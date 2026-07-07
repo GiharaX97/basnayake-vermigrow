@@ -16,31 +16,33 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MakeFarm — Where craft meets cultivation",
+  title: "Basnayaka VermiGrow — Organic Fertilizer & Vegetables, Karandeniya, Sri Lanka",
   description:
-    "MakeFarm is a creative collective rooted in the rhythms of the land. Film, photography, and brand design for makers, farms, and food brands.",
+    "Basnayaka VermiGrow is a family-run organic farm in Karandeniya, Sri Lanka, producing vermicompost from cow dung, chicken dung and fish waste, and growing organic vegetables for the local community.",
   keywords: [
-    "MakeFarm",
-    "portfolio",
-    "film",
-    "photography",
-    "brand design",
-    "documentary",
-    "creative studio",
+    "Basnayaka VermiGrow",
+    "organic fertilizer",
+    "vermicompost",
+    "Sri Lanka",
+    "Karandeniya",
+    "cow dung compost",
+    "chicken dung compost",
+    "fish nutrient",
+    "organic vegetables",
   ],
-  authors: [{ name: "MakeFarm Studio" }],
+  authors: [{ name: "Basnayaka VermiGrow" }],
   openGraph: {
-    title: "MakeFarm — Where craft meets cultivation",
+    title: "Basnayaka VermiGrow — Organic Fertilizer & Vegetables",
     description:
-      "A creative farm for film, photo & design. Crafting stories from the soil up.",
-    siteName: "MakeFarm",
+      "Family-run organic farm in Karandeniya, Sri Lanka. Vermicompost, organic fertilizer, and chemical-free vegetables.",
+    siteName: "Basnayaka VermiGrow",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "MakeFarm — Where craft meets cultivation",
+    title: "Basnayaka VermiGrow — Organic Fertilizer & Vegetables",
     description:
-      "A creative farm for film, photo & design. Crafting stories from the soil up.",
+      "Family-run organic farm in Karandeniya, Sri Lanka. Vermicompost, organic fertilizer, and chemical-free vegetables.",
   },
 };
 

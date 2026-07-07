@@ -403,10 +403,13 @@ export function EditPanel() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="Sprout">Sprout</SelectItem>
+                          <SelectItem value="Recycle">Recycle</SelectItem>
+                          <SelectItem value="Leaf">Leaf</SelectItem>
+                          <SelectItem value="Droplets">Droplets</SelectItem>
                           <SelectItem value="Film">Film</SelectItem>
                           <SelectItem value="Camera">Camera</SelectItem>
                           <SelectItem value="Palette">Palette</SelectItem>
-                          <SelectItem value="Sprout">Sprout</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -577,7 +580,7 @@ export function EditPanel() {
               </Section>
 
               {/* Projects */}
-              <Section title={`Projects (${content.projects.length})`}>
+              <Section title={`Projects / sub-brands (${content.projects.length})`}>
                 {content.projects.map((project) => (
                   <div key={project.id} className="rounded-lg border border-border/60 p-3 space-y-2">
                     <div className="flex items-center justify-between">
@@ -591,13 +594,24 @@ export function EditPanel() {
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
+                    <div>
+                      <Label className="text-xs">Logo URL (optional)</Label>
+                      <Input
+                        value={project.logo || ''}
+                        onChange={(e) =>
+                          updateListItem('projects', project.id, { logo: e.target.value })
+                        }
+                        className="mt-1 font-mono text-xs"
+                        placeholder="/logos/logo-project-x.png or full URL"
+                      />
+                    </div>
                     <Input
                       value={project.image}
                       onChange={(e) =>
                         updateListItem('projects', project.id, { image: e.target.value })
                       }
                       className="font-mono text-xs"
-                      placeholder="Image URL"
+                      placeholder="Cover image URL"
                     />
                     <Input
                       value={project.title}
@@ -620,6 +634,15 @@ export function EditPanel() {
                       }
                       placeholder="Year"
                     />
+                    <Textarea
+                      value={project.description || ''}
+                      onChange={(e) =>
+                        updateListItem('projects', project.id, { description: e.target.value })
+                      }
+                      rows={3}
+                      className="resize-none"
+                      placeholder="Description"
+                    />
                   </div>
                 ))}
                 <Button
@@ -629,10 +652,12 @@ export function EditPanel() {
                   onClick={() =>
                     addListItem('projects', {
                       id: genId(),
-                      image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80',
+                      logo: '',
+                      image: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800&q=80',
                       title: 'New project',
                       category: 'Category',
                       year: '2025',
+                      description: '',
                     } as never)
                   }
                 >

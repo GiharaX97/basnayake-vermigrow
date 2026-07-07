@@ -42,13 +42,17 @@ export function Navbar() {
       )}
     >
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <a href="#top" className="flex items-center gap-2 group">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background font-bold text-sm">
-            M
+        <a href="#top" className="flex items-center gap-2.5 group">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/95 backdrop-blur-sm shadow-sm overflow-hidden">
+            <img
+              src="/logos/logo-main.png"
+              alt={`${content.brand} logo`}
+              className="h-full w-full object-contain p-0.5"
+            />
           </span>
           <span
             className={cn(
-              'text-lg font-semibold tracking-tight transition-colors',
+              'text-base sm:text-lg font-semibold tracking-tight transition-colors leading-tight',
               scrolled ? 'text-foreground' : 'text-white drop-shadow'
             )}
           >
@@ -81,7 +85,7 @@ export function Navbar() {
             onClick={toggleEditMode}
             className={cn(
               'rounded-full',
-              editMode && 'bg-amber-500/20 text-amber-700 dark:text-amber-300',
+              editMode && 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
               !scrolled && !editMode && 'text-white hover:bg-white/10'
             )}
           >
@@ -121,7 +125,16 @@ export function Navbar() {
             className="fixed inset-0 z-50 md:hidden bg-background/95 backdrop-blur-xl"
           >
             <div className="flex items-center justify-between h-16 px-4">
-              <span className="text-lg font-semibold">{content.brand}</span>
+              <div className="flex items-center gap-2.5">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/95 overflow-hidden">
+                  <img
+                    src="/logos/logo-main.png"
+                    alt={`${content.brand} logo`}
+                    className="h-full w-full object-contain p-0.5"
+                  />
+                </span>
+                <span className="text-lg font-semibold">{content.brand}</span>
+              </div>
               <Button variant="ghost" size="icon" aria-label="Close menu" onClick={() => setOpen(false)}>
                 <X className="h-5 w-5" />
               </Button>

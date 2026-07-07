@@ -19,14 +19,14 @@ export function VideoShowcase() {
     <section id="videos" className="py-20 md:py-28 bg-muted/30 border-y border-border/60">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mb-12">
-          <span className="text-xs font-semibold uppercase tracking-widest text-amber-600 dark:text-amber-400">
-            Recent films
+          <span className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+            Farm films
           </span>
           <h2 className="mt-3 text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
             Video showcase
           </h2>
           <p className="mt-4 text-base md:text-lg text-muted-foreground">
-            Short films, brand documentaries, and field studies from the last few seasons. Click a card to play.
+            Short videos from the compost shed, the vermi-beds and harvest day. Click a card to play.
           </p>
         </div>
 
@@ -39,7 +39,7 @@ export function VideoShowcase() {
               viewport={{ once: true, margin: '-60px' }}
               transition={{ duration: 0.5, delay: (i % 3) * 0.1 }}
               onClick={() => setActive(i)}
-              className="group text-left rounded-2xl overflow-hidden bg-card border border-border/60 hover:shadow-xl hover:border-amber-500/40 transition-all"
+              className="group text-left rounded-2xl overflow-hidden bg-card border border-border/60 hover:shadow-xl hover:border-emerald-500/40 transition-all"
             >
               <div className="relative aspect-video bg-muted overflow-hidden">
                 <img

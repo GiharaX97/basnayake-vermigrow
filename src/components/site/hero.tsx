@@ -101,7 +101,7 @@ export function Hero() {
             className="max-w-3xl"
           >
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white/90 text-xs font-medium tracking-wide uppercase mb-5">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               {content.tagline}
             </span>
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-white drop-shadow-lg leading-[1.05]">
@@ -111,7 +111,7 @@ export function Hero() {
               {current.subtitle}
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button asChild size="lg" className="rounded-full bg-white text-black hover:bg-white/90">
+              <Button asChild size="lg" className="rounded-full bg-emerald-500 text-white hover:bg-emerald-600">
                 <a href="#work">View our work</a>
               </Button>
               <Button

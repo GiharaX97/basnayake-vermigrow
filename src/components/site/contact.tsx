@@ -37,14 +37,14 @@ export function Contact() {
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.6 }}
           >
-            <span className="text-xs font-semibold uppercase tracking-widest text-amber-400">
+            <span className="text-xs font-semibold uppercase tracking-widest text-emerald-400">
               Let&rsquo;s talk
             </span>
             <h2 className="mt-3 text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
-              Have a story to grow?
+              Want to grow with us?
             </h2>
             <p className="mt-5 text-base md:text-lg text-background/70 max-w-md leading-relaxed">
-              Whether it&rsquo;s a film, a brand refresh, or a long-form documentary, we&rsquo;d love to hear what you&rsquo;re working on. Send a note and we&rsquo;ll be in touch within two business days.
+              Whether you&rsquo;re a home gardener, a commercial farm, or a wholesale buyer, we&rsquo;d love to send you a sample of our vermicompost or talk about a regular supply. Send us a note and we&rsquo;ll reply within two business days.
             </p>
 
             <div className="mt-10 space-y-4">
@@ -52,18 +52,18 @@ export function Contact() {
                 href={`mailto:${content.contactEmail}`}
                 className="flex items-center gap-3 group"
               >
-                <span className="h-10 w-10 rounded-full bg-background/10 group-hover:bg-amber-500 flex items-center justify-center transition-colors">
+                <span className="h-10 w-10 rounded-full bg-background/10 group-hover:bg-emerald-500 flex items-center justify-center transition-colors">
                   <Mail className="h-4 w-4" />
                 </span>
-                <span className="text-background/90 group-hover:text-amber-300 transition-colors">
+                <span className="text-background/90 group-hover:text-emerald-300 transition-colors">
                   {content.contactEmail}
                 </span>
               </a>
               <a href={`tel:${content.contactPhone}`} className="flex items-center gap-3 group">
-                <span className="h-10 w-10 rounded-full bg-background/10 group-hover:bg-amber-500 flex items-center justify-center transition-colors">
+                <span className="h-10 w-10 rounded-full bg-background/10 group-hover:bg-emerald-500 flex items-center justify-center transition-colors">
                   <Phone className="h-4 w-4" />
                 </span>
-                <span className="text-background/90 group-hover:text-amber-300 transition-colors">
+                <span className="text-background/90 group-hover:text-emerald-300 transition-colors">
                   {content.contactPhone}
                 </span>
               </a>
@@ -107,7 +107,7 @@ export function Contact() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
-                className="bg-background/5 border-background/20 text-background placeholder:text-background/40 focus-visible:ring-amber-400"
+                className="bg-background/5 border-background/20 text-background placeholder:text-background/40 focus-visible:ring-emerald-400"
               />
             </div>
             <div>
@@ -120,7 +120,7 @@ export function Contact() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="bg-background/5 border-background/20 text-background placeholder:text-background/40 focus-visible:ring-amber-400"
+                className="bg-background/5 border-background/20 text-background placeholder:text-background/40 focus-visible:ring-emerald-400"
               />
             </div>
             <div>
@@ -131,15 +131,15 @@ export function Contact() {
                 id="message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Tell us about your project, timeline, and budget range"
+                placeholder="Tell us what you need — vermicompost, vegetables, or a custom blend"
                 rows={5}
-                className="bg-background/5 border-background/20 text-background placeholder:text-background/40 focus-visible:ring-amber-400 resize-none"
+                className="bg-background/5 border-background/20 text-background placeholder:text-background/40 focus-visible:ring-emerald-400 resize-none"
               />
             </div>
             <Button
               type="submit"
               size="lg"
-              className="w-full rounded-full bg-amber-500 hover:bg-amber-600 text-black"
+              className="w-full rounded-full bg-emerald-500 hover:bg-emerald-600 text-white"
             >
               Send message
               <ArrowRight className="ml-2 h-4 w-4" />

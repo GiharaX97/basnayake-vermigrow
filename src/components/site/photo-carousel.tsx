@@ -33,14 +33,14 @@ export function PhotoCarousel() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
           <div className="max-w-2xl">
-            <span className="text-xs font-semibold uppercase tracking-widest text-amber-600 dark:text-amber-400">
-              Field & studio
+            <span className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+              Field & shed
             </span>
             <h2 className="mt-3 text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
-              Photo stories
+              From the farm
             </h2>
             <p className="mt-4 text-base md:text-lg text-muted-foreground">
-              A selection of frames from recent shoots — harvests, makers, weather, and the small details that hold a story together.
+              A selection of frames from our compost sheds, vermi-beds and vegetable plots in Karandeniya.
             </p>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -79,7 +79,7 @@ export function PhotoCarousel() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                       <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-xs font-medium uppercase tracking-wider text-amber-300">
+                        <span className="text-xs font-medium uppercase tracking-wider text-emerald-300">
                           {photo.category}
                         </span>
                         <p className="text-sm font-medium mt-1">{photo.caption}</p>
@@ -146,7 +146,7 @@ export function PhotoCarousel() {
                 className="max-h-[78vh] max-w-full object-contain rounded-lg"
               />
               <figcaption className="mt-4 text-center text-white">
-                <span className="text-xs uppercase tracking-wider text-amber-300">
+                <span className="text-xs uppercase tracking-wider text-emerald-300">
                   {content.photos[lightbox].category}
                 </span>
                 <p className="text-sm mt-1">{content.photos[lightbox].caption}</p>

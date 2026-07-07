@@ -45,9 +45,11 @@ export interface StatItem {
 export interface ProjectItem {
   id: string
   image: string
+  logo?: string
   title: string
   category: string
   year: string
+  description?: string
 }
 
 export interface SiteContent {
@@ -70,126 +72,146 @@ export interface SiteContent {
   socials: { id: string; label: string; url: string }[]
 }
 
-// ---------- Default content ----------
+// ---------- Default content: Basnayaka VermiGrow ----------
 export const defaultContent: SiteContent = {
-  brand: 'MakeFarm',
-  tagline: 'Where craft meets cultivation',
+  brand: 'Basnayaka VermiGrow',
+  tagline: 'Organic fertility, from soil to harvest',
   heroSlides: [
     {
       id: 'h1',
-      type: 'video',
-      src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-      poster: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1920&q=80',
-      title: 'Crafting stories from the soil up',
-      subtitle: 'A creative farm for film, photo & design',
+      type: 'image',
+      src: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1920&q=80',
+      title: 'Growing soil, growing life',
+      subtitle: 'Organic fertilizer & vegetables from Karandeniya, Sri Lanka',
     },
     {
       id: 'h2',
       type: 'image',
-      src: 'https://images.unsplash.com/photo-1500076656116-558758c991c1?w=1920&q=80',
-      title: 'Grown with intention',
-      subtitle: 'Every frame, every pixel, every harvest',
+      src: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1920&q=80',
+      title: 'Pure inputs, honest harvest',
+      subtitle: 'Cow dung, chicken dung & fish-based composting',
     },
     {
       id: 'h3',
       type: 'image',
-      src: 'https://images.unsplash.com/photo-1469224974493-4f068aafee69?w=1920&q=80',
-      title: 'From field to frame',
-      subtitle: 'Capturing the rhythm of the land',
+      src: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=1920&q=80',
+      title: 'From vermi-bed to vegetable',
+      subtitle: 'Nourishing the land that nourishes you',
     },
   ],
-  aboutTitle: 'We are MakeFarm',
+  aboutTitle: 'We are Basnayaka VermiGrow',
   aboutBody:
-    'MakeFarm is a creative collective rooted in the rhythms of the land. We blend documentary film, photography, and brand design into stories that feel honest, textured, and alive. From sunrise harvests to launch-day screens, we cultivate every project the same way a farmer tends a field — patiently, deliberately, and with deep respect for the craft. Our team of directors, growers, designers, and editors works side-by-side with brands and communities who care about where things come from and how they are made. Over the past decade we have shipped more than 200 films, 40 brand systems, and a dozen long-form documentaries, all driven by the same belief: that good work, like good soil, takes time.',
-  aboutImage: 'https://images.unsplash.com/photo-1523741543316-beb7fc7023d8?w=1200&q=80',
+    'Basnayaka VermiGrow is a family-run organic farm in Karandeniya, in Sri Lanka’s southern lowlands, where traditional farming knowledge meets modern composting science. We produce premium organic fertilizer by carefully composting cow dung, chicken dung and fish waste, then enriching it through vermicomposting with earthworms. The result is a living soil amendment that restores micro-biology, improves water retention, and feeds plants slowly and naturally. Alongside our fertilizer line, we cultivate a rotating selection of organic vegetables using fish-based nutrients and zero synthetic chemicals, supplying our local community and wholesale buyers with produce that tastes the way vegetables used to taste. Every batch is hand-turned, every bed is hand-graded, and every harvest is a small act of stewardship for the land we have farmed for three generations.',
+  aboutImage: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200&q=80',
   mission:
-    'To grow honest stories that connect people to the land, the makers, and the moments that matter.',
+    'To restore soil health across Sri Lanka by making living, chemical-free fertilizer accessible to every farmer, home gardener, and grower.',
   vision:
-    'A world where every brand, farm, and maker has the tools to tell its own story with craft and care.',
+    'A future where Sri Lankan farms feed the nation with produce grown in soil that gets richer every season — not poorer.',
   stats: [
-    { id: 's1', value: '200+', label: 'Films delivered' },
-    { id: 's2', value: '40+', label: 'Brand systems' },
-    { id: 's3', value: '12', label: 'Documentaries' },
-    { id: 's4', value: '10y', label: 'In the field' },
+    { id: 's1', value: '3', label: 'Generations farming' },
+    { id: 's2', value: '100%', label: 'Organic inputs' },
+    { id: 's3', value: '12+', label: 'Compost batches / yr' },
+    { id: 's4', value: '0', label: 'Synthetic chemicals' },
   ],
   services: [
     {
       id: 'sv1',
-      icon: 'Film',
-      title: 'Film & Documentary',
+      icon: 'Sprout',
+      title: 'Vermicompost',
       description:
-        'End-to-end direction, shooting, and editing for short films, brand documentaries, and series. We handle everything from script to color.',
+        'Aged cow dung and chicken dung composted with red earthworms into dark, microbe-rich castings. Slow-release nutrition that builds soil structure and water-holding capacity.',
     },
     {
       id: 'sv2',
-      icon: 'Camera',
-      title: 'Photography',
+      icon: 'Recycle',
+      title: 'Compost blending',
       description:
-        'Editorial, product, and field photography. On-location shoots with natural light and a documentary eye for authentic detail.',
+        'Custom blends using cow dung, chicken dung, fish waste and green matter, turned and cured for 60–90 days to stabilise nutrients and kill weed seeds.',
     },
     {
       id: 'sv3',
-      icon: 'Palette',
-      title: 'Brand & Design',
+      icon: 'Leaf',
+      title: 'Organic vegetables',
       description:
-        'Identity systems, packaging, and web design for makers, farms, and food brands. Built to grow with you over the long haul.',
+        'Seasonal vegetables grown in our own beds using fish-based nutrients and vermicompost. Available wholesale and direct to local buyers in Karandeniya.',
     },
     {
       id: 'sv4',
-      icon: 'Sprout',
-      title: 'Strategy & Story',
+      icon: 'Droplets',
+      title: 'Fish ATE nutrients',
       description:
-        'Narrative strategy, content planning, and creative direction. We help you find the through-line that holds every channel together.',
+        'Fish-based liquid nutrient blends that feed foliar and soil biology, boosting vegetable flavour, shelf life and resistance without any synthetic additives.',
     },
   ],
   photos: [
-    { id: 'p1', src: 'https://images.unsplash.com/photo-1500076656116-558758c991c1?w=1200&q=80', caption: 'Morning harvest', category: 'Field' },
-    { id: 'p2', src: 'https://images.unsplash.com/photo-1469224974493-4f068aafee69?w=1200&q=80', caption: 'Golden hour', category: 'Field' },
-    { id: 'p3', src: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1200&q=80', caption: 'Barn light', category: 'Studio' },
-    { id: 'p4', src: 'https://images.unsplash.com/photo-1523741543316-beb7fc7023d8?w=1200&q=80', caption: 'Studio still life', category: 'Studio' },
-    { id: 'p5', src: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=80', caption: 'Open sky', category: 'Field' },
-    { id: 'p6', src: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1200&q=80', caption: 'Tools of the trade', category: 'Detail' },
+    { id: 'p1', src: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200&q=80', caption: 'Compost rows at dawn', category: 'Compost' },
+    { id: 'p2', src: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1200&q=80', caption: 'Vermi-beds in shade', category: 'Vermicompost' },
+    { id: 'p3', src: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=1200&q=80', caption: 'Harvest basket', category: 'Vegetables' },
+    { id: 'p4', src: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1200&q=80', caption: 'Hand sorting', category: 'Process' },
+    { id: 'p5', src: 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?w=1200&q=80', caption: 'Curing shed', category: 'Compost' },
+    { id: 'p6', src: 'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=1200&q=80', caption: 'Fresh picked', category: 'Vegetables' },
   ],
   videos: [
     {
       id: 'v1',
       src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-      poster: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=80',
-      title: 'Joyrides',
-      description: 'A short documentary about the small machines that move us.',
+      poster: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200&q=80',
+      title: 'Inside the vermi-shed',
+      description: 'A walkthrough of our vermicompost beds and turning cycle.',
       duration: '2:18',
     },
     {
       id: 'v2',
       src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-      poster: 'https://images.unsplash.com/photo-1469224974493-4f068aafee69?w=1200&q=80',
-      title: 'Bigger Fun',
-      description: 'Brand film exploring play, craft, and the people behind it.',
+      poster: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1200&q=80',
+      title: 'From dung to soil',
+      description: 'How we blend cow dung, chicken dung and fish waste into living compost.',
       duration: '1:12',
     },
     {
       id: 'v3',
       src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      poster: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1200&q=80',
-      title: 'Blazes',
-      description: 'A field study of fire, season, and regeneration.',
+      poster: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=1200&q=80',
+      title: 'Harvest day',
+      description: 'A morning harvest of organic vegetables for our Karandeniya buyers.',
       duration: '1:05',
     },
   ],
   projects: [
-    { id: 'pr1', image: 'https://images.unsplash.com/photo-1500076656116-558758c991c1?w=800&q=80', title: 'Hollowfield Farm', category: 'Brand & Film', year: '2024' },
-    { id: 'pr2', image: 'https://images.unsplash.com/photo-1469224974493-4f068aafee69?w=800&q=80', title: 'Sunroot Co-op', category: 'Photography', year: '2024' },
-    { id: 'pr3', image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80', title: 'Field Notes', category: 'Documentary', year: '2023' },
-    { id: 'pr4', image: 'https://images.unsplash.com/photo-1523741543316-beb7fc7023d8?w=800&q=80', title: 'Barn Raising', category: 'Brand', year: '2023' },
-    { id: 'pr5', image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80', title: 'Open Sky Dairy', category: 'Film', year: '2023' },
-    { id: 'pr6', image: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&q=80', title: 'Heirloom Seed Co.', category: 'Packaging', year: '2022' },
+    {
+      id: 'pr1',
+      logo: '/logos/logo-project-1.png',
+      image: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800&q=80',
+      title: 'Basnayaka VermiCompost',
+      category: 'Flagship fertilizer',
+      year: '2018',
+      description: 'Our core vermicompost line, made from cow dung, chicken dung and aged fish waste, cured and graded for home gardens and commercial farms.',
+    },
+    {
+      id: 'pr2',
+      logo: '/logos/logo-project-2.png',
+      image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
+      title: 'Basnayaka Organic Veg',
+      category: 'Vegetable cultivation',
+      year: '2020',
+      description: 'A rotating plot of seasonal vegetables grown on fish-based nutrients and vermicompost, supplied to local buyers and wholesale markets.',
+    },
+    {
+      id: 'pr3',
+      logo: '/logos/logo-project-3.png',
+      image: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=800&q=80',
+      title: 'Basnayaka Fish Nutrient',
+      category: 'Liquid fertilizer',
+      year: '2022',
+      description: 'A concentrated fish-based liquid nutrient that feeds soil biology and boosts vegetable flavour, shelf life and disease resistance.',
+    },
   ],
-  contactEmail: 'hello@makefarm.studio',
-  contactPhone: '+1 (555) 234-9087',
-  contactAddress: 'Old Mill Road 14, Greenfield Valley',
+  contactEmail: 'hello@basnayakavermigrow.lk',
+  contactPhone: '+94 77 123 4567',
+  contactAddress: 'Karandeniya, Galle District, Southern Province, Sri Lanka',
   socials: [
-    { id: 'so1', label: 'Instagram', url: 'https://instagram.com' },
-    { id: 'so2', label: 'Vimeo', url: 'https://vimeo.com' },
+    { id: 'so1', label: 'Facebook', url: 'https://facebook.com' },
+    { id: 'so2', label: 'WhatsApp', url: 'https://whatsapp.com' },
     { id: 'so3', label: 'YouTube', url: 'https://youtube.com' },
   ],
 }
@@ -216,7 +238,7 @@ export const useContentStore = create<ContentState>()(
       resetContent: () => set({ content: defaultContent }),
     }),
     {
-      name: 'makefarm-content',
+      name: 'basnayaka-vermigrow-content',
     }
   )
 )

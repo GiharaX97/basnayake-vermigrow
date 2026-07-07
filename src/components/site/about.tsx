@@ -26,7 +26,7 @@ export function About() {
                 loading="lazy"
               />
             </div>
-            <div className="absolute -bottom-6 -right-4 sm:-right-6 hidden sm:flex h-24 w-24 items-center justify-center rounded-full bg-amber-500 text-white shadow-xl">
+            <div className="absolute -bottom-6 -right-4 sm:-right-6 hidden sm:flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xl">
               <Sprout className="h-10 w-10" />
             </div>
           </motion.div>
@@ -37,7 +37,7 @@ export function About() {
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.6, delay: 0.1 }}
           >
-            <span className="text-xs font-semibold uppercase tracking-widest text-amber-600 dark:text-amber-400">
+            <span className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
               About us
             </span>
             <h2 className="mt-3 text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
@@ -49,14 +49,14 @@ export function About() {
 
             <div className="mt-10 grid sm:grid-cols-2 gap-6">
               <div className="rounded-xl border border-border/60 p-5 bg-card">
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                   <Target className="h-5 w-5" />
                   <span className="text-sm font-semibold uppercase tracking-wider">Mission</span>
                 </div>
                 <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{content.mission}</p>
               </div>
               <div className="rounded-xl border border-border/60 p-5 bg-card">
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                   <Eye className="h-5 w-5" />
                   <span className="text-sm font-semibold uppercase tracking-wider">Vision</span>
                 </div>

@@ -9,9 +9,13 @@ export function Footer() {
     <footer className="bg-background border-t border-border/60 mt-auto">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background font-bold text-sm">
-              M
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white border border-border/60 overflow-hidden">
+              <img
+                src="/logos/logo-main.png"
+                alt={`${content.brand} logo`}
+                className="h-full w-full object-contain p-0.5"
+              />
             </span>
             <div>
               <div className="text-base font-semibold">{content.brand}</div>
