@@ -16,6 +16,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 
 interface SectionProps {
@@ -54,6 +65,7 @@ function Section({ title, defaultOpen = false, children }: SectionProps) {
 export function EditPanel() {
   const { editMode, content, updateField, setContent, resetContent, toggleEditMode } =
     useContentStore()
+  const [showResetConfirm, setShowResetConfirm] = React.useState(false)
 
   // Helpers for list operations
   const updateListItem = <K extends keyof typeof content>(
@@ -70,23 +82,22 @@ export function EditPanel() {
 
   const removeListItem = (key: keyof typeof content, id: string) => {
     const list = content[key] as unknown as Array<{ id: string }>
-    const next = list.filter((item) => item.id !== id) as unknown as (typeof content)[K]
-    updateField(key, next)
+    const next = list.filter((item) => item.id !== id)
+    updateField(key, next as any)
   }
 
   const addListItem = (key: keyof typeof content, item: { id: string }) => {
     const list = content[key] as unknown as Array<{ id: string }>
-    const next = [...list, item] as unknown as (typeof content)[K]
-    updateField(key, next)
+    const next = [...list, item]
+    updateField(key, next as any)
   }
 
   const genId = () => Math.random().toString(36).slice(2, 10)
 
   const onReset = () => {
-    if (confirm('Reset all content to defaults? This cannot be undone.')) {
-      resetContent()
-      toast.success('Content reset to defaults')
-    }
+    resetContent()
+    toast.success('Content reset to defaults')
+    setShowResetConfirm(false)
   }
 
   const onExport = () => {
@@ -376,17 +387,17 @@ export function EditPanel() {
                 </Button>
               </Section>
 
-              {/* Services */}
-              <Section title={`Services (${content.services.length})`}>
-                {content.services.map((service) => (
-                  <div key={service.id} className="rounded-lg border border-border/60 p-3 space-y-2">
+              {/* Products */}
+              <Section title={`Products (${(content.products ?? []).length})`}>
+                {(content.products ?? []).map((product) => (
+                  <div key={product.id} className="rounded-lg border border-border/60 p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold">{service.title}</span>
+                      <span className="text-xs font-semibold">{product.title}</span>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-destructive"
-                        onClick={() => removeListItem('services', service.id)}
+                        onClick={() => removeListItem('products', product.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -394,9 +405,9 @@ export function EditPanel() {
                     <div>
                       <Label className="text-xs">Icon</Label>
                       <Select
-                        value={service.icon}
+                        value={product.icon}
                         onValueChange={(v) =>
-                          updateListItem('services', service.id, { icon: v })
+                          updateListItem('products', product.id, { icon: v })
                         }
                       >
                         <SelectTrigger className="mt-1">
@@ -414,21 +425,56 @@ export function EditPanel() {
                       </Select>
                     </div>
                     <Input
-                      value={service.title}
+                      value={product.title}
                       onChange={(e) =>
-                        updateListItem('services', service.id, { title: e.target.value })
+                        updateListItem('products', product.id, { title: e.target.value })
                       }
                       placeholder="Title"
                     />
                     <Textarea
-                      value={service.description}
+                      value={product.description}
                       onChange={(e) =>
-                        updateListItem('services', service.id, { description: e.target.value })
+                        updateListItem('products', product.id, { description: e.target.value })
                       }
                       rows={3}
                       className="resize-none"
                       placeholder="Description"
                     />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs">Price (e.g. Rs 350)</Label>
+                        <Input
+                          value={product.price}
+                          onChange={(e) =>
+                            updateListItem('products', product.id, { price: e.target.value })
+                          }
+                          className="mt-1"
+                          placeholder="Rs 350"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Unit (e.g. per kg)</Label>
+                        <Input
+                          value={product.unit}
+                          onChange={(e) =>
+                            updateListItem('products', product.id, { unit: e.target.value })
+                          }
+                          className="mt-1"
+                          placeholder="per kg"
+                        />
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={product.featured}
+                        onChange={(e) =>
+                          updateListItem('products', product.id, { featured: e.target.checked })
+                        }
+                        className="rounded border-border"
+                      />
+                      Featured / Best seller
+                    </label>
                   </div>
                 ))}
                 <Button
@@ -436,15 +482,18 @@ export function EditPanel() {
                   size="sm"
                   className="w-full"
                   onClick={() =>
-                    addListItem('services', {
+                    addListItem('products', {
                       id: genId(),
                       icon: 'Sprout',
-                      title: 'New service',
-                      description: 'Describe this service',
+                      title: 'New product',
+                      description: 'Describe this product',
+                      price: '',
+                      unit: '',
+                      featured: false,
                     } as never)
                   }
                 >
-                  <Plus className="h-4 w-4 mr-1" /> Add service
+                  <Plus className="h-4 w-4 mr-1" /> Add product
                 </Button>
               </Section>
 
@@ -501,6 +550,246 @@ export function EditPanel() {
                   }
                 >
                   <Plus className="h-4 w-4 mr-1" /> Add photo
+                </Button>
+              </Section>
+
+              {/* Event Photos */}
+              <Section title={`Event photos (${(content.eventPhotos ?? []).length})`}>
+                {(content.eventPhotos ?? []).map((photo) => (
+                  <div key={photo.id} className="rounded-lg border border-border/60 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold truncate">{photo.caption}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => removeListItem('eventPhotos', photo.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <Input
+                      value={photo.src}
+                      onChange={(e) => updateListItem('eventPhotos', photo.id, { src: e.target.value })}
+                      className="font-mono text-xs"
+                      placeholder="Image URL"
+                    />
+                    <Input
+                      value={photo.caption}
+                      onChange={(e) => updateListItem('eventPhotos', photo.id, { caption: e.target.value })}
+                      placeholder="Caption"
+                    />
+                    <Input
+                      value={photo.category}
+                      onChange={(e) => updateListItem('eventPhotos', photo.id, { category: e.target.value })}
+                      placeholder="Category"
+                    />
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() =>
+                    addListItem('eventPhotos', {
+                      id: genId(),
+                      src: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&q=80',
+                      caption: 'New event photo',
+                      category: 'Event',
+                    } as never)
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add event photo
+                </Button>
+              </Section>
+
+              {/* Training Photos */}
+              <Section title={`Training photos (${(content.trainingPhotos ?? []).length})`}>
+                {(content.trainingPhotos ?? []).map((photo) => (
+                  <div key={photo.id} className="rounded-lg border border-border/60 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold truncate">{photo.caption}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => removeListItem('trainingPhotos', photo.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <Input
+                      value={photo.src}
+                      onChange={(e) => updateListItem('trainingPhotos', photo.id, { src: e.target.value })}
+                      className="font-mono text-xs"
+                      placeholder="Image URL"
+                    />
+                    <Input
+                      value={photo.caption}
+                      onChange={(e) => updateListItem('trainingPhotos', photo.id, { caption: e.target.value })}
+                      placeholder="Caption"
+                    />
+                    <Input
+                      value={photo.category}
+                      onChange={(e) => updateListItem('trainingPhotos', photo.id, { category: e.target.value })}
+                      placeholder="Category"
+                    />
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() =>
+                    addListItem('trainingPhotos', {
+                      id: genId(),
+                      src: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&q=80',
+                      caption: 'New training photo',
+                      category: 'Training',
+                    } as never)
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add training photo
+                </Button>
+              </Section>
+
+              {/* Training Videos */}
+              <Section title={`Training videos (${(content.trainingVideos ?? []).length})`}>
+                {(content.trainingVideos ?? []).map((video) => (
+                  <div key={video.id} className="rounded-lg border border-border/60 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold">{video.title}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => removeListItem('trainingVideos', video.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <Input
+                      value={video.src}
+                      onChange={(e) => updateListItem('trainingVideos', video.id, { src: e.target.value })}
+                      className="font-mono text-xs"
+                      placeholder="Video URL (.mp4)"
+                    />
+                    <Input
+                      value={video.poster}
+                      onChange={(e) => updateListItem('trainingVideos', video.id, { poster: e.target.value })}
+                      className="font-mono text-xs"
+                      placeholder="Poster image URL"
+                    />
+                    <Input
+                      value={video.title}
+                      onChange={(e) => updateListItem('trainingVideos', video.id, { title: e.target.value })}
+                      placeholder="Title"
+                    />
+                    <Textarea
+                      value={video.description}
+                      onChange={(e) => updateListItem('trainingVideos', video.id, { description: e.target.value })}
+                      rows={2}
+                      className="resize-none"
+                      placeholder="Description"
+                    />
+                    <Input
+                      value={video.duration}
+                      onChange={(e) => updateListItem('trainingVideos', video.id, { duration: e.target.value })}
+                      placeholder="Duration (e.g. 15:30)"
+                    />
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() =>
+                    addListItem('trainingVideos', {
+                      id: genId(),
+                      src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+                      poster: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&q=80',
+                      title: 'New training video',
+                      description: 'Describe this training video',
+                      duration: '0:00',
+                    } as never)
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add training video
+                </Button>
+              </Section>
+
+              {/* Notices */}
+              <Section title={`Notices (${(content.notices ?? []).length})`}>
+                {(content.notices ?? []).map((notice) => (
+                  <div key={notice.id} className="rounded-lg border border-border/60 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold truncate">{notice.title}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => removeListItem('notices', notice.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Type</Label>
+                      <Select
+                        value={notice.type}
+                        onValueChange={(v) =>
+                          updateListItem('notices', notice.id, { type: v as 'event' | 'training' })
+                        }
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="event">Event</SelectItem>
+                          <SelectItem value="training">Training</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Input
+                      value={notice.title}
+                      onChange={(e) => updateListItem('notices', notice.id, { title: e.target.value })}
+                      placeholder="Title"
+                    />
+                    <Input
+                      value={notice.date}
+                      onChange={(e) => updateListItem('notices', notice.id, { date: e.target.value })}
+                      placeholder="Date (e.g. 2025-08-15)"
+                    />
+                    <Input
+                      value={notice.location}
+                      onChange={(e) => updateListItem('notices', notice.id, { location: e.target.value })}
+                      placeholder="Location"
+                    />
+                    <Textarea
+                      value={notice.description}
+                      onChange={(e) => updateListItem('notices', notice.id, { description: e.target.value })}
+                      rows={3}
+                      className="resize-none"
+                      placeholder="Description"
+                    />
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() =>
+                    addListItem('notices', {
+                      id: genId(),
+                      title: 'New notice',
+                      date: '',
+                      location: '',
+                      description: '',
+                      type: 'event',
+                    } as never)
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add notice
                 </Button>
               </Section>
 
@@ -679,14 +968,35 @@ export function EditPanel() {
                     className="block w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-primary file:text-primary-foreground file:cursor-pointer"
                   />
                 </label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-destructive hover:text-destructive"
-                  onClick={onReset}
-                >
-                  <RotateCcw className="h-4 w-4 mr-1" /> Reset to defaults
-                </Button>
+                <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-destructive hover:text-destructive"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1" /> Reset to defaults
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Reset all content?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently replace all current content with the factory defaults.
+                        This action cannot be undone. Export your current content first if you want to keep a backup.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={onReset}
+                      >
+                        Reset
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </Section>
 
               <div className="h-10" />

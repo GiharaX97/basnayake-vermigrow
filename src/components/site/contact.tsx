@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import { motion } from 'framer-motion'
 import { Mail, Phone, MapPin, ArrowRight } from 'lucide-react'
 import { useContentStore } from '@/store/content-store'
 import { Button } from '@/components/ui/button'
@@ -14,29 +13,56 @@ export function Contact() {
   const [name, setName] = React.useState('')
   const [email, setEmail] = React.useState('')
   const [message, setMessage] = React.useState('')
+  const [sending, setSending] = React.useState(false)
 
-  const onSubmit = (e: React.FormEvent) => {
+  // Read ?product= from URL on mount to pre-fill message
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const product = params.get('product')
+    if (product) {
+      setMessage(`Hi, I'm interested in ordering: ${product}\n\nPlease provide details on availability, pricing and delivery.`)
+      // Scroll to contact
+      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [])
+
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name || !email || !message) {
       toast.error('Please fill in all fields')
       return
     }
-    toast.success('Thanks! We will be in touch within 2 business days.')
-    setName('')
-    setEmail('')
-    setMessage('')
+    setSending(true)
+    try {
+      const res = await fetch('/api/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, message }),
+      })
+      if (res.ok) {
+        toast.success('Thanks! We will be in touch within 2 business days.')
+        setName('')
+        setEmail('')
+        setMessage('')
+        // Remove product param from URL
+        const url = new URL(window.location.href)
+        url.searchParams.delete('product')
+        window.history.replaceState({}, '', url.toString())
+      } else {
+        toast.error('Failed to send message. Please try again.')
+      }
+    } catch {
+      toast.error('Connection error')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
-    <section id="contact" className="py-20 md:py-28 bg-foreground text-background">
+    <section id="contact" className="py-20 md:py-28 bg-foreground text-background scroll-mt-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20">
-          <motion.div
-            initial={{ opacity: 0, x: -24 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.6 }}
-          >
+          <div>
             <span className="text-xs font-semibold uppercase tracking-widest text-emerald-400">
               Let&rsquo;s talk
             </span>
@@ -82,20 +108,16 @@ export function Contact() {
                   href={s.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 rounded-full text-sm border border-background/20 hover:bg-background/10 transition-colors"
+                  className="px-4 py-2 min-h-[44px] rounded-full text-sm border border-background/20 hover:bg-background/10 transition-colors inline-flex items-center"
                 >
                   {s.label}
                 </a>
               ))}
             </div>
-          </motion.div>
+          </div>
 
-          <motion.form
+          <form
             onSubmit={onSubmit}
-            initial={{ opacity: 0, x: 24 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.6, delay: 0.1 }}
             className="rounded-2xl bg-background/5 backdrop-blur-sm border border-background/10 p-6 md:p-8 space-y-5"
           >
             <div>
@@ -107,7 +129,7 @@ export function Contact() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
-                className="bg-background/5 border-background/20 text-background placeholder:text-background/40 focus-visible:ring-emerald-400"
+                className="bg-background/5 border-background/20 text-background placeholder:text-background/40 focus-visible:ring-emerald-400 min-h-[48px]"
               />
             </div>
             <div>
@@ -120,7 +142,7 @@ export function Contact() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="bg-background/5 border-background/20 text-background placeholder:text-background/40 focus-visible:ring-emerald-400"
+                className="bg-background/5 border-background/20 text-background placeholder:text-background/40 focus-visible:ring-emerald-400 min-h-[48px]"
               />
             </div>
             <div>
@@ -139,12 +161,12 @@ export function Contact() {
             <Button
               type="submit"
               size="lg"
-              className="w-full rounded-full bg-emerald-500 hover:bg-emerald-600 text-white"
+              className="w-full rounded-full bg-emerald-500 hover:bg-emerald-600 text-white min-h-[52px] text-base"
             >
-              Send message
+              {sending ? 'Sending...' : 'Send message'}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-          </motion.form>
+          </form>
         </div>
       </div>
     </section>

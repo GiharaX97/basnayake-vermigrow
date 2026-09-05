@@ -1,14 +1,13 @@
 'use client'
 
 import * as React from 'react'
-import { motion } from 'framer-motion'
 import { ArrowUpRight } from 'lucide-react'
 import { useContentStore } from '@/store/content-store'
 
 export function Projects() {
   const { content } = useContentStore()
   return (
-    <section id="work" className="py-20 md:py-28">
+    <section id="work" className="py-20 md:py-28 scroll-mt-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
           <div className="max-w-2xl">
@@ -25,13 +24,9 @@ export function Projects() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {content.projects.map((project, i) => (
-            <motion.article
+          {content.projects.map((project) => (
+            <article
               key={project.id}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-60px' }}
-              transition={{ duration: 0.5, delay: (i % 3) * 0.1 }}
               className="group relative overflow-hidden rounded-2xl bg-card border border-border/60 hover:border-emerald-500/40 hover:shadow-xl transition-all"
             >
               {/* Logo header */}
@@ -75,7 +70,7 @@ export function Projects() {
                   <ArrowUpRight className="h-4 w-4" />
                 </a>
               </div>
-            </motion.article>
+            </article>
           ))}
         </div>
       </div>

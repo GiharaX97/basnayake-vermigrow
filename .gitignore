@@ -32,6 +32,13 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!.env*.example
+
+# local-only secrets, DB backups, and agent tooling noise
+SECRETS*.local.md
+db/*.bak
+.mimocode/
 
 # vercel
 .vercel

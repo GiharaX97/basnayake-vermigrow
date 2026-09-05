@@ -1,23 +1,15 @@
 'use client'
 
-import * as React from 'react'
-import { motion } from 'framer-motion'
 import { Sprout, Target, Eye } from 'lucide-react'
 import { useContentStore } from '@/store/content-store'
 
 export function About() {
   const { content } = useContentStore()
   return (
-    <section id="about" className="py-20 md:py-28">
+    <section id="about" className="py-20 md:py-28 scroll-mt-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -24 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.6 }}
-            className="relative"
-          >
+          <div className="relative">
             <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-muted">
               <img
                 src={content.aboutImage}
@@ -29,14 +21,9 @@ export function About() {
             <div className="absolute -bottom-6 -right-4 sm:-right-6 hidden sm:flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500 text-white shadow-xl">
               <Sprout className="h-10 w-10" />
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, x: 24 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
+          <div>
             <span className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
               About us
             </span>
@@ -63,7 +50,7 @@ export function About() {
                 <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{content.vision}</p>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

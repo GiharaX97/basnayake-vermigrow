@@ -1,13 +1,4 @@
-import { PrismaClient } from '@prisma/client'
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-export const db =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: ['query'],
-  })
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
+// DEPRECATED: Use src/lib/prisma.ts instead.
+// This file is kept as a reference but is not used.
+// The PrismaClient singleton is managed in prisma.ts.
+export { prisma as db } from './prisma'

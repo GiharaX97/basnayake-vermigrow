@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import { motion } from 'framer-motion'
 import { Play, Clock } from 'lucide-react'
 import { useContentStore } from '@/store/content-store'
 import {
@@ -16,7 +15,7 @@ export function VideoShowcase() {
   const [active, setActive] = React.useState<number | null>(null)
 
   return (
-    <section id="videos" className="py-20 md:py-28 bg-muted/30 border-y border-border/60">
+    <section id="videos" className="py-20 md:py-28 bg-muted/30 border-y border-border/60 scroll-mt-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mb-12">
           <span className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
@@ -32,12 +31,8 @@ export function VideoShowcase() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {content.videos.map((video, i) => (
-            <motion.button
+            <button
               key={video.id}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-60px' }}
-              transition={{ duration: 0.5, delay: (i % 3) * 0.1 }}
               onClick={() => setActive(i)}
               className="group text-left rounded-2xl overflow-hidden bg-card border border-border/60 hover:shadow-xl hover:border-emerald-500/40 transition-all"
             >
@@ -65,7 +60,7 @@ export function VideoShowcase() {
                   {video.description}
                 </p>
               </div>
-            </motion.button>
+            </button>
           ))}
         </div>
       </div>

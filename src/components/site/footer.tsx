@@ -25,9 +25,14 @@ export function Footer() {
 
           <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
             <a href="#work" className="hover:text-foreground transition-colors">Work</a>
+            <a href="#products" className="hover:text-foreground transition-colors">Products</a>
+            <a href="#map" className="hover:text-foreground transition-colors">Map</a>
             <a href="#photos" className="hover:text-foreground transition-colors">Photos</a>
+            <a href="#events" className="hover:text-foreground transition-colors">Events</a>
+            <a href="#training" className="hover:text-foreground transition-colors">Training</a>
             <a href="#videos" className="hover:text-foreground transition-colors">Videos</a>
             <a href="#about" className="hover:text-foreground transition-colors">About</a>
+            <a href="#founder" className="hover:text-foreground transition-colors">Founder</a>
             <a href="#contact" className="hover:text-foreground transition-colors">Contact</a>
           </nav>
 

@@ -1,0 +1,26 @@
+# Basnayaka VermiGrow — Production Caddyfile (auto-HTTPS)
+# Installed to /etc/caddy/Caddyfile by provision-vps.sh.
+# DNS must already point the domain(s) at this VPS before Caddy can issue certs.
+
+# Canonical host: apex domain.
+basnayakavermigrow.lk {
+	reverse_proxy 127.0.0.1:3001
+
+	encode gzip zstd
+
+	header {
+		# Enable HSTS only AFTER the first cert successfully issues.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# -X-Content-Type-Options / X-Frame-Options are set by Next.js headers too;
+		# Caddy can reinforce them if the app headers ever get removed.
+	}
+
+	# Long cache for user-uploaded media (admin adds files under /uploads/*)
+	@uploads path /uploads/*
+	header @uploads Cache-Control "public, max-age=604800"
+}
+
+# Redirect www to the apex domain (avoids duplicate-content SEO).
+www.basnayakavermigrow.lk {
+	redir https://basnayakavermigrow.lk{uri} permanent
+}

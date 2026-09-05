@@ -2,17 +2,20 @@
 
 import * as React from 'react'
 import { useTheme } from 'next-themes'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Sun, Moon, Pencil } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Menu, X, Sun, Moon } from 'lucide-react'
 import { useContentStore } from '@/store/content-store'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { label: 'Work', href: '#work' },
+  { label: 'Products', href: '#products' },
+  { label: 'Map', href: '#map' },
   { label: 'Photos', href: '#photos' },
+  { label: 'Events', href: '#events' },
+  { label: 'Training', href: '#training' },
   { label: 'Videos', href: '#videos' },
   { label: 'About', href: '#about' },
+  { label: 'Founder', href: '#founder' },
   { label: 'Contact', href: '#contact' },
 ]
 
@@ -21,9 +24,11 @@ export function Navbar() {
   const [mounted, setMounted] = React.useState(false)
   const [open, setOpen] = React.useState(false)
   const [scrolled, setScrolled] = React.useState(false)
-  const { content, editMode, toggleEditMode } = useContentStore()
+  const store = useContentStore()
+  const brand = store?.content?.brand ?? 'Basnayaka VermiGrow'
+  const hasNotices = (store?.content?.notices?.length ?? 0) > 0 && !store?.tickerDismissed
 
-  React.useEffect(() => setMounted(true), [])
+  React.useEffect(() => { setMounted(true) }, [])
 
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -35,7 +40,7 @@ export function Navbar() {
   return (
     <header
       className={cn(
-        'fixed top-0 inset-x-0 z-50 transition-all duration-500',
+        `fixed ${hasNotices ? 'top-11' : 'top-0'} inset-x-0 z-50 transition-all duration-500`,
         scrolled
           ? 'bg-background/80 backdrop-blur-xl border-b border-border/60'
           : 'bg-transparent'
@@ -46,7 +51,7 @@ export function Navbar() {
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/95 backdrop-blur-sm shadow-sm overflow-hidden">
             <img
               src="/logos/logo-main.png"
-              alt={`${content.brand} logo`}
+              alt={`${brand} logo`}
               className="h-full w-full object-contain p-0.5"
             />
           </span>
@@ -56,7 +61,7 @@ export function Navbar() {
               scrolled ? 'text-foreground' : 'text-white drop-shadow'
             )}
           >
-            {content.brand}
+            {brand}
           </span>
         </a>
 
@@ -78,82 +83,71 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Toggle edit mode"
-            onClick={toggleEditMode}
-            className={cn(
-              'rounded-full',
-              editMode && 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
-              !scrolled && !editMode && 'text-white hover:bg-white/10'
-            )}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
+            type="button"
             aria-label="Toggle theme"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className={cn('rounded-full', !scrolled && 'text-white hover:bg-white/10')}
+            className={cn(
+              'inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full transition-colors touch-[manipulation]',
+              !scrolled ? 'text-white hover:bg-white/10 active:bg-white/20' : 'text-foreground hover:bg-accent active:bg-accent'
+            )}
           >
             {mounted ? (
-              theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />
+              theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />
             ) : (
-              <span className="h-4 w-4" />
+              <Moon className="size-4" />
             )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
+          </button>
+          <button
+            type="button"
             aria-label="Open menu"
-            className={cn('md:hidden rounded-full', !scrolled && 'text-white hover:bg-white/10')}
             onClick={() => setOpen(true)}
+            className={cn(
+              'md:hidden inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full transition-colors touch-[manipulation]',
+              !scrolled ? 'text-white hover:bg-white/10 active:bg-white/20' : 'text-foreground hover:bg-accent active:bg-accent'
+            )}
           >
-            <Menu className="h-5 w-5" />
-          </Button>
+            <Menu className="size-5" />
+          </button>
         </div>
       </nav>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 md:hidden bg-background/95 backdrop-blur-xl"
-          >
-            <div className="flex items-center justify-between h-16 px-4">
-              <div className="flex items-center gap-2.5">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/95 overflow-hidden">
-                  <img
-                    src="/logos/logo-main.png"
-                    alt={`${content.brand} logo`}
-                    className="h-full w-full object-contain p-0.5"
-                  />
-                </span>
-                <span className="text-lg font-semibold">{content.brand}</span>
-              </div>
-              <Button variant="ghost" size="icon" aria-label="Close menu" onClick={() => setOpen(false)}>
-                <X className="h-5 w-5" />
-              </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 md:hidden bg-background/95 backdrop-blur-xl flex flex-col">
+          <div className="flex items-center justify-between h-16 px-4 shrink-0">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/95 overflow-hidden">
+                <img
+                  src="/logos/logo-main.png"
+                  alt={`${brand} logo`}
+                  className="h-full w-full object-contain p-0.5"
+                />
+              </span>
+              <span className="text-lg font-semibold">{brand}</span>
             </div>
-            <div className="px-4 pt-6 flex flex-col gap-2">
-              {navItems.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className="px-3 py-3 text-xl font-medium rounded-md hover:bg-foreground/5"
-                >
-                  {item.label}
-                </a>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <button
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setOpen(false)}
+              className="inline-flex items-center justify-center size-9 rounded-full text-foreground hover:bg-accent active:bg-accent touch-[manipulation]"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 pt-6 flex flex-col gap-2">
+            {navItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className="block px-3 py-4 text-xl font-medium rounded-md hover:bg-accent active:bg-accent"
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </header>
   )
 }

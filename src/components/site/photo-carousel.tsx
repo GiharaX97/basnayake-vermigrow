@@ -1,8 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, ChevronDown } from 'lucide-react'
 import { useContentStore } from '@/store/content-store'
 import {
   Carousel,
@@ -12,7 +11,6 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from '@/components/ui/carousel'
-import { cn } from '@/lib/utils'
 
 export function PhotoCarousel() {
   const { content } = useContentStore()
@@ -28,8 +26,13 @@ export function PhotoCarousel() {
     api.on('select', () => setCurrent(api.selectedScrollSnap()))
   }, [api])
 
+  React.useEffect(() => {
+    if (!api || !lightbox) return
+    api.scrollTo(lightbox)
+  }, [lightbox, api])
+
   return (
-    <section id="photos" className="py-20 md:py-28">
+    <section id="photos" className="py-20 md:py-28 scroll-mt-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
           <div className="max-w-2xl">
@@ -57,17 +60,13 @@ export function PhotoCarousel() {
             className="w-full"
           >
             <CarouselContent className="-ml-2 md:-ml-4">
-              {content.photos.map((photo, i) => (
+              {content.photos.map((photo) => (
                 <CarouselItem
                   key={photo.id}
                   className="pl-2 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3"
                 >
-                  <motion.button
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: '-60px' }}
-                    transition={{ duration: 0.5, delay: (i % 3) * 0.08 }}
-                    onClick={() => setLightbox(i)}
+                  <button
+                    onClick={() => setLightbox(content.photos.indexOf(photo))}
                     className="group block w-full text-left"
                   >
                     <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-muted">
@@ -76,6 +75,7 @@ export function PhotoCarousel() {
                         alt={photo.caption}
                         className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                         loading="lazy"
+                        decoding="async"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                       <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 group-hover:opacity-100 transition-opacity">
@@ -85,76 +85,72 @@ export function PhotoCarousel() {
                         <p className="text-sm font-medium mt-1">{photo.caption}</p>
                       </div>
                     </div>
-                  </motion.button>
+                  </button>
                 </CarouselItem>
               ))}
             </CarouselContent>
             <CarouselPrevious className="hidden md:flex -left-4 bg-background border-border shadow-md" />
             <CarouselNext className="hidden md:flex -right-4 bg-background border-border shadow-md" />
+            <div className="flex md:hidden items-center justify-center gap-1.5 mt-4 text-xs text-muted-foreground">
+              <ChevronDown className="h-3 w-3 -rotate-90" />
+              Swipe to browse
+              <ChevronDown className="h-3 w-3 rotate-90" />
+            </div>
           </Carousel>
         </div>
       </div>
 
       {/* Lightbox */}
-      <AnimatePresence>
-        {lightbox !== null && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+      {lightbox !== null && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            aria-label="Close"
+            className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
             onClick={() => setLightbox(null)}
           >
-            <button
-              aria-label="Close"
-              className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-              onClick={() => setLightbox(null)}
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <button
-              aria-label="Previous"
-              className="absolute left-4 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-              onClick={(e) => {
-                e.stopPropagation()
-                setLightbox((l) => (l! - 1 + content.photos.length) % content.photos.length)
-              }}
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-            <button
-              aria-label="Next"
-              className="absolute right-4 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
-              onClick={(e) => {
-                e.stopPropagation()
-                setLightbox((l) => (l! + 1) % content.photos.length)
-              }}
-            >
-              <ChevronRight className="h-6 w-6" />
-            </button>
-            <motion.figure
-              key={lightbox}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              className="max-w-5xl max-h-[85vh] flex flex-col items-center"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img
-                src={content.photos[lightbox].src}
-                alt={content.photos[lightbox].caption}
-                className="max-h-[78vh] max-w-full object-contain rounded-lg"
-              />
-              <figcaption className="mt-4 text-center text-white">
-                <span className="text-xs uppercase tracking-wider text-emerald-300">
-                  {content.photos[lightbox].category}
-                </span>
-                <p className="text-sm mt-1">{content.photos[lightbox].caption}</p>
-              </figcaption>
-            </motion.figure>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <X className="h-5 w-5" />
+          </button>
+          <button
+            aria-label="Previous"
+            className="absolute left-4 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+            onClick={(e) => {
+              e.stopPropagation()
+              setLightbox((l) => (l! - 1 + content.photos.length) % content.photos.length)
+            }}
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button
+            aria-label="Next"
+            className="absolute right-4 h-12 w-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+            onClick={(e) => {
+              e.stopPropagation()
+              setLightbox((l) => (l! + 1) % content.photos.length)
+            }}
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+          <figure
+            className="max-w-5xl max-h-[85vh] flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={content.photos[lightbox].src}
+              alt={content.photos[lightbox].caption}
+              className="max-h-[78vh] max-w-full object-contain rounded-lg"
+            />
+            <figcaption className="mt-4 text-center text-white">
+              <span className="text-xs uppercase tracking-wider text-emerald-300">
+                {content.photos[lightbox].category}
+              </span>
+              <p className="text-sm mt-1">{content.photos[lightbox].caption}</p>
+            </figcaption>
+          </figure>
+        </div>
+      )}
     </section>
   )
 }
