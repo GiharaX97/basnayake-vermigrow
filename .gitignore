@@ -59,3 +59,6 @@ prompt
 server.log
 # Skills directory
 /skills/
+# live SQLite DB (client content + hashes) — never push
+db/custom.db
+db/*.db-*

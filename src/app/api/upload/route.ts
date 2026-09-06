@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
+import { uploadsDir } from '@/lib/uploads'
 
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
   const bytes = await file.arrayBuffer()
   const buffer = Buffer.from(bytes)
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads')
+  const uploadDir = uploadsDir()
 
   await mkdir(uploadDir, { recursive: true })
   await writeFile(path.join(uploadDir, filename), buffer)

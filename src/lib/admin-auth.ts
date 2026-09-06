@@ -36,7 +36,10 @@ export async function setAdminCookie() {
   const cookieStore = await cookies()
   cookieStore.set(ADMIN_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    // Mark Secure only when we are actually behind HTTPS (NEXTAUTH_URL is the
+    // public URL). Not tied to NODE_ENV: on the IP-only staging phase the site
+    // is served over plain HTTP, and a Secure cookie would never be sent back.
+    secure: (process.env.NEXTAUTH_URL ?? '').startsWith('https://'),
     sameSite: 'lax',
     maxAge: SESSION_DURATION,
     path: '/',

@@ -13,7 +13,7 @@ export function NoticeBoard() {
   if (notices.length === 0) return null
 
   return (
-    <section id="notices" className="py-10 md:py-14 bg-gradient-to-b from-emerald-950 to-emerald-900 text-white scroll-mt-20">
+    <section id="notices" className="py-10 md:py-14 bg-gradient-to-b from-emerald-950 to-emerald-900 text-white scroll-mt-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mb-8">
           <span className="text-xs font-semibold uppercase tracking-widest text-emerald-400">

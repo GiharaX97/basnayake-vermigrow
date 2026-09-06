@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server'
 import { readdir, stat, unlink } from 'fs/promises'
 import path from 'path'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
+import { uploadsDir } from '@/lib/uploads'
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads')
+  const uploadDir = uploadsDir()
   try {
     const files = await readdir(uploadDir)
     const items = await Promise.all(
@@ -41,7 +42,7 @@ export async function DELETE(request: Request) {
   if (!filename) {
     return NextResponse.json({ error: 'No filename provided' }, { status: 400 })
   }
-  const filePath = path.join(process.cwd(), 'public', 'uploads', path.basename(filename))
+  const filePath = path.join(uploadsDir(), path.basename(filename))
   try {
     await unlink(filePath)
     return NextResponse.json({ success: true })

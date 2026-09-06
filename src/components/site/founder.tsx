@@ -9,7 +9,7 @@ export function Founder() {
   const founder = content.founder
 
   return (
-    <section id="founder" className="py-20 md:py-28 bg-gradient-to-b from-emerald-50/50 to-white dark:from-emerald-950/10 dark:to-background border-y border-border/60 scroll-mt-20">
+    <section id="founder" className="py-20 md:py-28 bg-gradient-to-b from-emerald-50/50 to-white dark:from-emerald-950/10 dark:to-background border-y border-border/60 scroll-mt-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="max-w-2xl mb-12">

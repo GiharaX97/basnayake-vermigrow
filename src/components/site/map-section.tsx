@@ -21,17 +21,40 @@ export function MapSection() {
   React.useEffect(() => {
     if (typeof window === 'undefined') return
 
+    const container = mapRef.current
+
+    // Wheel-zoom is OFF until the visitor deliberately clicks/taps the map, so
+    // scrolling the page is never hijacked while the cursor is over the map.
+    // Arming is revoked as soon as the pointer leaves the map (or clicks outside).
+    const armWheelZoom = () => {
+      const map = mapInstanceRef.current
+      if (map) map.scrollWheelZoom.enable()
+    }
+    const disarmWheelZoom = () => {
+      const map = mapInstanceRef.current
+      if (map) map.scrollWheelZoom.disable()
+    }
+    const onDocPointerDown = (e: Event) => {
+      const target = e.target as Node | null
+      if (container && target && !container.contains(target)) disarmWheelZoom()
+    }
+
+    container?.addEventListener('mouseleave', disarmWheelZoom)
+    document.addEventListener('pointerdown', onDocPointerDown)
+
     const initMap = async () => {
       const L = await import('leaflet')
       await import('leaflet/dist/leaflet.css')
 
       if (mapInstanceRef.current) return
 
-      const map = L.map(mapRef.current!, {
+      const map = L.map(container!, {
         center: [7.5, 80.7],
         zoom: 8,
-        scrollWheelZoom: true,
+        scrollWheelZoom: false,
       })
+
+      map.on('click', armWheelZoom)
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -75,6 +98,8 @@ export function MapSection() {
     initMap()
 
     return () => {
+      container?.removeEventListener('mouseleave', disarmWheelZoom)
+      document.removeEventListener('pointerdown', onDocPointerDown)
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null
@@ -83,7 +108,7 @@ export function MapSection() {
   }, [content.mapLocations])
 
   return (
-    <section id="map" className="py-20 md:py-28 bg-muted/30 border-y border-border/60 scroll-mt-20">
+    <section id="map" className="py-20 md:py-28 bg-muted/30 border-y border-border/60 scroll-mt-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mb-12">
           <span className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
@@ -99,7 +124,9 @@ export function MapSection() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div ref={mapRef} className="w-full h-[500px] rounded-2xl overflow-hidden border border-border/60 shadow-lg" />
+        {/* relative z-0 traps Leaflet's internal panes (z-index up to 1000) inside this
+            stacking context so the map can never paint over the fixed ticker/navbar above. */}
+        <div ref={mapRef} className="relative z-0 w-full h-[500px] rounded-2xl overflow-hidden border border-border/60 shadow-lg" />
       </div>
     </section>
   )

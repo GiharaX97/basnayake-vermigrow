@@ -116,9 +116,10 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Anchor offset lives on each section's scroll-mt-* so it's a single source
+     of truth sized to clear the fixed notice ticker (~44px) + navbar (64px). */
   html {
     scroll-behavior: smooth;
-    scroll-padding-top: 5rem;
   }
   body {
     @apply bg-background text-foreground;

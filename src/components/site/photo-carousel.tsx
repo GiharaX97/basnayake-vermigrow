@@ -32,7 +32,7 @@ export function PhotoCarousel() {
   }, [lightbox, api])
 
   return (
-    <section id="photos" className="py-20 md:py-28 scroll-mt-20">
+    <section id="photos" className="py-20 md:py-28 scroll-mt-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
           <div className="max-w-2xl">

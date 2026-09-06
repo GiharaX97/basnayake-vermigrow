@@ -13,7 +13,7 @@ export function EventGallery() {
   if (photos.length === 0) return null
 
   return (
-    <section id="events" className="py-20 md:py-28 scroll-mt-20">
+    <section id="events" className="py-20 md:py-28 scroll-mt-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mb-12">
           <span className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
