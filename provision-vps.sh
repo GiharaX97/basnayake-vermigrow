@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Basnayaka VermiGrow — Ubuntu 24.04 VPS provisioner + deployer
+# Basnayaka VermiGrow — Ubuntu 24.04 VPS provisioner (fresh server bootstrap)
 #
-# Run ON the fresh VPS, as root, from the directory that contains package.json:
+# Run ON a fresh VPS, as root, from inside the git clone (repo root has
+# package.json + the server config files):
 #
 #     sudo bash provision-vps.sh
 #
-# Overrides:
-#   DOMAIN=www.example.lk   sudo bash provision-vps.sh   (default: basnayakavermigrow.lk)
-#   UFW_ENABLE=1            sudo bash provision-vps.sh   (also enables firewall)
+# Canonical public host is www:  https://www.basnayakavermigrow.lk
+# (apex redirects to www via Caddy). DNS must point BOTH of these at the VPS:
+#     basnayakavermigrow.lk  A  <server IP>
+#     www.basnayakavermigrow.lk  A  <server IP>
 #
-# Expected upload layout (see LAUNCH-PLAN.md):
-#   /var/www/basnayakavermigrow/app/{package.json, prisma, src, public, db/custom.db, ...}
+# Expected layout (matches deploy-vermigrow.sh):
+#   /var/www/basnayakavermigrow/app/{package.json, prisma, src, public,
+#                                     db/custom.db, Caddyfile.production,
+#                                     basnayaka.service, deploy-vermigrow.sh, ...}
+# The repo is the single source of truth for code + config. Data (db, uploads)
+# and the real env file (/etc/basnayakavermigrow.env) live outside git.
 # =============================================================================
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 DOMAIN="${DOMAIN:-basnayakavermigrow.lk}"
+PUBLIC_URL="https://www.${DOMAIN}"
 BASE="/var/www/basnayakavermigrow"
 DB_DIR="$BASE/db"
 DB_FILE="$DB_DIR/custom.db"
@@ -29,7 +36,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 if [ ! -f "$APP_DIR/package.json" ]; then
-  echo "package.json not found in $APP_DIR. Run this script from the uploaded source dir."
+  echo "package.json not found in $APP_DIR. Run this script from the git clone root."
   exit 1
 fi
 
@@ -60,17 +67,17 @@ if [ ! -f "$DB_FILE" ] && [ -f "$APP_DIR/db/custom.db" ]; then
   cp "$APP_DIR/db/custom.db" "$DB_FILE"
   log "2/10" "DB copied from source → $DB_FILE"
 else
-  warn "Using existing DB at $DB_FILE (if missing, upload db/custom.db first)."
+  warn "Using existing DB at $DB_FILE (if missing, restore db/custom.db into the repo first)."
 fi
 
-log "3/10" "Environment file (/etc/basnayakavermigrow.env)"
+log "3/10" "Environment file (/etc/basnayakavermigrow.env, server-local)"
 umask 077
 cat > /etc/basnayakavermigrow.env <<EOF
 NODE_ENV="production"
 PORT="3001"
 HOSTNAME="127.0.0.1"
 DATABASE_URL="file:${DB_FILE}"
-NEXTAUTH_URL="https://${DOMAIN}"
+NEXTAUTH_URL="${PUBLIC_URL}"
 NEXTAUTH_SECRET="$(openssl rand -base64 32)"
 EOF
 chmod 600 /etc/basnayakavermigrow.env
@@ -78,10 +85,10 @@ warn "Secrets generated. ADMIN_PASSWORD is NOT set — the bundled DB already ha
 
 log "4/10" "npm ci + Prisma"
 cd "$APP_DIR"
-export NEXTAUTH_URL="https://$DOMAIN"
+export NEXTAUTH_URL="$PUBLIC_URL"
 export DATABASE_URL="file:$DB_FILE"
 export NEXT_TELEMETRY_DISABLED=1
-npm ci --no-audit --no-fund
+npm ci --include=dev --no-audit --no-fund
 npx prisma generate
 npx prisma db push --skip-generate
 
@@ -95,48 +102,19 @@ cp -r public .next/standalone/
 mkdir -p .next/standalone/public/uploads
 chown -R www-data:www-data "$APP_DIR/.next/standalone" "$DB_DIR"
 
-log "7/10" "systemd unit"
-cat > /etc/systemd/system/basnayaka.service <<EOF
-[Unit]
-Description=Basnayaka VermiGrow (Next.js standalone)
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=$APP_DIR/.next/standalone
-EnvironmentFile=/etc/basnayakavermigrow.env
-ExecStart=/usr/bin/node server.js
-Restart=always
-RestartSec=3
-User=www-data
-Group=www-data
-
-[Install]
-WantedBy=multi-user.target
-EOF
+log "7/10" "systemd unit (from repo: basnayaka.service)"
+install -m 0644 "$APP_DIR/basnayaka.service" /etc/systemd/system/basnayaka.service
 systemctl daemon-reload
 systemctl enable --now basnayaka
 
-log "8/10" "Caddy config (auto-HTTPS for $DOMAIN + www redirect)"
-cat > /etc/caddy/Caddyfile <<EOF
-$DOMAIN {
-	reverse_proxy 127.0.0.1:3001
-	encode gzip zstd
-	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-	}
-	@uploads path /uploads/*
-	header @uploads Cache-Control "public, max-age=604800"
-}
-www.$DOMAIN {
-	redir https://$DOMAIN{uri} permanent
-}
-EOF
-if systemctl list-unit-files 2>/dev/null | grep -q '^caddy.service'; then
-  systemctl restart caddy
-else
-  (caddy start --config /etc/caddy/Caddyfile >/dev/null 2>&1 || warn "caddy start failed — check DNS & run again") || true
-fi
+log "8/10" "Caddy config (from repo: Caddyfile.production -> auto-HTTPS)"
+install -m 0644 "$APP_DIR/Caddyfile.production" /etc/caddy/Caddyfile
+caddy validate --config /etc/caddy/Caddyfile
+systemctl restart caddy
+
+log "8b/10" "Deploy script -> /usr/local/bin/deploy-vermigrow"
+install -m 0755 "$APP_DIR/deploy-vermigrow.sh" /usr/local/bin/deploy-vermigrow
+echo "Run 'sudo deploy-vermigrow' after every 'git push' to update the server."
 
 log "9/10" "Firewall (80/443/22)"
 ufw allow 22/tcp >/dev/null 2>&1 || true
@@ -160,12 +138,13 @@ echo ""
 echo "=============================================================="
 echo " Server IP:     $(hostname -I | awk '{print $1}')"
 echo " App:           http://127.0.0.1:3001 (behind Caddy)"
-echo " Public URL:    https://$DOMAIN   (once DNS A record points here)"
-echo " Admin:         https://$DOMAIN/admin/login"
+echo " Public URL:    $PUBLIC_URL   (once DNS below points here)"
+echo " Admin:         $PUBLIC_URL/admin/login"
 echo " Logs:          journalctl -u basnayaka -f"
 echo " Admin password: see SECRETS.local.md (change on first login)"
 echo ""
-echo " NEXT: add these DNS records at your registrar:"
-echo "   $DOMAIN        A   $(hostname -I | awk '{print $1}')"
-echo "   www.$DOMAIN    A   $(hostname -I | awk '{print $1}')"
+echo " NEXT: add these DNS records at clouDNS (zone basnayakavermigrow.lk):"
+echo "   www.${DOMAIN}    A   $(hostname -I | awk '{print $1}')"
+echo "   ${DOMAIN}        A   $(hostname -I | awk '{print $1}')   (redirects to www)"
+echo " Then:  sudo deploy-vermigrow"
 echo "=============================================================="

@@ -1,26 +1,42 @@
-# Basnayaka VermiGrow — Production Caddyfile (auto-HTTPS)
-# Installed to /etc/caddy/Caddyfile by provision-vps.sh.
-# DNS must already point the domain(s) at this VPS before Caddy can issue certs.
+# Basnayaka VermiGrow — PRODUCTION Caddyfile (canonical host: www)
+# Source of truth. deploy-vermigrow.sh installs this to /etc/caddy/Caddyfile
+# (after `caddy validate`) and reloads Caddy. DNS must point the names below
+# at this VPS before Caddy can issue certs (auto-HTTPS / Let's Encrypt).
 
-# Canonical host: apex domain.
-basnayakavermigrow.lk {
-	reverse_proxy 127.0.0.1:3001
-
+# Canonical host — serves the app.
+www.basnayakavermigrow.lk {
 	encode gzip zstd
 
-	header {
-		# Enable HSTS only AFTER the first cert successfully issues.
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-		# -X-Content-Type-Options / X-Frame-Options are set by Next.js headers too;
-		# Caddy can reinforce them if the app headers ever get removed.
+	# Admin uploads are stored off-app and served straight from disk, so new
+	# files appear immediately (no restart) and survive redeploys.
+	handle_path /uploads/* {
+		root * /var/www/basnayakavermigrow/uploads
+		file_server
 	}
 
-	# Long cache for user-uploaded media (admin adds files under /uploads/*)
-	@uploads path /uploads/*
-	header @uploads Cache-Control "public, max-age=604800"
+	handle {
+		reverse_proxy 127.0.0.1:3001
+	}
 }
 
-# Redirect www to the apex domain (avoids duplicate-content SEO).
-www.basnayakavermigrow.lk {
-	redir https://basnayakavermigrow.lk{uri} permanent
+# Apex -> www (one canonical URL; avoids duplicate content). Keep in sync with
+# NEXTAUTH_URL in /etc/basnayakavermigrow.env, which must be https://www...
+basnayakavermigrow.lk {
+	redir https://www.basnayakavermigrow.lk{uri} permanent
+}
+
+# Diagnostics only: plain-http on the server IP. Admin needs https (cookie is
+# Secure), so use the domain — this block is just a public-page fallback while
+# DNS is being moved / for server-side checks.
+http://161.97.120.230 {
+	encode gzip zstd
+
+	handle_path /uploads/* {
+		root * /var/www/basnayakavermigrow/uploads
+		file_server
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:3001
+	}
 }

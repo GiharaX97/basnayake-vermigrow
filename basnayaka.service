@@ -1,0 +1,20 @@
+# Basnayaka VermiGrow — systemd unit (Next.js standalone)
+# Source of truth. deploy-vermigrow.sh installs this to
+# /etc/systemd/system/basnayaka.service and runs daemon-reload.
+# Runtime env comes from /etc/basnayakavermigrow.env (server-local, NOT in git).
+[Unit]
+Description=Basnayaka VermiGrow (Next.js standalone)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/basnayakavermigrow/app/.next/standalone
+EnvironmentFile=/etc/basnayakavermigrow.env
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target
