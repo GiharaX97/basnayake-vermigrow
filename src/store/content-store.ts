@@ -18,6 +18,7 @@ export { defaultContent } from '@/lib/content-defaults'
 
 // ---------- Types ----------
 import type { SiteContent } from '@/lib/content-defaults'
+import { deepMergeDefaults } from '@/lib/content-defaults'
 import { defaultContent } from '@/lib/content-defaults'
 
 // ---------- Store ----------
@@ -79,21 +80,9 @@ export const useContentStore = create<ContentState>()(
               }))
               delete data.services
             }
-            // Merge with defaults first so missing fields keep their defaults
-            const merged = { ...defaultContent, ...data }
-            // Then ensure all array fields exist (but only override if they exist in data and aren't arrays)
-            if (merged.products && !Array.isArray(merged.products)) merged.products = []
-            if (merged.heroSlides && !Array.isArray(merged.heroSlides)) merged.heroSlides = []
-            if (merged.photos && !Array.isArray(merged.photos)) merged.photos = []
-            if (merged.videos && !Array.isArray(merged.videos)) merged.videos = []
-            if (merged.projects && !Array.isArray(merged.projects)) merged.projects = []
-            if (merged.stats && !Array.isArray(merged.stats)) merged.stats = []
-            if (merged.socials && !Array.isArray(merged.socials)) merged.socials = []
-            if (merged.mapLocations && !Array.isArray(merged.mapLocations)) merged.mapLocations = []
-            if (merged.notices && !Array.isArray(merged.notices)) merged.notices = []
-            if (merged.eventPhotos && !Array.isArray(merged.eventPhotos)) merged.eventPhotos = []
-            if (merged.trainingPhotos && !Array.isArray(merged.trainingPhotos)) merged.trainingPhotos = []
-            if (merged.trainingVideos && !Array.isArray(merged.trainingVideos)) merged.trainingVideos = []
+            // Deep-merge with defaults so missing fields (older blobs saved
+            // before newer sections were added) keep their defaults
+            const merged = deepMergeDefaults(defaultContent, data)
             set({ content: merged, loaded: true })
           } else {
             await fetch('/api/content', {

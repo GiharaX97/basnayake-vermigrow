@@ -406,3 +406,29 @@ export const defaultContent: SiteContent = {
     },
   ],
 }
+
+/**
+ * Fill any keys missing in `stored` from `defaults`, recursively.
+ * Stored values always win when present; arrays are taken or left whole
+ * (never concatenated) and fall back to the default if they aren't arrays.
+ * Older content blobs saved before newer sections were added (map, notices,
+ * events, training…) are missing those keys — without this, the admin editor
+ * crashes on `content.<section>.map` and nested fields like
+ * `founder.achievements` can be undefined too.
+ */
+export function deepMergeDefaults<T>(defaults: T, stored: unknown): T {
+  if (Array.isArray(defaults)) {
+    return (Array.isArray(stored) ? stored : defaults) as T
+  }
+  if (defaults !== null && typeof defaults === 'object') {
+    if (stored === null || typeof stored !== 'object' || Array.isArray(stored)) {
+      return (stored === undefined || stored === null ? defaults : stored) as T
+    }
+    const out: Record<string, unknown> = { ...stored }
+    for (const [key, defVal] of Object.entries(defaults as Record<string, unknown>)) {
+      out[key] = deepMergeDefaults(defVal, (stored as Record<string, unknown>)[key])
+    }
+    return out as T
+  }
+  return (stored === undefined ? defaults : stored) as T
+}

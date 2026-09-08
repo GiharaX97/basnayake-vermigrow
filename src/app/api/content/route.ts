@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { getContent, saveContent } from '@/lib/content-service'
-import { defaultContent } from '@/lib/content-defaults'
+import { defaultContent, deepMergeDefaults } from '@/lib/content-defaults'
 
 export async function GET() {
   let data = await getContent()
@@ -10,7 +10,15 @@ export async function GET() {
     await saveContent(JSON.stringify(defaultContent))
     data = JSON.stringify(defaultContent)
   }
-  return NextResponse.json(JSON.parse(data))
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(data)
+  } catch {
+    // Corrupt blob — serve defaults rather than crashing the admin editor
+    parsed = defaultContent
+  }
+  // Fill keys missing from older blobs (sections added after the last save)
+  return NextResponse.json(deepMergeDefaults(defaultContent, parsed))
 }
 
 export async function POST(request: Request) {
