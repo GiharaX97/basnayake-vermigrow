@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { getContent, saveContent } from '@/lib/content-service'
 import { defaultContent, deepMergeDefaults } from '@/lib/content-defaults'
@@ -31,5 +32,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid content data' }, { status: 400 })
   }
   await saveContent(JSON.stringify(body))
+  // The root layout is cached (revalidate = 300), so without this an edit would
+  // sit behind that window. 'layout' invalidates the layout and every page
+  // beneath it. In a Route Handler this marks the path rather than rebuilding
+  // now, so the new content is served on the next visit.
+  revalidatePath('/', 'layout')
   return NextResponse.json({ success: true })
 }

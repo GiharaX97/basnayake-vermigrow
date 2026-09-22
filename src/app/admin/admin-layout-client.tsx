@@ -13,19 +13,35 @@ import {
   MessageSquare,
   Image,
   ChevronRight,
+  HeartHandshake,
+  Warehouse,
+  Package,
 } from 'lucide-react'
 
+/**
+ * `short` is what the mobile bottom nav renders. That bar divides the full width
+ * between its items with no wrapping, so adding Catalog took it to 8 — the point
+ * where the longest labels ("Content Editor", "Media Library") start colliding
+ * at a 360px viewport. An explicit short label beats shrinking the font until
+ * nothing fits.
+ */
 const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/content', label: 'Content Editor', icon: FileText },
-  { href: '/admin/inquiries', label: 'Inquiries', icon: MessageSquare },
-  { href: '/admin/media', label: 'Media Library', icon: Image },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/admin', label: 'Dashboard', short: 'Home', icon: LayoutDashboard },
+  { href: '/admin/content', label: 'Content Editor', short: 'Content', icon: FileText },
+  { href: '/admin/warehouse', label: 'Warehouse', short: 'Warehouse', icon: Warehouse },
+  { href: '/admin/catalog', label: 'Catalog', short: 'Catalog', icon: Package },
+  { href: '/admin/donations', label: 'Donations', short: 'Donations', icon: HeartHandshake },
+  { href: '/admin/inquiries', label: 'Inquiries', short: 'Inquiries', icon: MessageSquare },
+  { href: '/admin/media', label: 'Media Library', short: 'Media', icon: Image },
+  { href: '/admin/settings', label: 'Settings', short: 'Settings', icon: Settings },
 ]
 
 const breadcrumbLabels: Record<string, string> = {
   '/admin': 'Dashboard',
   '/admin/content': 'Content Editor',
+  '/admin/warehouse': 'Warehouse',
+  '/admin/catalog': 'Catalog',
+  '/admin/donations': 'Donations',
   '/admin/inquiries': 'Inquiries',
   '/admin/media': 'Media Library',
   '/admin/settings': 'Settings',
@@ -149,14 +165,16 @@ export default function AdminLayoutClient({
             <Link
               key={item.href}
               href={item.href}
-              className={`flex-1 flex flex-col items-center justify-center min-h-[60px] text-[10px] gap-0.5 transition-colors ${
+              className={`flex-1 min-w-0 flex flex-col items-center justify-center min-h-[60px] text-[9px] gap-0.5 px-0.5 transition-colors ${
                 active
                   ? 'text-emerald-600'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Icon className={`h-5 w-5 ${active ? 'text-emerald-600' : ''}`} />
-              <span className={active ? 'font-medium' : ''}>{item.label}</span>
+              <Icon className={`h-5 w-5 shrink-0 ${active ? 'text-emerald-600' : ''}`} />
+              <span className={`w-full text-center truncate ${active ? 'font-medium' : ''}`}>
+                {item.short}
+              </span>
             </Link>
           )
         })}

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Film, Camera, Palette, Sprout, Recycle, Leaf, Droplets, ShoppingBag, Star, type LucideIcon } from 'lucide-react'
 import { useContentStore } from '@/store/content-store'
 import { Button } from '@/components/ui/button'
@@ -69,10 +70,14 @@ export function Services() {
                   className="mt-4 w-full rounded-full bg-emerald-500 hover:bg-emerald-600 text-white gap-2"
                   asChild
                 >
-                  <a href={`#contact?product=${encodeURIComponent(product.title)}`}>
+                  {/* Was `#contact?product=<title>`, which silently did nothing:
+                      a fragment link leaves `location.search` empty, so the
+                      contact form's prefill never fired. It now goes to the real
+                      ordering page, where the item can actually be chosen. */}
+                  <Link href="/order">
                     <ShoppingBag className="h-4 w-4" />
                     Order now
-                  </a>
+                  </Link>
                 </Button>
               </div>
             )

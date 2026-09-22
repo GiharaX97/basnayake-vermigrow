@@ -40,6 +40,17 @@ SECRETS*.local.md
 db/*.bak
 .mimocode/
 
+# DB snapshots taken before a migration or a test run, and the throwaway copy
+# the end-to-end tests mutate. `db/*.db-*` above does NOT cover these — that
+# pattern only matches SQLite's own sidecars (custom.db-journal).
+db/*.backup-*
+db/verify.db
+
+# Scratch dirs and dumped agent transcripts. Both have turned up untracked in
+# the repo root before; nothing here is source.
+.tmp-*/
+20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*.txt
+
 # vercel
 .vercel
 

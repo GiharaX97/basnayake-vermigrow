@@ -44,9 +44,11 @@ case "${NEXTAUTH_URL:-}" in
 esac
 echo "  NEXTAUTH_URL=$NEXTAUTH_URL"
 
-echo "[4/7] npm ci + prisma generate"
+echo "[4/7] npm ci + prisma generate + db push"
 npm ci --include=dev --no-audit --no-fund --loglevel=error
 npx prisma generate
+# Apply schema changes (additive — creates new tables like Product/Sale/Donor)
+npx prisma db push
 
 echo "[5/7] build (public URL baked: $NEXTAUTH_URL)"
 npm run build

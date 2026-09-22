@@ -1,6 +1,3 @@
-'use client'
-
-import { useEffect } from 'react'
 import { Navbar } from '@/components/site/navbar'
 import { NoticeTicker } from '@/components/site/notice-ticker'
 import { NoticeBoard } from '@/components/site/notice-board'
@@ -18,18 +15,32 @@ import { Projects } from '@/components/site/projects'
 import { Founder } from '@/components/site/founder'
 import { Contact } from '@/components/site/contact'
 import { Footer } from '@/components/site/footer'
-import { LoadingOverlay } from '@/components/site/loading-overlay'
-import { useContentStore } from '@/store/content-store'
+import { readSiteContent } from '@/lib/content-service'
+import { buildSiteJsonLd, serializeJsonLd } from '@/lib/structured-data'
 
-export default function Home() {
-  const loadFromServer = useContentStore((s) => s.loadFromServer)
-
-  useEffect(() => {
-    loadFromServer()
-  }, [loadFromServer])
+/**
+ * A server component on purpose.
+ *
+ * This page used to be `'use client'` and fetched its content in a `useEffect`,
+ * which meant the HTML crawlers received contained the hardcoded `defaultContent`
+ * — every edit made in `/admin/content` reached the browser only after hydration.
+ * Rendering on the server puts the CMS content in the HTML itself.
+ *
+ * The sections are all still client components (they use effects, carousels and
+ * maps); a server component is free to render them, so no client boundary moved.
+ */
+export default async function Home() {
+  const content = await readSiteContent()
+  const origin = process.env.NEXTAUTH_URL || 'https://basnayakavermigrow.lk'
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(buildSiteJsonLd(content, origin)),
+        }}
+      />
       <NoticeTicker />
       <Navbar />
       <main className="flex-1">
@@ -49,9 +60,6 @@ export default function Home() {
         <Contact />
       </main>
       <Footer />
-
-      {/* Loading overlay (hidden once content loads from server) */}
-      <LoadingOverlay />
     </div>
   )
 }

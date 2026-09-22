@@ -134,3 +134,72 @@
     overflow: hidden;
   }
 }
+
+/* Donor wall — vertical auto-scroll. The list is rendered twice and shifted
+   by half its height for a seamless loop. */
+@keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.marquee-track {
+  animation: marquee-vertical 30s linear infinite;
+}
+
+.marquee-track:hover,
+.marquee-track:focus-within {
+  animation-play-state: paused;
+}
+
+/* QR sticker sheet printing: only the sheet, flowing across pages.
+   Fixed/absolute-positioned boxes never paginate (they clip), so the dialog is
+   un-fixed for print and cells become atomic inline-blocks — a row of stickers
+   moves to the next page whole instead of being sliced mid-QR. */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+  /* Hide the app page (display, not visibility — hidden-but-laid-out blocks
+     would only push blank pages ahead of the sheet). The Radix dialog portal
+     is a direct child of <body>, everything else goes. */
+  body > *:not([data-slot="dialog-portal"]) {
+    display: none !important;
+  }
+  [data-slot="dialog-overlay"],
+  [data-slot="dialog-content"] > * {
+    display: none !important;
+  }
+  /* Un-hide and un-fix only a dialog that holds a sticker sheet. */
+  [data-slot="dialog-content"]:has(> .print-sheet) {
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  [data-slot="dialog-content"]:has(> .print-sheet) > .print-sheet {
+    display: block !important;
+  }
+  .print-sheet > div {
+    display: inline-block !important;
+    width: 46mm !important;
+    margin: 0 2mm 2mm 0 !important;
+    vertical-align: top !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  .print-sheet img {
+    width: 42mm !important;
+    height: 42mm !important;
+  }
+}

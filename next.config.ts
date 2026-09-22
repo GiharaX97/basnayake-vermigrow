@@ -31,6 +31,26 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // Customer receipts (/r/<token>) — personal data on a public URL.
+        //
+        // This entry comes SECOND on purpose. Next applies every matching rule
+        // and a later value for the same header key wins, so listing it after the
+        // catch-all is what makes `no-referrer` override the site-wide
+        // `strict-origin-when-cross-origin`. Do not reorder these two.
+        //
+        // noindex via header rather than only via the page's metadata, because
+        // the header also covers the Server Action endpoint and any future file
+        // added under /r/. robots.txt deliberately does NOT list /r/ — a
+        // Disallow line would advertise the path and, paradoxically, be ignored
+        // by the crawlers that matter here.
+        source: "/r/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store, private" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, nosnippet" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      },
     ];
   },
 };

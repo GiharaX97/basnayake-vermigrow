@@ -133,6 +133,10 @@ interface SiteContent {
   eventPhotos: PhotoItem[]
   trainingPhotos: PhotoItem[]
   trainingVideos: VideoCard[]
+  /** Read by the root layout's generateMetadata() — blank falls back to a built-in default. */
+  seoTitle?: string
+  seoDescription?: string
+  ogImage?: string
 }
 
 let idCounter = 100
@@ -260,6 +264,7 @@ export default function ContentEditor() {
           <TabsTrigger value="notices">Notices</TabsTrigger>
           <TabsTrigger value="founder">Founder</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
+          <TabsTrigger value="seo">SEO</TabsTrigger>
         </TabsList>
 
         {/* General */}
@@ -942,6 +947,53 @@ export default function ContentEditor() {
                   </Button>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* SEO — feeds <title>, the meta description and the social share image */}
+        <TabsContent value="seo" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader><CardTitle>Search & Social</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                These control how the site appears in Google results and when a link is
+                shared. Leave any of them blank to fall back to the built-in default.
+              </p>
+              <div className="space-y-2">
+                <Label>Page Title</Label>
+                <Input
+                  value={content.seoTitle || ''}
+                  onChange={(e) => update('seoTitle', e.target.value)}
+                  placeholder="Basnayaka VermiGrow — Organic Fertilizer & Vegetables, Karandeniya"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Keep it under about 60 characters, or Google truncates it.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Meta Description</Label>
+                <Textarea
+                  rows={4}
+                  value={content.seoDescription || ''}
+                  onChange={(e) => update('seoDescription', e.target.value)}
+                  placeholder="A family-run organic farm in Karandeniya, Sri Lanka..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Aim for roughly 150–160 characters. This is the grey text under the title.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Social Share Image</Label>
+                <FileUpload
+                  currentUrl={content.ogImage || ''}
+                  onUpload={(url) => update('ogImage', url)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown when the site is shared on Facebook or WhatsApp. A wide image
+                  works best (about 1200×630). Also used as the logo in search results.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -7,16 +7,18 @@ import { useContentStore } from '@/store/content-store'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { label: 'Work', href: '#work' },
-  { label: 'Products', href: '#products' },
-  { label: 'Map', href: '#map' },
-  { label: 'Photos', href: '#photos' },
-  { label: 'Events', href: '#events' },
-  { label: 'Training', href: '#training' },
-  { label: 'Videos', href: '#videos' },
-  { label: 'About', href: '#about' },
-  { label: 'Founder', href: '#founder' },
-  { label: 'Contact', href: '#contact' },
+  { label: 'Work', href: '/#work' },
+  { label: 'Products', href: '/#products' },
+  { label: 'Map', href: '/#map' },
+  { label: 'Photos', href: '/#photos' },
+  { label: 'Events', href: '/#events' },
+  { label: 'Training', href: '/#training' },
+  { label: 'Videos', href: '/#videos' },
+  { label: 'About', href: '/#about' },
+  { label: 'Founder', href: '/#founder' },
+  { label: 'Contact', href: '/#contact' },
+  { label: 'Order', href: '/order' },
+  { label: 'Donations', href: '/donations' },
 ]
 
 export function Navbar() {
@@ -47,7 +49,9 @@ export function Navbar() {
       )}
     >
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <a href="#top" className="flex items-center gap-2.5 group">
+        {/* `/`, not `#top`: the `#top` anchor only exists in the home page hero,
+            so on /order or /donations this link did nothing at all. */}
+        <a href="/" className="flex items-center gap-2.5 group">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/95 backdrop-blur-sm shadow-sm overflow-hidden">
             <img
               src="/logos/logo-main.png"

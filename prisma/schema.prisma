@@ -8,9 +8,9 @@ datasource db {
 }
 
 model SiteContent {
-  id      String @id @default(cuid())
-  key     String @unique
-  value   String
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
   updatedAt DateTime @updatedAt
 }
 
@@ -28,11 +28,325 @@ model AdminUser {
 }
 
 model Inquiry {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
   email     String
   message   String
-  status    String   @default("unread")
-  createdAt DateTime @default(now())
+  status    String    @default("unread")
+  createdAt DateTime  @default(now())
   readAt    DateTime?
+}
+
+// A catalog item: a physical good (fertilizer, worms, ...) or a paid service
+// (workshop / training program), told apart by `kind`.
+//
+// Donation program: every item contributes donationPerUnit (LKR) per unit sold
+// — products and services alike. It is snapshotted onto Sale/Pack at entry, so
+// editing a rate here never rewrites history.
+//
+// Column-adding behaviour on SQLite, measured 2026-09-20 against a copy of the
+// live DB (Prisma 6.19.3) rather than assumed — the two cases are NOT the same:
+//   - NULLABLE column            => plain `ALTER TABLE ... ADD COLUMN`.
+//   - NOT NULL DEFAULT column    => full table redefine (CREATE new_Product /
+//     INSERT..SELECT / DROP / RENAME). A DB-level default does NOT make it an
+//     ADD COLUMN, contrary to the obvious guess.
+// The redefine is data-preserving and does NOT trip the data-loss gate: `db
+// push` exited 0 with non-TTY stdin, PRAGMA foreign_key_check was clean, and all
+// rows plus the LKR 180 public total survived. So NOT NULL DEFAULT is safe here,
+// but it rewrites the table — prefer nullable unless the default is real.
+//
+// Do NOT add a unique constraint to this table (e.g. a `slug @unique`): the gate
+// rejects added uniques on an EXISTING table, and deploy-vermigrow.sh runs a bare
+// `db push` under `set -euo pipefail` in a non-TTY, so the deploy would abort
+// rather than prompt. (A unique on a NEW table is fine — FundEntry relies on it.)
+model Product {
+  id              String    @id @default(cuid())
+  name            String
+  kind            String    @default("product") // 'product' | 'service' — no SQLite enums
+  price           Float     @default(0) // LKR per unit; <= 0 => not orderable online
+  unit            String    @default("") // 'per kg', 'per seat', 'per pack'
+  description     String    @default("")
+  imageUrl        String?
+  donationPerUnit Float     @default(20)
+  eventDate       DateTime? // service only; null => enroll-anytime program
+  location        String? // service only; where the workshop is held
+  capacity        Int? // service only; null => unlimited seats
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  sales           Sale[]
+  packs           Pack[]
+}
+
+// One trackable sellable unit with a unique QR code: a physical pack, or a
+// single workshop seat (a voucher). donationAmount is snapshotted at creation
+// so later rate edits don't rewrite history (same as Sale).
+//
+// Lifecycle depends on product.kind:
+//   product: in_warehouse -> dispatched -> sold  (first QR scan) — unchanged
+//   service: issued -> redeemed                  (issued when the booking is
+//            paid, redeemed when the voucher is scanned at the workshop)
+//
+// SERVICE VOUCHERS CARRY donationAmount = 0 ON PURPOSE. The donation for a
+// booked seat is carried by its Sale row; a non-zero amount here would count the
+// same seat twice into the public fund. Two independent guards keep vouchers out
+// of the fund maths: this zero, and the fact they never reach status='sold'.
+// Do not "fix" this without re-reading the ledger invariant in FundEntry.
+//
+// saleId / orderRef are plain scalars, deliberately NOT relations: adding a
+// foreign key to an existing SQLite table forces a full table redefinition on
+// `db push`, which is exactly what the deploy path cannot survive.
+model Pack {
+  id             String      @id @default(cuid())
+  code           String      @unique
+  productId      String
+  product        Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+  donationAmount Float
+  status         String      @default("in_warehouse")
+  dispatchId     String?
+  dispatch       Dispatch?   @relation(fields: [dispatchId], references: [id])
+  dispatchedAt   DateTime?
+  soldAt         DateTime?
+  deliveredAt    DateTime? // unit handed over / service given
+  redeemedAt     DateTime? // service only: voucher scanned at the workshop
+  holderName     String? // service only: who the seat was issued to
+  holderPhone    String?
+  saleId         String? // the Sale that paid for this unit (no FK — see above)
+  orderRef       String? // groups the units of one online order
+  scanCount      Int         @default(0)
+  donorId        String?     @unique
+  donor          Donor?      @relation("PackDonor", fields: [donorId], references: [id], onDelete: SetNull)
+  createdAt      DateTime    @default(now())
+  scans          ScanEvent[]
+}
+
+// Stock sent from the warehouse to a retailer/store. Own-storefront sales
+// never need a dispatch — the pack sells via scan straight from in_warehouse.
+model Dispatch {
+  id        String   @id @default(cuid())
+  retailer  String
+  note      String?
+  createdAt DateTime @default(now())
+  packs     Pack[]
+}
+
+// One QR scan of a pack. First scan marks the pack sold; further scans are
+// kept for anomaly detection (re-used codes).
+model ScanEvent {
+  id        String   @id @default(cuid())
+  packId    String
+  pack      Pack     @relation(fields: [packId], references: [id], onDelete: Cascade)
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+// One recorded sale (or batch), admin-entered or placed by a customer online.
+// amount + unitPrice are snapshotted at entry so later edits to the product's
+// price/rate never rewrite history.
+//
+// Online orders reuse this row shape rather than adding Order/OrderItem: the
+// donation snapshot then exists BEFORE payment, so "customer paid" is a
+// visibility flip on a row that already carries its amount. A separate Order
+// model would need a second write path minting Sale rows at payment time, and a
+// bug there silently loses or double-counts donation money. A multi-line order
+// is several rows sharing one orderRef, grouped in the read model — the admin UI
+// is order-shaped, the DB stays row-shaped.
+//
+// `retailer` stays REQUIRED on purpose: SQLite cannot drop NOT NULL via ALTER
+// TABLE, so making it optional would rewrite the whole table on a live DB.
+// Online orders write the server-only sentinel 'Online store' (see
+// src/lib/orders.ts) — never accepted from the client. The real buyer lives in
+// the customer* columns.
+model Sale {
+  id             String    @id @default(cuid())
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity       Int // units; SEATS when product.kind = 'service'
+  retailer       String
+  donationAmount Float
+  unitPrice      Float     @default(0) // snapshot of product.price
+  status         String    @default("paid") // 'pending' | 'paid' | 'cancelled'
+  source         String    @default("admin") // 'admin' | 'online'
+  customerName   String?
+  customerPhone  String?
+  customerEmail  String?
+  paymentMethod  String    @default("") // 'cash' | 'bank_transfer' | 'reload' | 'other'
+  paidAt         DateTime?
+  orderRef       String?
+  note           String?
+  payments       Payment[]
+  createdAt      DateTime  @default(now())
+}
+
+// A gift with no purchase. This cannot live on Sale: Sale.productId is required
+// with an onDelete: Restrict FK, so a donation-only customer has no product to
+// point at.
+model Donation {
+  id         String    @id @default(cuid())
+  amount     Float
+  method     String    @default("cash") // 'cash' | 'bank_transfer' | 'reload' | 'other'
+  donorName  String?
+  // Optional, and the only reason it exists is so a giver can be thanked. Nullable
+  // so `db push` emits a plain ALTER TABLE ADD COLUMN — a NOT NULL DEFAULT column
+  // makes Prisma redefine the whole table (measured, see CODEBASE-TREE.md).
+  donorPhone String?
+  note       String?
+  status    String    @default("paid") // 'pending' | 'paid' | 'cancelled'
+  payments  Payment[]
+  createdAt DateTime  @default(now())
+}
+
+// One physical money-receiving event: who handed over what, by which method,
+// against which bank reference, and which admin took it. This is the "record
+// every money-receiving method and event" record.
+//
+// A sale's paid total is the SUM OF ITS PAYMENTS, not a hand-set flag, so
+// partial and split payments (half cash, half transfer) work with no special
+// cases, and Sale.status/paidAt are derived from the aggregate.
+model Payment {
+  id         String    @id @default(cuid())
+  amount     Float
+  method     String    @default("cash")
+  reference  String? // bank slip no. / transaction id
+  receivedBy String? // admin who took the money
+  note       String?
+  receivedAt DateTime  @default(now())
+  saleId     String?
+  sale       Sale?     @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  donationId String?
+  donation   Donation? @relation(fields: [donationId], references: [id], onDelete: SetNull)
+  // The order this receipt settles, for a MULTI-LINE order. A 3-line order is
+  // settled by ONE bank transfer, so it must be ONE Payment row — splitting it
+  // per line would record three receipts where the bank shows one. `saleId`
+  // carries the link only when the order happens to have a single line.
+  orderRef   String?
+  createdAt  DateTime  @default(now())
+}
+
+// The single donation ledger. One row per donation-bearing event, whatever
+// produced it, so the public total is ONE query and adding a channel (e.g.
+// reverse vending machines) is a new `channel` value plus a new writer — no
+// change to the public endpoint, the page, or the admin tiles.
+//
+// channel: 'sale' (an online/admin sale carried it) | 'pack' (a scanned pack
+// carried it) | 'direct' (a gift with no purchase) | 'machine' (reserved).
+//
+// @@unique([channel, refId]) is the guard that makes double-counting impossible
+// at the database level: a retried scan, a double-clicked "mark paid", or a
+// replayed machine event cannot write the same contribution twice. It sits on a
+// NEW table so it is created as part of CREATE TABLE — the data-loss gate is
+// about altering existing tables. refId is null for entries with no natural
+// source row (e.g. a direct donation) and nulls don't collide in SQLite uniques.
+model FundEntry {
+  id        String   @id @default(cuid())
+  amount    Float
+  channel   String // 'sale' | 'pack' | 'direct' | 'machine'
+  refId     String?
+  status    String   @default("paid") // 'pending' | 'paid' | 'cancelled'
+  createdAt DateTime @default(now())
+
+  @@unique([channel, refId])
+}
+
+// Buyer-entered names shown on the public donor wall (self-reported via QR scan).
+// amount is attributed server-side from the scanned pack (never client input);
+// 0 = name-only entry (e.g. a manual-sale batch whose packs carried no QR).
+// packId is unique: one wall entry claims at most one pack, and vice versa.
+model Donor {
+  id        String   @id @default(cuid())
+  name      String
+  amount    Float    @default(0)
+  packId    String?  @unique
+  pack      Pack?    @relation("PackDonor")
+  createdAt DateTime @default(now())
+}
+
+// The capability that opens a customer's receipt page (/r/<token>). ONE row per
+// record, deliberately separate from CustomerMessage below.
+//
+// Why separate: an order produces several messages over its life ("placed", then
+// "paid", later possibly "cancelled"). If the token lived on the message row, one
+// order would hand the customer two or three DIFFERENT working URLs, revocation
+// would mean revoking every one of them, and each added template would multiply
+// the leak surface. One record, one link.
+//
+// THE TOKEN IS A WRITE CAPABILITY, NOT A READ-ONLY VIEW. A receipt for a service
+// order can show the workshop QR codes, and POST /api/donations/scan redeems a
+// voucher on its first scan with no second factor. A leaked URL therefore does
+// not merely disclose a booking — it can BURN the customer's seats, and the real
+// holder arriving second is told "already redeemed" with no recourse. That is why
+// the page (a) never renders codes on load, (b) requires the order reference —
+// which the customer already holds from their confirmation, and which is NOT in
+// the URL — before revealing them, and (c) carries expiresAt/revokedAt so a leak
+// can be killed.
+//
+// token must NOT be Pack.code (printed on stickers, built to be read aloud and
+// typed, and itself the redeem capability) nor Sale.orderRef (six characters, and
+// there is no @unique on Sale.orderRef at all — two orders could share one, which
+// a public route would turn into cross-customer disclosure). Fresh CSPRNG bytes.
+model CustomerLink {
+  id        String            @id @default(cuid())
+  token     String            @unique
+  refType   String // 'order' | 'pack' | 'donation' | 'sale'
+  refId     String
+  expiresAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime          @default(now())
+  messages  CustomerMessage[]
+
+  @@unique([refType, refId])
+}
+
+// One message owed to one customer about one thing they actually did. The outbox.
+//
+// Rows are written INSIDE the caller's transaction, alongside the money movement,
+// for the same reason FundEntry is: a message must never exist for an event that
+// rolled back, and must never be missing for one that committed.
+//
+// `body` is the text FROZEN at creation, because it is a record of what was
+// actually said to that person. The receipt page at /r/<token> deliberately does
+// NOT read it back — that page must show the CURRENT state, since an order that
+// was 'pending' when the message was written is usually paid by the time anyone
+// opens the link.
+//
+// The link is an FK to CustomerLink. A foreign key between two NEW tables is
+// free — the schema rule about avoiding FKs applies to altering EXISTING tables,
+// which is what forces a full redefinition on `db push` (see the Pack comment).
+//
+// @@unique([linkId, template]) is the at-most-once guard, mirroring FundEntry's
+// @@unique([channel, refId]): a double-clicked "Mark paid" cannot queue a second
+// order_paid. linkId is required, so the constraint has no hole — a NULL never
+// collides with another NULL in a SQLite unique index, which is precisely why
+// recordFundEntry has to special-case refId === null with a plain insert.
+//
+// A KNOWN LIMIT: this dedupes per record, but the harm is per person. Two orders
+// from the same phone, or one purchase recorded twice through different forms,
+// each carry a different refId and so still produce two messages. Deduping by
+// recipient is deliberately not attempted here.
+//
+// NOTHING OUTSIDE AN AUTHENTICATED ADMIN ROUTE MAY SET status = 'sent'. Both
+// public writers (/api/orders and /api/donations via the wall claim) accept a
+// phone number from an anonymous caller behind a spoofable x-forwarded-for
+// throttle, so an auto-send there would hand an attacker a paid SMS primitive
+// pointed at any number they choose. Queueing from a public route is fine — a
+// queued row costs nothing — but a human presses Send. See src/lib/notify.ts.
+model CustomerMessage {
+  id        String       @id @default(cuid())
+  linkId    String
+  link      CustomerLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  toName    String?
+  // Send-to SNAPSHOT, copied at queue time. The same number also lives on
+  // Sale.customerPhone (which the admin UI can see and act on) or
+  // Donation.donorPhone; this copy exists so that later editing the source row
+  // cannot retroactively change where an already-sent message went — the same
+  // snapshot discipline as Sale.unitPrice and Pack.donationAmount.
+  toPhone   String?
+  template  String // 'order_placed' | 'order_paid' | 'order_cancelled' | 'sale_thanks' | 'scan_thanks' | 'gift_thanks'
+  body      String
+  status    String       @default("queued") // 'queued' | 'sent' | 'skipped' | 'failed'
+  sentAt    DateTime?
+  sentBy    String?
+  error     String?
+  createdAt DateTime     @default(now())
+
+  @@unique([linkId, template])
 }
