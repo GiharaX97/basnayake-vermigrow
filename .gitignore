@@ -73,3 +73,5 @@ server.log
 # live SQLite DB (client content + hashes) — never push
 db/custom.db
 db/*.db-*
+# throwaway copy the e2e suite runs against (scripts/run-e2e.sh)
+db/e2e.db

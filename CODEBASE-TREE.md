@@ -4,7 +4,8 @@ Structural map of Basnayaka VermiGrow. One line per entry, no code bodies.
 **Purpose:** stop re-discovering the same layout every session.
 Keep this updated when files are added or removed.
 
-Last updated: 2026-09-22 · HEAD `ff60d1b` + uncommitted catalog/orders/ledger/customer-messaging work, plus the SEO/server-rendering change (see "SEO & rendering").
+Last updated: 2026-09-27 · HEAD `85a801e` + uncommitted catalog/orders/ledger/customer-messaging
+work, the SEO/server-rendering change (see "SEO & rendering"), and the e2e suite (see "Testing").
 
 ---
 
@@ -216,6 +217,29 @@ distinct URLs to a crawler.
 - **Public nav** → `navItems` in `site/navbar.tsx` (module-level array; `/#hash` for anchors, `/path` for real routes) **and** the duplicated list in `site/footer.tsx` **and** `src/app/sitemap.ts`. Footer/navbar anchors must be `/#hash`, not bare `#hash`, or they only work on `/`.
 - **Admin nav** → `navItems` **and** `breadcrumbLabels` in `admin/admin-layout-client.tsx`. Breadcrumb lookup is **exact-path only**; active state is `pathname === item.href`. Mobile bottom nav is **8 items**, fitted with per-item `short` labels + `text-[9px]` + `truncate` — a 9th needs a rethink, not another entry.
 - **New dashboard tile** → `quickActions` / `stats` arrays in `admin/dashboard/page.tsx`.
+
+## Testing
+
+`bash scripts/run-e2e.sh` — the whole system end to end, over HTTP, against a
+**copy** of the working DB. 405 assertions, all green as of 2026-09-27.
+
+- **Never against `db/custom.db`.** The runner copies it to `db/e2e.db` (gitignored) and points the
+  server at the copy; `scripts/e2e.mjs` refuses to run unless `DATABASE_URL` contains `e2e`. The
+  tests create sales, scan packs and delete rows — the working DB is verified byte-identical after a
+  run (sha256 `ed3bf730…`, public total 180).
+- **A fresh server per run, on purpose.** `/api/orders` holds a GLOBAL 60-orders/hour throttle in
+  process memory, so a second run against the same process starts refusing orders and looks like a
+  failure. The runner starts and stops its own server for that reason.
+- Rows the suite creates are named `E2E …` and are deleted at startup, so runs are repeatable.
+- Sections: A public · B auth · C catalog (product + service) · D warehouse QR (generate → dispatch
+  → scan → wall claim) · E online order · F service seats + vouchers + redemption · G settle/cancel
+  · H counter sale · I direct gift · J payments · K outbox · L receipt privacy · M ledger integrity
+  · N guards (401s, throttles, honeypot, origin, injection) · O admin pages.
+- Every assertion is made twice: on the HTTP response **and** on the DB row behind it. A 200 with no
+  row is the bug class it is built to catch.
+- Two invariants it exists to protect: a unit is counted by exactly ONE channel, and **nothing on a
+  public path sends an SMS** (`transport: 'manual'`, every queued row stays `queued` until an admin
+  acts).
 
 ## Deploy
 
