@@ -78,8 +78,7 @@ function migrate(c) {
 
   // -- hero: keep the client's own headline, drop the two fabricated slides.
   const first = Array.isArray(c.heroSlides) ? c.heroSlides[0] : undefined
-  note('heroSlides', c.heroSlides, '1 slide')
-  c.heroSlides = [
+  const heroSlides = [
     {
       id: 'h1',
       type: 'image',
@@ -88,33 +87,64 @@ function migrate(c) {
       subtitle: first?.subtitle || 'Organic fertilizer & vegetables from Karandeniya, Sri Lanka',
     },
   ]
+  note('heroSlides', c.heroSlides, heroSlides)
+  c.heroSlides = heroSlides
 
   note('aboutImage', c.aboutImage, '/images/farm-about.jpg')
   c.aboutImage = '/images/farm-about.jpg'
 
   // -- photos: only what the farm actually has.
-  note('photos', c.photos, `${PHOTOS.length} real photos`)
+  note('photos', c.photos, PHOTOS)
   c.photos = PHOTOS
 
+  // Drop stock entries and keep anything the farm itself uploaded, rather than
+  // resetting these arrays to []. On the live blob every entry in all four is
+  // stock, so the result is the same — but a real upload the client makes before
+  // this runs must never be thrown away by a hard reset, and the client HAS
+  // already added one real photo (see trainingPhotos below).
+  const realOnly = (arr) =>
+    (Array.isArray(arr) ? arr : []).filter((e) => e && !STOCK_RE.test(String(e?.src ?? '')))
+
   // -- videos: Google's gtv-videos-bucket demo clips, not farm footage.
-  note('videos', c.videos, '[]')
-  c.videos = []
-  note('eventPhotos', c.eventPhotos, '[]')
-  c.eventPhotos = []
-  note('trainingPhotos', c.trainingPhotos, '[]')
-  c.trainingPhotos = []
-  note('trainingVideos', c.trainingVideos, '[]')
-  c.trainingVideos = []
+  const videos = realOnly(c.videos)
+  note('videos', c.videos, videos)
+  c.videos = videos
+
+  const eventPhotos = realOnly(c.eventPhotos)
+  note('eventPhotos', c.eventPhotos, eventPhotos)
+  c.eventPhotos = eventPhotos
+
+  const trainingVideos = realOnly(c.trainingVideos)
+  note('trainingVideos', c.trainingVideos, trainingVideos)
+  c.trainingVideos = trainingVideos
+
+  // -- trainingPhotos: NOT emptied. The client uploaded a real training-day
+  //    photo through the admin CMS, and the farm does have training coverage, so
+  //    the section keeps one photo — repointed at the optimised copy (the
+  //    original is the same 2.7 MB file the farm handed over). The client's own
+  //    caption is carried over rather than replaced. If nothing real is present
+  //    the farm's training-day photo still goes in: unlike the event/video
+  //    galleries, there is a genuine picture to show.
+  const realTraining = realOnly(c.trainingPhotos)
+  const trainingPhotos = [
+    realTraining.length
+      ? { ...realTraining[0], src: '/images/training-day.jpg' }
+      : { id: 'item_101', src: '/images/training-day.jpg', caption: 'From our training program', category: '' },
+  ]
+  note('trainingPhotos', c.trainingPhotos, trainingPhotos)
+  c.trainingPhotos = trainingPhotos
 
   // -- projects: real brand marks. description/year are carried over from the
   //    existing cards rather than invented; they still need the client's copy.
   if (Array.isArray(c.projects)) {
-    c.projects = c.projects.map((p, i) => {
+    const projects = c.projects.map((p, i) => {
       const spec = PROJECTS[i]
       if (!spec) return p
       return { ...p, ...spec, description: p.description ?? '', year: p.year ?? '' }
     })
-    note('projects', '(3 cards)', PROJECTS.map((p) => p.title).join(' / '))
+    const titles = (arr) => arr.map((p) => p.title ?? '?').join(' / ')
+    note('projects', titles(c.projects), titles(projects))
+    c.projects = projects
   }
 
   // -- founder
@@ -125,11 +155,13 @@ function migrate(c) {
 
   // -- map popups
   if (Array.isArray(c.mapLocations)) {
-    c.mapLocations = c.mapLocations.map((loc, i) => ({
+    const mapLocations = c.mapLocations.map((loc, i) => ({
       ...loc,
       photos: MAP_PHOTOS[i] ? [MAP_PHOTOS[i]] : [],
     }))
-    note('mapLocations[].photos', '(stock)', 'real photos')
+    const photoList = (arr) => arr.map((l) => (l.photos ?? []).join(',')).join(' | ')
+    note('mapLocations[].photos', photoList(c.mapLocations), photoList(mapLocations))
+    c.mapLocations = mapLocations
   }
 
   // -- the brand rename, applied last so it also catches any string set above.
@@ -208,6 +240,14 @@ function main() {
 
   if (DRY) {
     console.log('\n[dry-run] nothing written.')
+    db.close()
+    return
+  }
+
+  // Nothing to report means nothing to write: skip the UPDATE rather than bump
+  // `updatedAt` on a row whose value is byte-identical to what is already stored.
+  if (changes.length === 0) {
+    console.log('\nContent row left untouched.')
     db.close()
     return
   }
