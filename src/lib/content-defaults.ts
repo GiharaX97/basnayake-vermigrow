@@ -1,5 +1,5 @@
 /**
- * Shared default content for Basnayaka VermiGrow.
+ * Shared default content for Basnayaka Vermigrow.
  * Imported by both the client store and server API to ensure a single source of truth.
  */
 
@@ -125,35 +125,23 @@ export interface SiteContent {
 }
 
 export const defaultContent: SiteContent = {
-  brand: 'Basnayaka VermiGrow',
+  brand: 'Basnayaka Vermigrow',
   tagline: 'Organic fertility, from soil to harvest',
+  // One slide, because there is one real photograph of the farm. This array
+  // previously held three Unsplash images, which the hero rotated through.
   heroSlides: [
     {
       id: 'h1',
       type: 'image',
-      src: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1920&q=80',
+      src: '/images/farm-hero.jpg',
       title: 'Growing soil, growing life',
       subtitle: 'Organic fertilizer & vegetables from Karandeniya, Sri Lanka',
     },
-    {
-      id: 'h2',
-      type: 'image',
-      src: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1920&q=80',
-      title: 'Pure inputs, honest harvest',
-      subtitle: 'Cow dung, chicken dung & fish-based composting',
-    },
-    {
-      id: 'h3',
-      type: 'image',
-      src: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=1920&q=80',
-      title: 'From vermi-bed to vegetable',
-      subtitle: 'Nourishing the land that nourishes you',
-    },
   ],
-  aboutTitle: 'We are Basnayaka VermiGrow',
+  aboutTitle: 'We are Basnayaka Vermigrow',
   aboutBody:
-    'Basnayaka VermiGrow is a family-run organic farm in Karandeniya, in Sri Lanka’s southern lowlands, where traditional farming knowledge meets modern composting science. We produce premium organic fertilizer by carefully composting cow dung, chicken dung and fish waste, then enriching it through vermicomposting with earthworms. The result is a living soil amendment that restores micro-biology, improves water retention, and feeds plants slowly and naturally. Alongside our fertilizer line, we cultivate a rotating selection of organic vegetables using fish-based nutrients and zero synthetic chemicals, supplying our local community and wholesale buyers with produce that tastes the way vegetables used to taste. Every batch is hand-turned, every bed is hand-graded, and every harvest is a small act of stewardship for the land we have farmed for three generations.',
-  aboutImage: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200&q=80',
+    'Basnayaka Vermigrow is a family-run organic farm in Karandeniya, in Sri Lanka’s southern lowlands, where traditional farming knowledge meets modern composting science. We produce premium organic fertilizer by carefully composting cow dung, chicken dung and fish waste, then enriching it through vermicomposting with earthworms. The result is a living soil amendment that restores micro-biology, improves water retention, and feeds plants slowly and naturally. Alongside our fertilizer line, we cultivate a rotating selection of organic vegetables using fish-based nutrients and zero synthetic chemicals, supplying our local community and wholesale buyers with produce that tastes the way vegetables used to taste. Every batch is hand-turned, every bed is hand-graded, and every harvest is a small act of stewardship for the land we have farmed for three generations.',
+  aboutImage: '/images/farm-about.jpg',
   mission:
     'To restore soil health across Sri Lanka by making living, chemical-free fertilizer accessible to every farmer, home gardener, and grower.',
   vision:
@@ -206,77 +194,57 @@ export const defaultContent: SiteContent = {
         'Fish-based liquid nutrient blends that feed foliar and soil biology, boosting vegetable flavour, shelf life and resistance without any synthetic additives.',
     },
   ],
+  // Only the photographs this farm actually has. The nine frames here were
+  // Unsplash stock — sheds, beds and harvests of farms that are not this one —
+  // captioned as if they were. The hero is deliberately NOT repeated here: the
+  // logo is baked into it, so it reads as a brand graphic rather than a photo.
   photos: [
-    { id: 'p1', src: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200&q=80', caption: 'Compost rows at dawn', category: 'Farm Environment' },
-    { id: 'p2', src: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1200&q=80', caption: 'Vermi-beds under shade', category: 'Farm Environment' },
-    { id: 'p3', src: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=1200&q=80', caption: 'Morning harvest basket', category: 'Farm Environment' },
-    { id: 'p4', src: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1200&q=80', caption: 'Hand sorting compost', category: 'Farm Environment' },
-    { id: 'p5', src: 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?w=1200&q=80', caption: 'Curing shed interior', category: 'Farm Environment' },
-    { id: 'p6', src: 'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=1200&q=80', caption: 'Fresh picked vegetables', category: 'Farm Environment' },
-    { id: 'p7', src: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=80', caption: 'Golden hour at the farm', category: 'Farm Environment' },
-    { id: 'p8', src: 'https://images.unsplash.com/photo-1492496913980-501348b61469?w=1200&q=80', caption: 'Earthworm composting beds', category: 'Farm Environment' },
-    { id: 'p9', src: 'https://images.unsplash.com/photo-1586771107445-1b954c12d73c?w=1200&q=80', caption: 'Organic vegetable plot', category: 'Farm Environment' },
+    { id: 'p1', src: '/images/farm-about.jpg', caption: 'Finished vermicompost, ready to use', category: 'Farm Environment' },
+    { id: 'p2', src: '/images/training-day.jpg', caption: 'A training day with local growers', category: 'Training' },
   ],
-  videos: [
-    {
-      id: 'v1',
-      src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-      poster: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200&q=80',
-      title: 'Inside the vermi-shed',
-      description: 'A walkthrough of our vermicompost beds and turning cycle.',
-      duration: '2:18',
-    },
-    {
-      id: 'v2',
-      src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-      poster: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1200&q=80',
-      title: 'From dung to soil',
-      description: 'How we blend cow dung, chicken dung and fish waste into living compost.',
-      duration: '1:12',
-    },
-    {
-      id: 'v3',
-      src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      poster: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=1200&q=80',
-      title: 'Harvest day',
-      description: 'A morning harvest of organic vegetables for our Karandeniya buyers.',
-      duration: '1:05',
-    },
-  ],
+  // Empty on purpose. These three were Google's gtv-videos-bucket sample clips
+  // (ForBiggerJoyrides/ForBiggerFun/ForBiggerBlazes) — demo files shipped with a
+  // video-player tutorial, captioned as farm footage. VideoShowcase renders
+  // nothing while this is empty; add real clips when they exist.
+  videos: [],
+  // Renamed to the three real brand marks (Gedavila / Pananala / Pinwantha).
+  // Categories are taken from what each logo actually says. DESCRIPTIONS and
+  // YEARS are carried over unchanged from the previous cards and still describe
+  // the old product lines — they need the client's real copy before launch.
   projects: [
     {
       id: 'pr1',
-      logo: '/logos/logo-project-1.png',
-      image: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800&q=80',
-      title: 'Basnayaka VermiCompost',
-      category: 'Flagship fertilizer',
+      logo: '/images/brand-gedavila.png',
+      image: '/images/farm-about.jpg',
+      title: 'Gedavila',
+      category: 'Fertilizer',
       year: '2018',
       description: 'Our core vermicompost line, made from cow dung, chicken dung and aged fish waste, cured and graded for home gardens and commercial farms.',
     },
     {
       id: 'pr2',
-      logo: '/logos/logo-project-2.png',
-      image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
-      title: 'Basnayaka Organic Veg',
-      category: 'Vegetable cultivation',
+      logo: '/images/brand-pananala.png',
+      image: '/images/farm-hero.jpg',
+      title: 'Pananala',
+      category: 'Integrated farming',
       year: '2020',
       description: 'A rotating plot of seasonal vegetables grown on fish-based nutrients and vermicompost, supplied to local buyers and wholesale markets.',
     },
     {
       id: 'pr3',
-      logo: '/logos/logo-project-3.png',
-      image: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=800&q=80',
-      title: 'Basnayaka Fish Nutrient',
-      category: 'Liquid fertilizer',
+      logo: '/images/brand-pinwantha.png',
+      image: '/images/training-day.jpg',
+      title: 'Pinwantha',
+      category: 'Project',
       year: '2022',
       description: 'A concentrated fish-based liquid nutrient that feeds soil biology and boosts vegetable flavour, shelf life and disease resistance.',
     },
   ],
   founder: {
     name: 'Lolitha Basnayaka',
-    title: 'Founder & Master Composter — Basnayaka VermiGrow',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
-    bio: 'Lolitha Basnayaka is a third-generation farmer from Karandeniya, Galle District, who turned his family\'s traditional farming knowledge into a science-driven organic fertilizer enterprise. After witnessing the steady degradation of paddy soils in Southern Province from synthetic fertiliser overuse, Lolitha spent five years studying vermicomposting techniques — travelling to composting facilities in Colombo, Kandy and as far as Kerala, India — before establishing Basnayaka VermiGrow in 2018. His method combines cow dung, chicken dung and fish waste with locally-sourced red earthworms (Eudrilus eugeniae), producing a living soil amendment that restores microbial ecology while feeding crops. He is a frequent speaker at the Department of Agrarian Development\'s farmer-training programmes and has been featured in Divaina and Lankadeepa for his work on chemical-free farming in the low-country wet zone.',
+    title: 'Founder & Master Composter — Basnayaka Vermigrow',
+    image: '/images/founder.jpg',
+    bio: 'Lolitha Basnayaka is a third-generation farmer from Karandeniya, Galle District, who turned his family\'s traditional farming knowledge into a science-driven organic fertilizer enterprise. After witnessing the steady degradation of paddy soils in Southern Province from synthetic fertiliser overuse, Lolitha spent five years studying vermicomposting techniques — travelling to composting facilities in Colombo, Kandy and as far as Kerala, India — before establishing Basnayaka Vermigrow in 2018. His method combines cow dung, chicken dung and fish waste with locally-sourced red earthworms (Eudrilus eugeniae), producing a living soil amendment that restores microbial ecology while feeding crops. He is a frequent speaker at the Department of Agrarian Development\'s farmer-training programmes and has been featured in Divaina and Lankadeepa for his work on chemical-free farming in the low-country wet zone.',
     quote: 'The earthworm is the farmer\'s truest partner. Feed the soil biology, and the soil will feed you.',
     achievements: [
       { id: 'fa1', text: 'Certified organic compost producer — Sri Lanka National Organic Control Unit', year: '2019' },
@@ -302,9 +270,7 @@ export const defaultContent: SiteContent = {
       title: 'Karandeniya Main Farm',
       contactNo: '+94 77 123 4567',
       description: 'Main vermicompost production facility and training centre. Family-run farm with three generations of farming knowledge.',
-      photos: [
-        'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800&q=80',
-      ],
+      photos: ['/images/farm-hero.jpg'],
     },
     {
       id: 'ml2',
@@ -313,9 +279,7 @@ export const defaultContent: SiteContent = {
       title: 'Galle Distribution Centre',
       contactNo: '+94 77 234 5678',
       description: 'Distribution hub serving Galle district farmers and home gardens with vermicompost and organic vegetables.',
-      photos: [
-        'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
-      ],
+      photos: ['/images/farm-about.jpg'],
     },
     {
       id: 'ml3',
@@ -324,9 +288,7 @@ export const defaultContent: SiteContent = {
       title: 'Matara Partner Farm',
       contactNo: '+94 77 345 6789',
       description: 'Partner farm using Basnayaka vermicompost for commercial vegetable cultivation in Matara district.',
-      photos: [
-        'https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=800&q=80',
-      ],
+      photos: ['/images/training-day.jpg'],
     },
   ],
   notices: [
@@ -371,40 +333,15 @@ export const defaultContent: SiteContent = {
       type: 'training',
     },
   ],
-  eventPhotos: [
-    { id: 'ep1', src: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&q=80', caption: 'Basnayaka VermiGrow Grand Opening Ceremony', category: 'Opening' },
-    { id: 'ep2', src: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=1200&q=80', caption: 'New Compost Facility Inauguration', category: 'Ceremony' },
-    { id: 'ep3', src: 'https://images.unsplash.com/photo-1511578314322-1af6a70ce62b?w=1200&q=80', caption: 'Community Farming Day Celebration', category: 'Event' },
-    { id: 'ep4', src: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200&q=80', caption: 'Annual Harvest Festival 2025', category: 'Event' },
-    { id: 'ep5', src: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=1200&q=80', caption: 'Official Launch of Fish Nutrient Line', category: 'Opening' },
-    { id: 'ep6', src: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=1200&q=80', caption: 'Soil Health Awareness Program', category: 'Event' },
-  ],
-  trainingPhotos: [
-    { id: 'tp1', src: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&q=80', caption: 'Hands-on Vermicompost Training', category: 'Training' },
-    { id: 'tp2', src: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1200&q=80', caption: 'Compost Making Demonstration', category: 'Training' },
-    { id: 'tp3', src: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1200&q=80', caption: 'Farmer Workshop at Karandeniya', category: 'Workshop' },
-    { id: 'tp4', src: 'https://images.unsplash.com/photo-1581092795365-0e6a005c7d4a?w=1200&q=80', caption: 'Organic Farming Techniques Session', category: 'Training' },
-    { id: 'tp5', src: 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=1200&q=80', caption: 'Group Training with Department of Agriculture', category: 'Workshop' },
-    { id: 'tp6', src: 'https://images.unsplash.com/photo-1532619187608-e5375cab36aa?w=1200&q=80', caption: 'Vermicomposting Certification Program', category: 'Training' },
-  ],
-  trainingVideos: [
-    {
-      id: 'tv1',
-      src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-      poster: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&q=80',
-      title: 'Vermicomposting Basics',
-      description: 'Step-by-step guide to setting up your own vermicompost bed.',
-      duration: '15:30',
-    },
-    {
-      id: 'tv2',
-      src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-      poster: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1200&q=80',
-      title: 'Advanced Composting Techniques',
-      description: 'Deep dive into advanced composting methods for experienced farmers.',
-      duration: '22:15',
-    },
-  ],
+  // All three emptied together. The event and training galleries were stock
+  // photos captioned as named occasions — "Annual Harvest Festival 2025",
+  // "Group Training with Department of Agriculture" — which asserts things
+  // about this business that the images did not show. There is exactly one real
+  // training photograph, and it lives in `photos` above. EventGallery and
+  // TrainingGallery both render nothing for an empty array.
+  eventPhotos: [],
+  trainingPhotos: [],
+  trainingVideos: [],
 }
 
 /**

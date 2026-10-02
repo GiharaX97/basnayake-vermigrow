@@ -26,7 +26,7 @@ import { ReceiptVouchers } from '@/components/site/receipt-vouchers'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Your receipt · Basnayaka VermiGrow',
+  title: 'Your receipt · Basnayaka Vermigrow',
   // Paired with the X-Robots-Tag header in next.config.ts. Not redundant: the
   // config entry covers the whole /r/ path including anything added later, this
   // survives the config entry being lost in a refactor.
@@ -372,7 +372,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm overflow-hidden">
               <img src="/logos/logo-main.png" alt="" className="h-full w-full object-contain p-0.5" />
             </span>
-            <span className="font-semibold tracking-tight">Basnayaka VermiGrow</span>
+            <span className="font-semibold tracking-tight">Basnayaka Vermigrow</span>
           </a>
         </div>
       </header>

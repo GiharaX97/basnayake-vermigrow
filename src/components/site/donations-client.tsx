@@ -252,7 +252,7 @@ export function DonationsClient() {
               <Skeleton className="mt-6 h-16 w-72 mx-auto bg-white/10" />
             )}
             <p className="mt-4 text-base sm:text-lg text-emerald-100 max-w-xl mx-auto">
-              Every pack of Basnayaka VermiGrow sold at our store and partner
+              Every pack of Basnayaka Vermigrow sold at our store and partner
               retailers contributes to this fund. Grown in the soil, given back
               to the community.
             </p>
@@ -327,7 +327,7 @@ export function DonationsClient() {
               <ol className="space-y-3 text-sm">
                 <li className="flex gap-3">
                   <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">1</span>
-                  <span>Buy any Basnayaka VermiGrow pack in store or from a partner retailer.</span>
+                  <span>Buy any Basnayaka Vermigrow pack in store or from a partner retailer.</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">2</span>

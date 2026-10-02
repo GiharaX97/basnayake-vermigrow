@@ -1,4 +1,4 @@
-# Basnayaka VermiGrow — PRODUCTION Caddyfile (canonical host: www)
+# Basnayaka Vermigrow — PRODUCTION Caddyfile (canonical host: www)
 # Source of truth. deploy-vermigrow.sh installs this to /etc/caddy/Caddyfile
 # (after `caddy validate`) and reloads Caddy. DNS must point the names below
 # at this VPS before Caddy can issue certs (auto-HTTPS / Let's Encrypt).

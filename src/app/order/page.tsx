@@ -4,7 +4,7 @@ import { OrderClient } from '@/components/site/order-client'
 import { buildProductsJsonLd, serializeJsonLd } from '@/lib/structured-data'
 
 export const metadata: Metadata = {
-  title: 'Order & Book — Basnayaka VermiGrow',
+  title: 'Order & Book — Basnayaka Vermigrow',
   description:
     'Order vermicompost and worms, or book a seat in our vermiculture workshops. Every item and every seat sends a share to our community fund.',
   alternates: { canonical: '/order' },

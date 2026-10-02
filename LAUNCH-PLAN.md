@@ -1,4 +1,4 @@
-# Basnayaka VermiGrow — Launch Plan & Setup Checklist
+# Basnayaka Vermigrow — Launch Plan & Setup Checklist
 
 > Target launch: today (5-hour execution window)
 > Public URL: **https://basnayakavermigrow.lk**
@@ -39,7 +39,7 @@ Estimated: 15–30 min now.
 3. Submit registrant details:
    - Full name + NIC copy (individual) **or** Business Registration (company)
    - Organization name
-   - Reason: *"Official website of Basnayaka VermiGrow organic farm, Karandeniya, Sri Lanka"*
+   - Reason: *"Official website of Basnayaka Vermigrow organic farm, Karandeniya, Sri Lanka"*
 4. Save the **DNS panel login** you receive — you will add an `A` record in Phase 5.
 
 > `.lk` registration is subject to registry approval. Some agents activate in ~15–30 min;

@@ -1,4 +1,4 @@
-# Basnayaka VermiGrow — Comprehensive Audit & Issues
+# Basnayaka Vermigrow — Comprehensive Audit & Issues
 
 > Generated: 2026-07-09  
 > Project: Next.js 16 + Tailwind v4 + Prisma/SQLite  
@@ -131,7 +131,7 @@
 
 ### 20. No Metadata on Admin Pages (UX/SEO)
 - **File:** `src/app/admin/layout.tsx`
-- **Issue:** Admin pages have no custom `<title>` or meta tags — all show "Basnayaka VermiGrow".
+- **Issue:** Admin pages have no custom `<title>` or meta tags — all show "Basnayaka Vermigrow".
 - **Fix:** Add per-page metadata.
 
 ### 21. Tailwind v4 Deprecated Classes (Code Quality)

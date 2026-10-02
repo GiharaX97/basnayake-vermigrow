@@ -14,7 +14,9 @@ export function TrainingVideos() {
   const { content } = useContentStore()
   const [active, setActive] = React.useState<number | null>(null)
 
-  const videos = content.trainingVideos || []
+  // Only entries with a real source are playable — see the note in
+  // video-showcase.tsx. A half-filled card from the editor must not be shown.
+  const videos = (content.trainingVideos || []).filter((v) => v.src.trim() !== '')
 
   if (videos.length === 0) return null
 

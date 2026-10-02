@@ -4,17 +4,13 @@ const nextConfig: NextConfig = {
   output: "standalone",
   allowedDevOrigins: ["*.trycloudflare.com"],
   reactStrictMode: true,
+  // No remotePatterns: every image on this site is now served from /images or
+  // from uploads, both local. The two hostnames that used to be allow-listed
+  // (images.unsplash.com and commondatastorage.googleapis.com) were the stock
+  // photos and Google's demo videos that have since been replaced, and leaving
+  // them here would keep the door open for a stock URL to be pasted back in.
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-      },
-      {
-        protocol: "https",
-        hostname: "commondatastorage.googleapis.com",
-      },
-    ],
+    remotePatterns: [],
   },
   async headers() {
     return [

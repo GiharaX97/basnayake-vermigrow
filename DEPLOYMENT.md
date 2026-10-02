@@ -1,4 +1,4 @@
-# Basnayaka VermiGrow — Production Deployment Runbook
+# Basnayaka Vermigrow — Production Deployment Runbook
 
 > Target: Linux VPS + Caddy (auto-HTTPS). Public domain: **https://basnayakavermigrow.lk**
 > App: Next.js 16 (standalone) + Prisma/SQLite + custom admin CMS.
@@ -85,7 +85,7 @@ Caddy auto-issues Let's Encrypt certs. Add A/AAAA + CNAME DNS records first.
 
 ```ini
 [Unit]
-Description=Basnayaka VermiGrow (Next.js standalone)
+Description=Basnayaka Vermigrow (Next.js standalone)
 After=network.target
 
 [Service]

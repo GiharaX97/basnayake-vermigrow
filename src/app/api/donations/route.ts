@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { fundTotal } from '@/lib/fund'
 import { clientIp, createThrottle } from '@/lib/throttle'
-import { optionalPhone, queueMessage, linkExpiry } from '@/lib/notify'
+import { optionalPhone, queueMessage, linkExpiry, autoDeliver } from '@/lib/notify'
 import { z } from 'zod'
 
 // How many recent donor names the wall needs.
@@ -98,9 +98,8 @@ export async function POST(request: Request) {
         })
         await tx.pack.update({ where: { id: claimedPack.id }, data: { donorId: created.id } })
         // Queue the thank-you in the same transaction as the claim, so a name
-        // can never be on the wall with a message to a pack that was not
-        // claimed. Nothing is transmitted from here: this endpoint is public and
-        // anonymous, so a human presses Send in the admin. See src/lib/notify.ts.
+        // can never be on the wall with a message to a pack that was not claimed.
+        // The send happens after the commit, below — see the note there.
         await queueMessage(tx, {
           refType: 'pack',
           refId: claimedPack.id,
@@ -120,5 +119,25 @@ export async function POST(request: Request) {
   }
   // Claim is spent either way — drop it so a later name doesn't reuse the pack.
   cookieStore.delete('vg_scan_claim')
+
+  // The thank-you goes out automatically — from a PUBLIC route, which the rest of
+  // this codebase goes out of its way to avoid. Two facts make it defensible
+  // rather than reckless:
+  //
+  // 1. A message is only ever queued when a REAL pack code was claimed, and a
+  //    code claims once (Donor.packId @unique). Codes are 32^6 ≈ 1e9 and live on
+  //    physical packs, so an attacker cannot mint the precondition — the volume
+  //    of sendable messages is bounded by packs actually sold. The cookie is
+  //    client-controlled, but setting it to a code that does not exist claims
+  //    nothing and queues nothing.
+  // 2. autoDeliver's daily cap bounds the whole system regardless, and anything
+  //    past it stays queued for a human. The throttle above keys on a spoofable
+  //    x-forwarded-for, so it is NOT what protects this path.
+  //
+  // Only when THIS request is the one that claimed the pack: a losing race fell
+  // into the catch above, and the winner fires its own send.
+  const claimedPackId = claimedPack && donor.packId === claimedPack.id ? claimedPack.id : null
+  if (claimedPackId) await autoDeliver(prisma, 'pack', claimedPackId)
+
   return NextResponse.json(donor, { status: 201 })
 }

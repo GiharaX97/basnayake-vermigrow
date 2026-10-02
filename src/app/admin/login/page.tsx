@@ -54,7 +54,7 @@ export default function AdminLogin() {
           </div>
           <CardTitle className="text-2xl tracking-tight">Admin Login</CardTitle>
           <CardDescription className="text-sm mt-1.5">
-            Basnayaka VermiGrow — Content Management System
+            Basnayaka Vermigrow — Content Management System
           </CardDescription>
         </CardHeader>
         <CardContent>

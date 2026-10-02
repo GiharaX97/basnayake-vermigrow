@@ -346,7 +346,7 @@ export default function AdminCatalogPage() {
                   id="cat-name"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="e.g. VermiGrow Fertilizer 1kg"
+                  placeholder="e.g. Vermigrow Fertilizer 1kg"
                   maxLength={120}
                   required
                 />

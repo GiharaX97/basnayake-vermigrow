@@ -31,6 +31,12 @@ export function PhotoCarousel() {
     api.scrollTo(lightbox)
   }, [lightbox, api])
 
+  // Renders nothing when there are no photos. Without this the section still
+  // drew its heading, its "01 / 00" counter and a Swipe-to-browse hint over an
+  // empty carousel — which is what an emptied gallery would have looked like.
+  // Must sit AFTER every hook.
+  if (content.photos.length === 0) return null
+
   return (
     <section id="photos" className="py-20 md:py-28 scroll-mt-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -43,7 +49,7 @@ export function PhotoCarousel() {
               From the farm
             </h2>
             <p className="mt-4 text-base md:text-lg text-muted-foreground">
-              A selection of frames from our compost sheds, vermi-beds and vegetable plots in Karandeniya.
+              The compost we make and the growers we make it for, photographed at our farm in Karandeniya.
             </p>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

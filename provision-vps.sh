@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Basnayaka VermiGrow — Ubuntu 24.04 VPS provisioner (fresh server bootstrap)
+# Basnayaka Vermigrow — Ubuntu 24.04 VPS provisioner (fresh server bootstrap)
 #
 # Run ON a fresh VPS, as root, from inside the git clone (repo root has
 # package.json + the server config files):

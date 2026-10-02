@@ -14,6 +14,19 @@ export function VideoShowcase() {
   const { content } = useContentStore()
   const [active, setActive] = React.useState<number | null>(null)
 
+  // Only entries with a real source are playable. The editor's "Add video" starts
+  // a new card with an empty src, and a card that opens a dead player is worse
+  // than no card at all — so a half-filled entry is simply not shown until
+  // somebody gives it a file.
+  const videos = content.videos.filter((v) => v.src.trim() !== '')
+
+  // No farm footage yet, so this renders nothing rather than an empty section
+  // with a heading over blank space. The three clips it used to show were
+  // Google's gtv-videos-bucket demo files, not this farm — see
+  // scripts/migrate-site-content.mjs. Same contract as EventGallery and
+  // TrainingVideos. Must sit AFTER every hook.
+  if (videos.length === 0) return null
+
   return (
     <section id="videos" className="py-20 md:py-28 bg-muted/30 border-y border-border/60 scroll-mt-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -30,7 +43,7 @@ export function VideoShowcase() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {content.videos.map((video, i) => (
+          {videos.map((video, i) => (
             <button
               key={video.id}
               onClick={() => setActive(i)}
@@ -69,22 +82,22 @@ export function VideoShowcase() {
         <DialogContent className="max-w-5xl p-0 overflow-hidden bg-black border-border/40">
           {active !== null && (
             <>
-              <DialogTitle className="sr-only">{content.videos[active].title}</DialogTitle>
+              <DialogTitle className="sr-only">{videos[active].title}</DialogTitle>
               <DialogDescription className="sr-only">
-                {content.videos[active].description}
+                {videos[active].description}
               </DialogDescription>
               <video
-                key={content.videos[active].src}
+                key={videos[active].src}
                 className="w-full aspect-video object-contain bg-black"
-                src={content.videos[active].src}
-                poster={content.videos[active].poster}
+                src={videos[active].src}
+                poster={videos[active].poster}
                 controls
                 autoPlay
                 playsInline
               />
               <div className="px-5 py-4 bg-background">
-                <h3 className="text-lg font-semibold">{content.videos[active].title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{content.videos[active].description}</p>
+                <h3 className="text-lg font-semibold">{videos[active].title}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{videos[active].description}</p>
               </div>
             </>
           )}

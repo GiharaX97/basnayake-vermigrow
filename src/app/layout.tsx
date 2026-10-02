@@ -30,9 +30,9 @@ const SITE_URL = process.env.NEXTAUTH_URL || "https://basnayakavermigrow.lk";
 
 /** Used when the CMS fields are blank, so the site never ships an empty title. */
 const FALLBACK_TITLE =
-  "Basnayaka VermiGrow — Organic Fertilizer & Vegetables, Karandeniya, Sri Lanka";
+  "Basnayaka Vermigrow — Organic Fertilizer & Vegetables, Karandeniya, Sri Lanka";
 const FALLBACK_DESCRIPTION =
-  "Basnayaka VermiGrow is a family-run organic farm in Karandeniya, Sri Lanka, producing vermicompost from cow dung, chicken dung and fish waste, and growing organic vegetables for the local community.";
+  "Basnayaka Vermigrow is a family-run organic farm in Karandeniya, Sri Lanka, producing vermicompost from cow dung, chicken dung and fish waste, and growing organic vegetables for the local community.";
 
 /**
  * Metadata is generated from the CMS rather than hardcoded, so the `seoTitle`,
@@ -53,7 +53,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title,
     description,
     keywords: [
-      "Basnayaka VermiGrow",
+      "Basnayaka Vermigrow",
       "organic fertilizer",
       "vermicompost",
       "Sri Lanka",
@@ -63,11 +63,11 @@ export async function generateMetadata(): Promise<Metadata> {
       "fish nutrient",
       "organic vegetables",
     ],
-    authors: [{ name: content.brand || "Basnayaka VermiGrow" }],
+    authors: [{ name: content.brand || "Basnayaka Vermigrow" }],
     openGraph: {
       title,
       description,
-      siteName: content.brand || "Basnayaka VermiGrow",
+      siteName: content.brand || "Basnayaka Vermigrow",
       type: "website",
       // Omitted entirely when unset: an empty `images` array is worse than none,
       // and a `summary_large_image` card with no image renders as a blank box.

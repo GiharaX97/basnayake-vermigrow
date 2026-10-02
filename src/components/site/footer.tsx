@@ -32,18 +32,32 @@ export function Footer() {
             <a href="/#products" className="hover:text-foreground transition-colors">Products</a>
             <a href="/#map" className="hover:text-foreground transition-colors">Map</a>
             <a href="/#photos" className="hover:text-foreground transition-colors">Photos</a>
-            <a href="/#events" className="hover:text-foreground transition-colors">Events</a>
-            <a href="/#training" className="hover:text-foreground transition-colors">Training</a>
-            <a href="/#videos" className="hover:text-foreground transition-colors">Videos</a>
             <a href="/#about" className="hover:text-foreground transition-colors">About</a>
             <a href="/#founder" className="hover:text-foreground transition-colors">Founder</a>
             <a href="/#contact" className="hover:text-foreground transition-colors">Contact</a>
             <a href="/order" className="hover:text-foreground transition-colors">Order</a>
             <a href="/donations" className="hover:text-foreground transition-colors">Donations</a>
           </nav>
+        </div>
 
-          <div className="text-xs text-muted-foreground">
+        {/* Events, Training and Videos were dropped from the list above for the
+            same reason as the navbar's: those sections are empty until real
+            photos and footage exist, and a fragment link to a section that isn't
+            on the page scrolls nowhere. */}
+        <div className="mt-8 pt-6 border-t border-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted-foreground">
+          <div>
             © {year} {content.brand}. Crafted with care.
+          </div>
+          <div>
+            Developed by{' '}
+            <span className="font-medium text-foreground">Gihara Wijesinghe</span>
+            <span className="mx-1.5 text-border">·</span>
+            <a
+              href="tel:+94773259724"
+              className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
+            >
+              +94 77 325 9724
+            </a>
           </div>
         </div>
       </div>

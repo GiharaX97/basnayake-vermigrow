@@ -1,4 +1,4 @@
-# Basnayaka VermiGrow Website — Work Log
+# Basnayaka Vermigrow Website — Work Log
 
 ---
 Task ID: 1
@@ -43,16 +43,16 @@ Stage Summary:
 ---
 Task ID: 2
 Agent: main
-Task: Rebrand MakeFarm → Basnayaka VermiGrow (organic fertilizer farm in Karandeniya, Sri Lanka). Logo 05 is the main brand; logos 02/03/04 are the 3 sub-brand project logos.
+Task: Rebrand MakeFarm → Basnayaka Vermigrow (organic fertilizer farm in Karandeniya, Sri Lanka). Logo 05 is the main brand; logos 02/03/04 are the 3 sub-brand project logos.
 
 Work Log:
 - Copied user-uploaded logos from /home/z/my-project/upload/ to /home/z/my-project/public/logos/:
-  - logo-main.png (05 — main Basnayaka VermiGrow logo)
+  - logo-main.png (05 — main Basnayaka Vermigrow logo)
   - logo-project-1.png (02)
   - logo-project-2.png (03)
   - logo-project-3.png (04)
 - Rewrote src/store/content-store.ts with new default content:
-  - Brand: "Basnayaka VermiGrow"
+  - Brand: "Basnayaka Vermigrow"
   - Tagline: "Organic fertility, from soil to harvest"
   - Hero slides with farm/soil themes
   - About: family-run organic farm in Karandeniya, Galle District, Southern Province, Sri Lanka
@@ -72,13 +72,13 @@ Work Log:
 - Updated edit-panel.tsx: added logo URL + description fields to Projects section; updated icon options to include Sprout/Recycle/Leaf/Droplets for farm context.
 - Updated services.tsx icon map: added Recycle, Leaf, Droplets (in addition to existing icons).
 - Replaced all amber color usage with emerald across hero, about, services, photo-carousel, video-showcase, contact, navbar, edit-panel toggle.
-- Updated layout.tsx SEO metadata: title, description, keywords, OpenGraph, Twitter cards for Basnayaka VermiGrow.
+- Updated layout.tsx SEO metadata: title, description, keywords, OpenGraph, Twitter cards for Basnayaka Vermigrow.
 - Updated section headings: "Photo stories" → "From the farm"; "Recent films" → "Farm films"; "Services grown with care" → "Products & practices"; "Have a story to grow?" → "Want to grow with us?"; form placeholder now farm-appropriate.
-- Verified with Agent Browser (fresh localStorage): title is "Basnayaka VermiGrow — Organic Fertilizer & Vegetables, Karandeniya, Sri Lanka"; all sections render with new content; all 5 logo images load (navbar + 3 project cards + footer); no console errors.
+- Verified with Agent Browser (fresh localStorage): title is "Basnayaka Vermigrow — Organic Fertilizer & Vegetables, Karandeniya, Sri Lanka"; all sections render with new content; all 5 logo images load (navbar + 3 project cards + footer); no console errors.
 - Preview screenshot saved to /home/z/my-project/download/basnayaka-preview.png.
 
 Stage Summary:
-- Site fully rebranded from a generic creative studio portfolio to Basnayaka VermiGrow, an organic fertilizer & vegetable farm in Karandeniya, Sri Lanka.
+- Site fully rebranded from a generic creative studio portfolio to Basnayaka Vermigrow, an organic fertilizer & vegetable farm in Karandeniya, Sri Lanka.
 - Main logo (05) appears in navbar and footer.
 - 3 sub-brand project cards (logos 02, 03, 04) feature prominently in the "Basnayaka family of brands" section.
 - All copy reflects the actual business: cow dung, chicken dung, fish-waste composting, vermicompost, organic vegetable cultivation, Karandeniya/Sri Lanka context.
@@ -186,11 +186,11 @@ and `X-Robots-Tag` are correct in both.
 
 ### Open — needs a business decision, deliberately not guessed
 
-**Neither real product has a price, so nothing is orderable online.** `VermiGrow Fertilizer 1kg`
+**Neither real product has a price, so nothing is orderable online.** `Vermigrow Fertilizer 1kg`
 and `Vermicompost 5kg` are both `price = 0`, which the system reads as "no price set yet":
 `/order` shows *"Ask for price"* and `POST /api/orders` rejects them. There are also **no
 workshop services in the catalog at all.** The CMS cards say *Vermicompost — Rs 350*, but the DB
-product is *Vermicompost 5kg* with no unit set, and *VermiGrow Fertilizer 1kg* has no CMS
+product is *Vermicompost 5kg* with no unit set, and *Vermigrow Fertilizer 1kg* has no CMS
 counterpart. Prices and units are needed before the order flow is usable for real.
 
 **The schema is pushed LOCALLY ONLY — the production VPS (161.97.120.230) has not been migrated.**
@@ -273,3 +273,84 @@ Every test ran against a **copy** of `db/custom.db`; the working DB was confirme
   empty until prices are set. The marketing CMS still shows *Vermicompost — Rs 350* with no
   counterpart in the DB catalog.
 - **The schema is pushed LOCALLY ONLY** — the production VPS has still not been migrated.
+  → **Resolved 2026-09-28** (see the entry below).
+
+---
+
+## 2026-09-28 — Production selling outage: root cause, fix applied, live re-test
+
+**Reported as:** "test today live site with all product selling progress, catch any issues."
+
+### What the live site was doing (external HTTP probe only)
+
+| Endpoint | Before | After |
+|---|---|---|
+| `/order` | **500** | 200 |
+| `GET /api/catalog` | **500** (empty body) | 200 `{"items":[]}` |
+| `GET /api/donations` | **500** (empty body) | 200 `{"total":0,"donorCount":0,"donors":[]}` |
+| `/r/<token>` | **500** for any token | **404** (the correct answer) |
+| `POST /api/orders` (valid shape) | **500** `Could not place your order` | **409** `One of the items is no longer available` |
+
+Unaffected and confirmed working: `/` (all 12 section anchors, CMS content and JSON-LD in the raw
+HTML), `/admin/login`, `GET /api/content`, `/api/auth/check`, `/sitemap.xml`, `/robots.txt`, the
+HTTP→HTTPS 308 and apex→www 301 redirects, admin guards (307 → login unauthenticated, 401 on the
+admin APIs), and a clean 404 for an unknown path.
+
+**The `/donations` page was the quiet one.** It returns **200** while being useless: the live total
+and the donor wall both stay on loading skeletons forever, because `donations-client.tsx` does
+`if (!res.ok) return` and swallows the failure. A visitor sees an endless spinner, never an error.
+
+### Root cause (confirmed firsthand this time)
+
+`sqlite3 /var/www/basnayakavermigrow/db/custom.db ".tables"` printed exactly **4** tables —
+`AdminUser Inquiry SiteContent Upload`. The code expects **15**. The 2026-09-22 deploy invoked the
+**stale installed** `/usr/local/bin/deploy-vermigrow` (dated 2026-09-08), which contained no
+`npx prisma db push`. It regenerated the Prisma client, never pushed the schema, and honestly
+printed `DEPLOY_OK` — every step it actually ran had succeeded.
+
+It went unnoticed for **10 days** because `deploy-vermigrow.sh` step `[7/7]` health-checks **only**
+`curl /`. A total selling outage passed the deploy's own gate.
+
+### The fix (user authorized production changes)
+
+1. `install -m 0755 /var/www/basnayakavermigrow/app/deploy-vermigrow.sh /usr/local/bin/deploy-vermigrow`
+   — refreshed the stale copy; it now carries `prisma db push` (~line 51).
+2. Backed up the live DB → `custom.db.bak-20260928-054500`, sha256 `c23030d2…`, identical to the
+   live file at backup time.
+3. Ran `sudo /usr/local/bin/deploy-vermigrow` — the full 7 steps, ending `DEPLOY_OK`.
+
+### Verified after the fix
+
+| Check | Result |
+|---|---|
+| Prod table count | **4 → 15**; all 11 new models created |
+| `SiteContent` rows | **32 → 32** — preserved, no data lost |
+| `db push` data-loss gate | did not fire; `--accept-data-loss` was **not** used and was not needed |
+| Live endpoints | `/order` `/api/catalog` `/api/donations` all **200**; `/r/<bad>` **404** |
+| Order path degrades cleanly | **409** with a customer-facing message instead of a 500 |
+| Scan path degrades cleanly | unknown code → **404** `{"status":"unknown"}` |
+| My probes wrote nothing | Sale / Donation / Payment / Pack / Product / FundEntry / Donor / Dispatch / ScanEvent / CustomerLink / CustomerMessage all still **0** |
+
+Service restarted clean; `systemctl is-active basnayaka` = active.
+
+### Local control run
+
+`bash scripts/run-e2e.sh` — **405 passed, 0 failed**. The working DB was confirmed **byte-identical**
+afterwards (sha256 `ed3bf730…`). This isolates the outage entirely to the production schema: the
+code was never at fault.
+
+### Still open
+
+- **Nothing is on sale yet.** Every production business model is at **0 rows** — no catalog, no
+  printed packs, no recorded sale or donation. `{"items":[]}` is expected, not a bug. The selling
+  flow cannot be exercised end-to-end on live until an admin adds a product at `/admin/catalog` and
+  generates pack codes at `/admin/warehouse`.
+- **The admin UI could not be tested.** The password in `SECRETS.local.md` is **stale** —
+  `POST /api/auth/login` returns `401 {"error":"Invalid password"}`, so it has been changed in
+  Admin → Settings. It was **not** reset, because that would lock out whoever is using the current
+  one. Needs the client's current password, or explicit authorization to reset the DB hash.
+- **`deploy-vermigrow.sh` `[7/7]` still only curls `/`.** This is the defect that let a 10-day
+  selling outage print `DEPLOY_OK`. It should also assert `/order` and `/api/catalog`. Offered to
+  the user; not yet taken up.
+- No `Strict-Transport-Security` header; `/favicon.ico` 404s (the icon link points at
+  `/logos/logo-main.png`, which serves fine).

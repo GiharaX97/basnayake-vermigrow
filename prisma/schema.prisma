@@ -323,12 +323,15 @@ model CustomerLink {
 // each carry a different refId and so still produce two messages. Deduping by
 // recipient is deliberately not attempted here.
 //
-// NOTHING OUTSIDE AN AUTHENTICATED ADMIN ROUTE MAY SET status = 'sent'. Both
-// public writers (/api/orders and /api/donations via the wall claim) accept a
-// phone number from an anonymous caller behind a spoofable x-forwarded-for
-// throttle, so an auto-send there would hand an attacker a paid SMS primitive
-// pointed at any number they choose. Queueing from a public route is fine — a
-// queued row costs nothing — but a human presses Send. See src/lib/notify.ts.
+// SENDING WITHOUT A HUMAN PRESSING SEND is confined to autoDeliver
+// (src/lib/notify.ts) and requires a configured gateway; with none, every row
+// stays queued. It is reachable from one public route — /api/donations via the
+// wall claim, whose x-forwarded-for throttle an anonymous caller can spoof — so
+// autonomous spend is bounded by SMS_DAILY_CAP: a whole-system ceiling per local
+// day, counted from rows this table marked sent by 'auto' (a hand-sent row is
+// never blocked by it). Past the cap the rest stay 'queued'. Queueing from a
+// public route was always free; the cap is what makes sending from one affordable.
+// See src/lib/notify.ts and src/lib/sms/.
 model CustomerMessage {
   id        String       @id @default(cuid())
   linkId    String

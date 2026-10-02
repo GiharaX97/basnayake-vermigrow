@@ -4,7 +4,7 @@ import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { recordFundEntry, cancelFundEntry } from '@/lib/fund'
 import { settleSchema, OrderStateError } from '@/lib/payments'
 import { generatePackCodes } from '@/lib/pack-codes'
-import { queueMessage } from '@/lib/notify'
+import { queueMessage, autoDeliver } from '@/lib/notify'
 
 /**
  * Settle a customer order: either take the money ('pay') or call it off
@@ -132,13 +132,29 @@ export async function POST(
           refType: 'order',
           refId: orderRef,
           template: 'order_paid',
-          data: { name: lines[0].customerName, passes: vouchers },
+          // `donation` is the whole order's contribution, not one line's — the
+          // same figure recordFundEntry just wrote to the ledger, and the answer
+          // to the question the customer actually asked. `total` goes with it:
+          // "we received your payment" names no amount otherwise, and the
+          // customer has no way to check the figure against what they handed over.
+          data: {
+            name: lines[0].customerName,
+            passes: vouchers,
+            donation: donationTotal,
+            total: orderTotal,
+          },
           toName: lines[0].customerName,
           toPhone: lines[0].customerPhone,
         })
 
         return { lines: lines.length, orderTotal, donationTotal, vouchers, paymentId: payment.id }
       })
+
+      // After the commit — the gateway must not hold the order's write lock, and
+      // a gateway failure must not undo a settlement. This drains the record's
+      // queue oldest-first, so an order placed online (whose reference is only in
+      // order_placed) still tells a coherent story. See autoDeliver.
+      await autoDeliver(prisma, 'order', orderRef)
 
       return NextResponse.json({ success: true, action: 'pay', orderRef, ...result })
     }
@@ -180,6 +196,11 @@ export async function POST(
       // erase the record that it was received.
       return { lines: lines.length, donationRemoved }
     })
+
+    // A cancellation is news the customer must have, for the same reason the
+    // message was queued at all: the receipt they hold still says money was
+    // received until they are told otherwise.
+    await autoDeliver(prisma, 'order', orderRef)
 
     return NextResponse.json({ success: true, action: 'cancel', orderRef, ...result })
   } catch (err) {

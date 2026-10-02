@@ -1,6 +1,6 @@
 # CODEBASE-TREE.md
 
-Structural map of Basnayaka VermiGrow. One line per entry, no code bodies.
+Structural map of Basnayaka Vermigrow. One line per entry, no code bodies.
 **Purpose:** stop re-discovering the same layout every session.
 Keep this updated when files are added or removed.
 

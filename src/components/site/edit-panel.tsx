@@ -287,7 +287,12 @@ export function EditPanel() {
                     addListItem('heroSlides', {
                       id: genId(),
                       type: 'image',
-                      src: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1920&q=80',
+                      // The farm's own photograph, not a stock one. A new item
+                      // used to arrive pre-filled with an Unsplash image, which
+                      // meant the first thing an admin ever saw was somebody
+                      // else's field — and publishing without touching it would
+                      // have put a stock photo on the live site.
+                      src: '/images/farm-hero.jpg',
                       title: 'New slide',
                       subtitle: 'Describe this slide',
                     } as never)
@@ -543,7 +548,7 @@ export function EditPanel() {
                   onClick={() =>
                     addListItem('photos', {
                       id: genId(),
-                      src: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=80',
+                      src: '/images/farm-about.jpg',
                       caption: 'New photo',
                       category: 'Field',
                     } as never)
@@ -593,7 +598,7 @@ export function EditPanel() {
                   onClick={() =>
                     addListItem('eventPhotos', {
                       id: genId(),
-                      src: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&q=80',
+                      src: '/images/training-day.jpg',
                       caption: 'New event photo',
                       category: 'Event',
                     } as never)
@@ -643,7 +648,7 @@ export function EditPanel() {
                   onClick={() =>
                     addListItem('trainingPhotos', {
                       id: genId(),
-                      src: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&q=80',
+                      src: '/images/training-day.jpg',
                       caption: 'New training photo',
                       category: 'Training',
                     } as never)
@@ -706,8 +711,12 @@ export function EditPanel() {
                   onClick={() =>
                     addListItem('trainingVideos', {
                       id: genId(),
-                      src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-                      poster: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&q=80',
+                      // Empty src on purpose: there is no farm footage yet, and
+                      // the demo clip this used to pre-fill was Google's, not
+                      // ours. The showcase hides entries with no source, so this
+                      // stays invisible until a real file is chosen.
+                      src: '',
+                      poster: '/images/training-day.jpg',
                       title: 'New training video',
                       description: 'Describe this training video',
                       duration: '0:00',
@@ -856,8 +865,9 @@ export function EditPanel() {
                   onClick={() =>
                     addListItem('videos', {
                       id: genId(),
-                      src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-                      poster: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=80',
+                      // See the note on the training-video seed above.
+                      src: '',
+                      poster: '/images/farm-hero.jpg',
                       title: 'New video',
                       description: 'Describe this video',
                       duration: '0:00',
@@ -942,7 +952,7 @@ export function EditPanel() {
                     addListItem('projects', {
                       id: genId(),
                       logo: '',
-                      image: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800&q=80',
+                      image: '/images/farm-about.jpg',
                       title: 'New project',
                       category: 'Category',
                       year: '2025',

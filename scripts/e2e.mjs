@@ -1,5 +1,5 @@
 /**
- * End-to-end test of the whole VermiGrow system, over HTTP, against a running
+ * End-to-end test of the whole Vermigrow system, over HTTP, against a running
  * server pointed at a COPY of the working database.
  *
  *   node scripts/e2e.mjs

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { recordFundEntry, fundTotal } from '@/lib/fund'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { optionalText } from '@/lib/payments'
-import { optionalPhone, queueMessage, linkExpiry } from '@/lib/notify'
+import { optionalPhone, queueMessage, linkExpiry, autoDeliver } from '@/lib/notify'
 import { z } from 'zod'
 
 const saleSchema = z.object({
@@ -118,5 +118,16 @@ export async function POST(request: Request) {
     })
     return created
   })
+
+  // Tell the customer what they gave, now that the sale and its ledger row are
+  // committed. AFTER the transaction, never inside it: the gateway is a network
+  // call, and one that hangs must not hold the sale's write lock, nor one that
+  // fails undo a sale that happened. Awaited so the 201 means the message has
+  // been dealt with — and so a test can assert on the result without racing it.
+  //
+  // Does nothing unless a gateway is configured: with none, the message stays
+  // queued for the admin to send by hand. See autoDeliver in src/lib/notify.ts.
+  await autoDeliver(prisma, 'sale', sale.id)
+
   return NextResponse.json(sale, { status: 201 })
 }

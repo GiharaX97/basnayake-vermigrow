@@ -76,7 +76,7 @@ export default function AdminLayoutClient({
             </div>
             <span className="text-foreground/90">Admin Panel</span>
           </Link>
-          <p className="text-[11px] text-muted-foreground mt-1 ml-0.5">Basnayaka VermiGrow CMS</p>
+          <p className="text-[11px] text-muted-foreground mt-1 ml-0.5">Basnayaka Vermigrow CMS</p>
         </div>
         <nav className="flex-1 p-3 space-y-0.5">
           {navItems.map((item) => {

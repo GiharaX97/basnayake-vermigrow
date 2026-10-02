@@ -197,7 +197,7 @@ export default function InquiriesPage() {
                 </div>
                 <div className="mt-4">
                   <a
-                    href={`mailto:${selected.email}?subject=Re: Basnayaka VermiGrow inquiry`}
+                    href={`mailto:${selected.email}?subject=Re: Basnayaka Vermigrow inquiry`}
                     className="text-sm text-emerald-600 hover:underline"
                     target="_blank"
                     rel="noopener noreferrer"

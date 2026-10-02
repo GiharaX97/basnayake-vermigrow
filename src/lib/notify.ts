@@ -12,13 +12,18 @@ import { formatLkr } from '@/lib/currency'
  * site. A message is owed if and only if the event that produced it committed —
  * so a rolled-back payment can never text somebody "we received your money".
  *
- * WHAT THIS FILE DOES NOT DO IS SEND. Queueing is free and happens in the
- * transaction; delivery is a separate, human-triggered step (see deliverMessage
- * below). That split is not a shortcut — it is the safety property. Both public
- * writers (/api/orders and the donor-wall claim) accept a phone number from an
- * anonymous caller, behind a throttle that keys on a spoofable x-forwarded-for.
- * Auto-sending from those paths would hand a stranger a paid SMS primitive
- * aimed at whatever number they typed.
+ * QUEUEING AND SENDING ARE ALWAYS SEPARATE STEPS. Queueing happens inside the
+ * transaction and is free; sending is a network call that can hang, cost money
+ * and fail, and must never be able to roll back a payment or a fund entry. So
+ * every event queues (queueMessage), and delivery happens afterwards, outside the
+ * transaction, through autoDeliver — which callers fire only once the money has
+ * actually moved.
+ *
+ * autoDeliver STILL REQUIRES A CONFIGURED GATEWAY. With none, the transport is
+ * 'manual' and it does nothing at all: writing status='sent' for a message that
+ * was never transmitted is a false record of delivery, worse than a queue a human
+ * has to work through. That also keeps the public writers safe by default — see
+ * the transport section and src/lib/sms/.
  */
 
 /** Where a message's subject lives. Mirrors `CustomerLink.refType`. */
@@ -185,6 +190,13 @@ export interface MessageData {
   orderRef?: string | null
   total?: number | null
   amount?: number | null
+  /**
+   * What this purchase put into the community fund — the figure the customer
+   * actually asked about. Distinct from `amount`, which for a service sale is the
+   * seat price and only coincides with the donation while nothing else is
+   * configured.
+   */
+  donation?: number | null
   passes?: number | null
   url: string
 }
@@ -206,8 +218,16 @@ function hi(name?: string | null): string {
  * carrier splits it into parts that can arrive out of order.
  */
 export function renderMessage(template: Template, data: MessageData): string {
-  const { name, orderRef, total, amount, passes, url } = data
+  const { name, orderRef, total, amount, donation, passes, url } = data
   const ref = orderRef ?? ''
+
+  /**
+   * Whether a figure is worth stating. A non-finite or absent value is omitted
+   * rather than printed as LKR 0 — but an explicit 0 IS stated, because "nothing
+   * went to the fund" is a real answer to give a customer, and silently dropping
+   * it would read as though the donation had been forgotten.
+   */
+  const statesDonation = typeof donation === 'number' && Number.isFinite(donation)
 
   switch (template) {
     case 'order_placed':
@@ -223,8 +243,14 @@ export function renderMessage(template: Template, data: MessageData): string {
       // message would hand them to whoever the message is forwarded to, which is
       // exactly the case the gate exists for. The reference was sent when the
       // order was placed.
+      //
+      // The donation IS named: an amount is not a credential, and an online buyer
+      // is owed the same answer a counter customer gets from sale_thanks.
       return (
-        `${hi(name)}we received your payment. Thank you!` +
+        `${hi(name)}we received your payment` +
+        (total ? ` of ${formatLkr(total)}` : '') +
+        `. Thank you!` +
+        (statesDonation ? ` ${formatLkr(donation as number)} of it went to the community fund.` : '') +
         (passes
           ? ` Your ${passes === 1 ? 'workshop pass is' : `${passes} workshop passes are`} ready — open ${url} and enter the reference we sent when you booked.`
           : ` Your receipt: ${url}`)
@@ -348,59 +374,21 @@ export async function queueMessage(
  * the text, or taps a link that opens their own phone's SMS app prefilled. It
  * costs nothing and works today.
  *
- * `http` posts to a gateway. It is inert until the three variables below are
- * set in the server's environment file (/etc/basnayakavermigrow.env on the VPS —
- * deliberately not in git, and not editable from the admin UI, because this app
- * has no encryption-at-rest helper and no code path that reads a secret back out
- * of the database).
- */
-export type Transport = 'manual' | 'http'
-
-export function activeTransport(): Transport {
-  return process.env.SMS_GATEWAY_URL ? 'http' : 'manual'
-}
-
-export interface DeliveryResult {
-  ok: boolean
-  error?: string
-}
-
-/**
- * POST the message to the configured gateway.
+ * `http` hands the message to a gateway. WHICH gateway — and what it needs — is
+ * src/lib/sms/'s business; this file only asks whether anything transmits and, if
+ * so, passes the text over. Credentials live in the server's environment file
+ * (/etc/basnayakavermigrow.env on the VPS — deliberately not in git, and not
+ * editable from the admin UI, because this app has no encryption-at-rest helper
+ * and no code path that reads a secret back out of the database).
  *
- * Deliberately never throws: a provider outage must mark a message failed, not
- * turn into a 500 that leaves the admin unsure whether anything was sent.
+ * Re-exported rather than reimplemented so the delivery decision has exactly one
+ * definition; a second copy of "do we actually send?" is how a system ends up
+ * recording messages as sent that were never transmitted.
  */
-export async function sendViaGateway(to: string, body: string): Promise<DeliveryResult> {
-  const url = process.env.SMS_GATEWAY_URL
-  if (!url) return { ok: false, error: 'No SMS gateway configured' }
+import { activeTransport, sendSms as sendViaGateway } from '@/lib/sms'
 
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(process.env.SMS_GATEWAY_KEY
-          ? { Authorization: `Bearer ${process.env.SMS_GATEWAY_KEY}` }
-          : {}),
-      },
-      body: JSON.stringify({
-        to,
-        message: body,
-        sender: process.env.SMS_SENDER_ID ?? undefined,
-      }),
-      // A gateway that hangs must not hang the admin request with it.
-      signal: AbortSignal.timeout(10_000),
-    })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      return { ok: false, error: `${res.status} ${text.slice(0, 200)}`.trim() }
-    }
-    return { ok: true }
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Send failed' }
-  }
-}
+export { activeTransport, sendViaGateway }
+export type { Transport } from '@/lib/sms'
 
 /**
  * Send a queued message, or record that the admin already sent it by hand.
@@ -449,13 +437,165 @@ export async function deliverMessage(
 
   const result = await sendViaGateway(message.toPhone, message.body)
   if (!result.ok) {
+    // sentAt AND sentBy ARE CLEARED, not left behind. The claim above stamped
+    // them optimistically so a crash mid-send would not leave the row looking
+    // queued; but now that the provider has actually refused, leaving them would
+    // make the admin list read "Sent 14:02 by auto" over a message nobody got,
+    // which is exactly the false record of delivery this file exists to prevent.
+    // status='failed' means not sent, so the sent-* columns say so too.
     await client.customerMessage.update({
       where: { id },
-      data: { status: 'failed', error: result.error ?? 'Send failed' },
+      data: { status: 'failed', error: result.error ?? 'Send failed', sentAt: null, sentBy: null },
     })
     return { ok: false, error: result.error }
   }
   return { ok: true }
+}
+
+/* ------------------------------------------------------------- auto-send -- */
+
+/**
+ * The sentBy marker for machine-sent messages. Kept distinct from 'admin'
+ * because the daily cap counts only these: a ceiling meant to bound what the
+ * software does on its own must never block a human deciding to send one more.
+ */
+export const AUTO_SENT_BY = 'auto'
+
+/** Automatic sends allowed per local day, across the whole system. */
+export function smsDailyCap(): number {
+  const raw = Number.parseInt(process.env.SMS_DAILY_CAP ?? '', 10)
+  return Number.isFinite(raw) && raw >= 0 ? raw : 200
+}
+
+/** SMS_AUTOSEND=off (or false/0) stops automatic sending without a redeploy. */
+export function autoSendEnabled(): boolean {
+  const raw = (process.env.SMS_AUTOSEND ?? '').trim().toLowerCase()
+  return !(raw === 'off' || raw === 'false' || raw === '0')
+}
+
+/**
+ * How many messages the system has sent on its own since local midnight. Counts
+ * only `sentBy = 'auto'`: a message a human pressed Send on is not what the
+ * ceiling is there to bound, and counting it would let one busy morning lock the
+ * automation out for the rest of the day.
+ */
+export async function autoSentToday(client: NotifyClient): Promise<number> {
+  // Server-local midnight. The VPS runs UTC, so the window is a UTC day — close
+  // enough for a spend ceiling, and it needs no timezone dependency to compute.
+  const midnight = new Date()
+  midnight.setHours(0, 0, 0, 0)
+  return client.customerMessage.count({
+    where: { status: 'sent', sentBy: AUTO_SENT_BY, sentAt: { gte: midnight } },
+  })
+}
+
+export interface AutoSendResult {
+  sent: number
+  failed: number
+  /** Still queued — held back by the cap, for a human to send or skip. */
+  held: number
+  /** Why nothing (or less than everything) happened. For logs, never for the customer. */
+  reason?: string
+}
+
+/**
+ * Send whatever the last committed event queued.
+ *
+ * CALL THIS AFTER THE TRANSACTION COMMITS, WITH THE PLAIN PRISMA CLIENT. Passing
+ * the transaction client would put gateway HTTP calls inside the money
+ * transaction, where one slow gateway would hold a database write lock open — and
+ * the entire separation this file is built around would be undone. The
+ * corresponding guarantee is that a message can exist for an event that
+ * committed, but never for one that rolled back.
+ *
+ * THREE THINGS STOP IT, ALL ON PURPOSE:
+ *
+ * 1. No gateway configured. `activeTransport()` is 'manual', so there is nothing
+ *    to transmit. Returning early is not laziness — the alternative is marking
+ *    messages 'sent' that no one ever received.
+ * 2. SMS_AUTOSEND=off. A kill switch that does not need a deploy.
+ * 3. The daily cap. /api/donations is public and its throttle keys on a
+ *    spoofable x-forwarded-for, so an attacker rotating that header could
+ *    otherwise spend the farm's SMS credit on numbers of their choosing. The cap
+ *    bounds the whole system's autonomous spend to a number the owner can
+ *    predict; whatever it holds back stays queued and visible in the admin.
+ *
+ * Note the cap is checked per call and counted from committed rows, so two
+ * callers running at once can overshoot by a few messages. It is a spend ceiling,
+ * not a quota — overshooting slightly is the acceptable failure.
+ *
+ * IT SENDS THE WHOLE QUEUE FOR THAT RECORD, OLDEST FIRST, NOT JUST THE NEWEST
+ * MESSAGE. That is not tidiness. An order placed online queues order_placed and
+ * nothing else — placement is not a sale, so nothing is transmitted then — and
+ * order_paid deliberately does not repeat the order reference, it refers back to
+ * "the reference we sent when you booked". Sending only the newest message would
+ * deliver that sentence to somebody who was never sent the reference. Draining
+ * the backlog in order is what makes the later message make sense, and it is why
+ * an order that sat unpaid for a week still tells a coherent story when it is
+ * finally settled.
+ *
+ * Nothing here throws: it runs after the customer's request has already
+ * succeeded, so a gateway outage must not turn a completed sale into an error.
+ */
+export async function autoDeliver(
+  client: NotifyClient,
+  refType: RefType,
+  refId: string
+): Promise<AutoSendResult> {
+  const nothing = (reason: string): AutoSendResult => ({ sent: 0, failed: 0, held: 0, reason })
+
+  try {
+    if (!autoSendEnabled()) return nothing('automatic sending disabled (SMS_AUTOSEND)')
+    if (activeTransport() === 'manual') {
+      return nothing('no gateway configured — messages stay queued for manual sending')
+    }
+
+    const link = await client.customerLink.findUnique({
+      where: { refType_refId: { refType, refId } },
+      select: { id: true },
+    })
+    if (!link) return nothing('nothing was queued for this record')
+
+    const queued = await client.customerMessage.findMany({
+      where: { linkId: link.id, status: 'queued' },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    })
+    if (queued.length === 0) return nothing('no queued messages')
+
+    const room = smsDailyCap() - (await autoSentToday(client))
+    if (room <= 0) return { sent: 0, failed: 0, held: queued.length, reason: 'daily cap reached' }
+
+    let sent = 0
+    let failed = 0
+    let held = 0
+
+    for (const message of queued) {
+      if (sent >= room) {
+        held++
+        continue
+      }
+      const result = await deliverMessage(client, message.id, AUTO_SENT_BY)
+      if (result.ok) sent++
+      // `already` means an admin tapped Send first. It is out of the queue and was
+      // never ours to send, so it counts as neither a send nor a failure.
+      else if (!result.already) failed++
+    }
+
+    return held > 0
+      ? { sent, failed, held, reason: 'daily cap reached' }
+      : { sent, failed, held }
+  } catch (err) {
+    // The events that call this have already committed. A failure here — the
+    // database refusing a write, a provider throwing against its contract — must
+    // stay a log line, not become the response to a sale that did happen.
+    return {
+      sent: 0,
+      failed: 0,
+      held: 0,
+      reason: err instanceof Error ? `auto-send failed: ${err.message}` : 'auto-send failed',
+    }
+  }
 }
 
 /**

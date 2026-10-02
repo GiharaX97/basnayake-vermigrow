@@ -6,14 +6,17 @@ import { Menu, X, Sun, Moon } from 'lucide-react'
 import { useContentStore } from '@/store/content-store'
 import { cn } from '@/lib/utils'
 
+/**
+ * Events, Training and Videos are deliberately absent: those sections have no
+ * real coverage yet, so their content arrays are empty and the components
+ * render nothing. A nav link to a section that isn't on the page is worse than
+ * no link. Re-add the entry when real photos or footage are supplied.
+ */
 const navItems = [
   { label: 'Work', href: '/#work' },
   { label: 'Products', href: '/#products' },
   { label: 'Map', href: '/#map' },
   { label: 'Photos', href: '/#photos' },
-  { label: 'Events', href: '/#events' },
-  { label: 'Training', href: '/#training' },
-  { label: 'Videos', href: '/#videos' },
   { label: 'About', href: '/#about' },
   { label: 'Founder', href: '/#founder' },
   { label: 'Contact', href: '/#contact' },
@@ -27,7 +30,7 @@ export function Navbar() {
   const [open, setOpen] = React.useState(false)
   const [scrolled, setScrolled] = React.useState(false)
   const store = useContentStore()
-  const brand = store?.content?.brand ?? 'Basnayaka VermiGrow'
+  const brand = store?.content?.brand ?? 'Basnayaka Vermigrow'
   const hasNotices = (store?.content?.notices?.length ?? 0) > 0 && !store?.tickerDismissed
 
   React.useEffect(() => { setMounted(true) }, [])

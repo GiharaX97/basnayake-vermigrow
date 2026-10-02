@@ -29,8 +29,15 @@ export function Projects() {
               key={project.id}
               className="group relative overflow-hidden rounded-2xl bg-card border border-border/60 hover:border-emerald-500/40 hover:shadow-xl transition-all"
             >
-              {/* Logo header */}
-              <div className="relative aspect-[4/3] bg-gradient-to-br from-emerald-50 to-amber-50 dark:from-emerald-950/30 dark:to-amber-950/20 overflow-hidden flex items-center justify-center p-8">
+              {/* Logo header.
+                  Deliberately stays LIGHT in dark mode — there is no `dark:`
+                  variant on the gradient. The three supplied brand marks are
+                  dark-on-white artwork (maroon, deep green, orange); over the
+                  previous dark-emerald panel the green one all but vanished and
+                  the maroon one lost most of its contrast. A light plate is how
+                  these marks are designed to be shown, so the card keeps one in
+                  both themes rather than tinting the logo. */}
+              <div className="relative aspect-[4/3] bg-gradient-to-br from-white via-emerald-50 to-amber-50 overflow-hidden flex items-center justify-center p-8">
                 {project.logo ? (
                   <img
                     src={project.logo}

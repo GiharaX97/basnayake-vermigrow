@@ -965,7 +965,7 @@ export default function ContentEditor() {
                 <Input
                   value={content.seoTitle || ''}
                   onChange={(e) => update('seoTitle', e.target.value)}
-                  placeholder="Basnayaka VermiGrow — Organic Fertilizer & Vegetables, Karandeniya"
+                  placeholder="Basnayaka Vermigrow — Organic Fertilizer & Vegetables, Karandeniya"
                 />
                 <p className="text-xs text-muted-foreground">
                   Keep it under about 60 characters, or Google truncates it.

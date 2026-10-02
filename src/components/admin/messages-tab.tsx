@@ -51,6 +51,18 @@ interface MessagesResponse {
   queuedCount: number
   failedCount: number
   transport: 'manual' | 'http'
+  provider: {
+    transport: 'manual' | 'http'
+    provider: string
+    requires: string[]
+    missing: string[]
+    ready: boolean
+  }
+  autoSend: {
+    enabled: boolean
+    cap: number
+    sentToday: number
+  }
 }
 
 const TEMPLATE_LABELS: Record<string, string> = {
@@ -94,6 +106,7 @@ export function MessagesTab() {
   const [data, setData] = useState<MessagesResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [bulkBusy, setBulkBusy] = useState(false)
   const [filter, setFilter] = useState<'queued' | 'all'>('queued')
   const [reloadKey, setReloadKey] = useState(0)
 
@@ -149,6 +162,39 @@ export function MessagesTab() {
     }
   }
 
+  /**
+   * Send everything queued, 50 at a time. Confirmed first: this spends real
+   * money, and it is the one button here that cannot be undone by tapping again.
+   */
+  const sendAll = async () => {
+    const count = data?.queuedCount ?? 0
+    if (
+      !window.confirm(
+        `Send ${Math.min(count, 50)} of ${count} queued message${count === 1 ? '' : 's'} now? This spends real SMS credit and cannot be undone.`
+      )
+    ) {
+      return
+    }
+    setBulkBusy(true)
+    try {
+      const res = await fetch('/api/admin/messages', { method: 'POST' })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) {
+        toast.error(body?.error ?? 'Could not send the queue')
+        return
+      }
+      toast.success(
+        `Sent ${body.sent}${body.failed ? `, ${body.failed} failed` : ''}` +
+          (body.remaining ? ` — ${body.remaining} still queued` : '')
+      )
+      refresh()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
   const copy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -165,6 +211,8 @@ export function MessagesTab() {
   const messages = data?.messages ?? []
   const shown = filter === 'queued' ? messages.filter((m) => m.status === 'queued') : messages
   const transport = data?.transport ?? 'manual'
+  const provider = data?.provider
+  const autoSend = data?.autoSend
 
   return (
     <div className="space-y-6">
@@ -185,9 +233,34 @@ export function MessagesTab() {
                 your phone&rsquo;s messaging app, then mark it sent.
               </>
             ) : (
-              <>A gateway is configured — tapping Send transmits the message immediately.</>
+              <>Tapping Send transmits the message immediately.</>
             )}
           </p>
+          {/* What the admin needs in order to trust the number above: which
+              gateway is in play, whether it is actually usable, and how much of
+              today's automatic budget is gone. A missing credential is reported
+              by NAME — the value is never sent to the browser. */}
+          {provider && transport === 'http' && (
+            <p className="text-xs text-muted-foreground mt-2">
+              {provider.ready ? (
+                <>
+                  Sending through{' '}
+                  <span className="font-medium text-foreground">{provider.provider}</span>.
+                  {autoSend
+                    ? autoSend.enabled
+                      ? ` New sales are texted automatically — ${autoSend.sentToday} of ${autoSend.cap} used today.`
+                      : ' Automatic sending is switched off (SMS_AUTOSEND).'
+                    : null}
+                </>
+              ) : (
+                <span className="text-destructive">
+                  {provider.missing.length
+                    ? `Gateway "${provider.provider}" is missing ${provider.missing.join(', ')} — sending will fail.`
+                    : `Unknown gateway "${provider.provider}" — sending will fail.`}
+                </span>
+              )}
+            </p>
+          )}
           {(data?.failedCount ?? 0) > 0 && (
             <p className="text-xs text-destructive mt-2">
               {data?.failedCount} message{data?.failedCount === 1 ? '' : 's'} failed to send.
@@ -211,6 +284,21 @@ export function MessagesTab() {
         >
           All messages
         </Button>
+        {/* Only with a gateway: on the manual transport "send all" would mark the
+            whole queue sent without transmitting anything. The API refuses it
+            too — this just keeps the button from offering it. */}
+        {transport === 'http' && (data?.queuedCount ?? 0) > 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto"
+            disabled={bulkBusy}
+            onClick={sendAll}
+          >
+            <Send className="size-4" />
+            {bulkBusy ? 'Sending…' : 'Send all queued'}
+          </Button>
+        )}
       </div>
 
       {shown.length === 0 ? (
@@ -270,7 +358,11 @@ export function MessagesTab() {
                 {m.sentAt && (
                   <p className="text-xs text-muted-foreground">
                     Sent {format(new Date(m.sentAt), 'd MMM yyyy, HH:mm')}
-                    {m.sentBy ? ` by ${m.sentBy}` : ''}
+                    {m.sentBy === 'auto'
+                      ? ' automatically'
+                      : m.sentBy
+                        ? ` by ${m.sentBy}`
+                        : ''}
                   </p>
                 )}
 

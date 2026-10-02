@@ -1,4 +1,4 @@
-# Basnayaka VermiGrow — Project Status
+# Basnayaka Vermigrow — Project Status
 
 > Last updated: 2026-07-11
 > Branch: `main`

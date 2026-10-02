@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Basnayaka VermiGrow — deploy: pull latest from GitHub, apply server config
+# Basnayaka Vermigrow — deploy: pull latest from GitHub, apply server config
 # from the repo, rebuild, restart.  Run as root:   sudo deploy-vermigrow
 #
 # The GitHub repo is the SINGLE SOURCE OF TRUTH for site code AND server config
