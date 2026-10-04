@@ -354,3 +354,504 @@ code was never at fault.
   the user; not yet taken up.
 - No `Strict-Transport-Security` header; `/favicon.ico` 404s (the icon link points at
   `/logos/logo-main.png`, which serves fine).
+
+---
+
+## 2026-10-04 — Order management page + httpSMS status updates (local only, NOT deployed)
+
+**Asked for:** a real order screen in the admin so orders can be worked by hand, and all order-status
+updates driven from the httpSMS system.
+
+### What was built
+
+**Fulfilment is a new axis, not an overloaded column.** `Sale.status` means *money* and drives seat
+capacity, sold counts and the fund — packing a box must never touch it. So the pipeline
+(New → Confirmed → Packed → Dispatched → Delivered) went into a **new nullable `Sale.fulfillment`**,
+where `NULL` means New, so every existing order needed no backfill. `dispatched` is labelled
+**"Sent to customer"** in the UI, because `Pack.status='dispatched'` already means stock sent to a
+*retailer*.
+
+**One writer for order state.** `src/lib/order-actions.ts` (`setStageTx` / `cancelOrderTx` /
+`requestCancelTx` / `addNote` / `dismissCancelRequest`). The admin routes and the SMS webhook both go
+through it, so cancelling cannot grow a second, subtly different implementation that moves money
+differently. Money-safe cancel plus fund/seat rules were lifted verbatim out of the settle route.
+
+**Admin UI.** `/admin/orders` (list: search, six client-side filters, summary tiles) and
+`/admin/orders/[orderRef]` (every action: record payment, cancel, move stage, notes, dismiss a cancel
+request, plus timeline + per-order SMS history). Deliberate split — a scrolling list is for *finding*
+an order; money-touching and customer-texting actions live on the detail page. The `orders-tab.tsx`
+component was deleted and the Orders tab removed from `/admin/donations`, so there is one order UI.
+Nav gained Orders as item #2; the mobile bottom bar is now **9 items** — Warehouse→"Stock" and
+Inquiries→"Inquiry" were shortened to fit, and the breadcrumb lookup was made prefix-aware so
+`/admin/orders/<ref>` reads "Orders".
+
+**Status SMS.** Four new templates (`order_confirmed|packed|dispatched|delivered`), queued inside the
+stage-change transaction and sent after commit via `autoDeliver`. A **step back sends nothing** — it
+gets an `OrderEvent` for the audit trail and stays quiet. `order_paid` and `order_confirmed` now
+invite a reply, because the old copy never told anyone that CONFIRM/CANCEL existed.
+
+**httpSMS correlation, both directions.** Every send carries `request_id = CustomerMessage.id`; the
+gateway's `data.id` is persisted as `providerMessageId`. `deliveryStatus` is written **only** by a
+webhook — a 2xx from httpSMS means "accepted into the phone's queue", never "delivered".
+
+**Inbound: `POST /api/sms/webhook`** (new, public). HS256 JWT verified by hand with `node:crypto`
+(`webhook-verify.ts`) — no JWT library is installed and `alg: none` is refused outright. Signature is
+checked **before the body is parsed**. Idempotency is `SmsEvent.@@unique([eventType,
+providerMessageId])` with the insert **inside the effect's transaction**, so a duplicate is a no-op
+200 and a failure rolls back to let the retry succeed. `inbound.ts` holds the reply policy: bare
+`YES`/`NO`/`1`/`0` count only as the *whole* message (so "no problem, thanks" never cancels), only
+CONFIRM/CANCEL may open a short sentence, and `STOP` is deliberately **not** a cancel. A reply must
+match **exactly one** live order for that number; a shared phone gets recorded and **nothing moves**.
+
+**The policy the user chose, implemented as chosen:** `CANCEL` on a **paid** order sets
+`cancelRequestedAt` and texts the customer something that does not claim a cancellation — the office
+decides. `CANCEL` on an **unpaid** order really cancels it, through the same path the admin's Cancel
+button uses. Unmatched replies now surface in the Messages tab (`inbound` list), because an inbound
+path that silently ate a customer's CANCEL would be worse than having none.
+
+### Verification (all against a DB **copy**; the working DB was never opened for writing)
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit` | **exit 0** |
+| `npm run build` | **exit 0**; `/admin/orders`, `/admin/orders/[orderRef]`, `/api/sms/webhook` all in the route table |
+| `bash scripts/run-e2e.sh` | **465 passed, 0 failed** |
+| `bash scripts/run-e2e-sms.sh` | **156 passed, 0 failed** — phases `mock` 51, `fail` 13, `manual` 13, **`webhook` 79** |
+
+The new `webhook` phase signs its own JWTs with `crypto` (an independent second implementation, so the
+test does not verify the verifier with itself) and covers: unsigned / malformed / wrong-key /
+`alg:none` / expired all **401 with nothing written**; a receipt setting `deliveryStatus` without
+touching our own `status`; the same event twice being idempotent; the `request_id` fallback; CONFIRM on
+an unpaid order recorded but **not** acted on; CONFIRM on a paid order advancing it and texting;
+chatter stored but not obeyed; CANCEL flagging a paid order **without** cancelling it and leaving its
+donation in the fund; CANCEL cancelling an unpaid one; a shared number refusing to guess; and an
+unknown number matching nothing.
+
+### Not done / still open
+
+- **Not deployed.** Prod is untouched. The schema change is additive and nullable (`ALTER TABLE ADD
+  COLUMN`; two new tables), so `prisma db push` on the live DB should not rewrite anything — but that
+  has not been run against live and is the first thing to watch.
+- **No human has looked at the pages yet.** Only the automated suites ran; a localhost walkthrough of
+  `/admin/orders`, the detail page, the stepper and the Messages tab is still owed.
+- **Mobile nav at 9 items** needs an eyeball at 360px.
+- **SMS cost:** one text per stage change, bounded only by `SMS_DAILY_CAP` (200/day by default). Worth
+  confirming that number is right for the farm before going live.
+- **httpSMS operational reality:** the Android handset must stay on and online; the public webhook
+  needs working HTTPS on the VPS, and `HTTPSMS_WEBHOOK_SECRET` must be set in the systemd env or the
+  endpoint answers 503 to everything.
+
+---
+
+## 2026-10-04 (later) — Local test loop: sample orders, simulated replies, Cloudflare tunnel
+
+Set up so the order + SMS pipeline can be exercised end to end without a gateway account and without
+touching production. Everything below is **localhost only**; prod is unchanged.
+
+### Two new scripts
+
+- **`scripts/test-data.mjs`** — creates a priced `[LOCAL TEST]` product (the two real catalog items are
+  price 0 and therefore not orderable at all) plus a PAID and an UNPAID order, then settles one as paid.
+  Re-running reuses what it already made instead of piling up orders. Refuses to run against any host
+  but localhost, because it writes real rows and the deployed site is one `BASE_URL` away.
+  Written to `db/custom.db` — the working DB, not a copy. Undo with `--clean`.
+- **`scripts/simulate-reply.mjs`** — signs the exact CloudEvents payload httpSMS posts and sends it to
+  `/api/sms/webhook`. This is what makes CONFIRM/CANCEL testable with no gateway, no handset and no
+  tunnel. Reads `HTTPSMS_WEBHOOK_SECRET` from `.env` if the environment has it.
+
+**The unpaid order is deliberately on a different number.** `findOrderForPhone` refuses to act when a
+number has more than one live order, so two live orders sharing a number would make *every* reply come
+back "ambiguous — nothing was changed", which looks exactly like a broken webhook.
+
+### Verified by hand (localhost, mock transport)
+
+| Reply | Number | Result |
+|---|---|---|
+| `hello` | paid order's | 200, `orderRef: null`, "reply not recognised" |
+| `CONFIRM` | paid order's | advanced `Sale.fulfillment` → `confirmed`; `order_confirmed` sent |
+| `CANCEL` | **unpaid** order's | order cancelled; `order_cancelled` sent |
+| `CANCEL` | **paid** order's | `cancelRequestedAt` set, `status` still **`paid`** — not cancelled |
+
+Also confirmed: the same signed event through the **public tunnel** is accepted (200), and all four
+replies appear on Donations → Messages with their outcome.
+
+### Cloudflare tunnel
+
+`cloudflared tunnel --url http://localhost:3001` → `https://<random>.trycloudflare.com`. The webhook URL
+to register in httpSMS is `https://<tunnel>/api/sms/webhook`, and the signing key is whatever
+`HTTPSMS_WEBHOOK_SECRET` holds. The free URL **changes on every restart**.
+
+⚠️ **A quick tunnel publishes the whole site, including `/admin`.** Measured, so the risk is not
+guesswork: `/admin` redirects without a cookie, but a **forged 96-character `admin_session` cookie
+renders `/admin/orders` with HTTP 200** — the middleware checks the cookie's length, not its validity.
+No business data leaks that way (the page is a client component; `/api/admin/orders` correctly answers
+401), but the admin shell is public and **`/api/auth/login` has no rate limiting while
+`ADMIN_PASSWORD` is `admin123`**. Change the password before pointing a tunnel at this, or gate the
+tunnel with Cloudflare Access. Only `/api/sms/webhook` needs to be public.
+
+### Notes
+
+- Locally `SMS_PROVIDER=mock`: every "send" is appended to `.sms-outbox.log` and nothing leaves the
+  machine. Real dispatch needs `SMS_PROVIDER=httpsms` + `HTTPSMS_API_KEY` + `HTTPSMS_FROM`.
+- `/api/orders` throttles **5 orders per IP per 30 min** (60/hour global, per-process). Creating a
+  third sample order inside that window returns 429 — the guard working, not a bug.
+- `/api/admin/messages` is the **API**; the human-readable replies view is the **Messages tab under
+  Donations**, not a page at `/admin/messages` (which 404s).
+
+### The SMS suite was fragile to real data — fixed
+
+Creating local test data broke `run-e2e-sms.sh` (16 failures), which is worth recording because the
+cause was not the test data:
+
+- `autoSentToday()` counts automatic sends since local midnight **across the whole database**, and
+  every phase runs against a fresh copy of `db/custom.db`. Once that copy contained 13 real sends from
+  today, the mock phase's `SMS_DAILY_CAP=3` was already spent, so nothing auto-sent and six assertions
+  failed in a way indistinguishable from broken auto-send code.
+- The webhook phase asserted `smsEvent.count() === 0`, which only holds on a database that has never
+  received a webhook.
+
+So the suite only passed on a DB that had never been used — i.e. it could not be run against anything
+resembling production, which is exactly when it is worth running. Fixed:
+
+- `resetDailyAutoSendCounter()` moves today's existing `sentBy='auto'` rows back a day at phase start
+  (rows moved, never deleted — they belong to the working DB). The cap assertions then mean what they
+  say.
+- The bad-signature block counts `SmsEvent` as a **delta** from a baseline, which tests the same claim
+  ("nothing was written") without requiring an empty table.
+
+**156 passed, 0 failed** with the local test data present.
+
+### And the main suite assumed a `.env` with no SMS
+
+Adding `SMS_PROVIDER=mock` to `.env` for local testing broke `run-e2e.sh` (3 failures): the main suite
+tests the **no-gateway** path and asserts `transport === 'manual'`, but the standalone server inherits
+`.env`, so messages actually sent and three assertions flipped. The suite was depending on a file it
+never mentions.
+
+Fixed in `run-e2e.sh`: `SMS_PROVIDER=""` and `SMS_GATEWAY_URL=""` are set explicitly for its server.
+Next.js never lets a `.env` file override a real environment variable, and `configuredProvider()`
+treats `''` as unset and falls through to `'manual'` — so the suite now means what it says regardless
+of how the machine is configured for local testing.
+
+Same class of bug as the SMS-suite one above: **a suite must not depend on ambient machine state.**
+
+| Suite | After the fixes |
+|---|---|
+| `bash scripts/run-e2e.sh` | **465 passed, 0 failed** |
+| `bash scripts/run-e2e-sms.sh` | **156 passed, 0 failed** |
+
+---
+
+## 2026-10-04 (later) — Admin was O(n) bcrypt per request; every tab paid ~3s
+
+Reported symptom: admin tabs take seconds to load, locally **and** on the deployed site.
+
+Cause was in `isAdminAuthenticated()` (`src/lib/admin-auth.ts`), not in the cloud, the tunnel or dev
+mode. Sessions were stored as `session:<bcrypt hash of the token>`, and because a bcrypt hash cannot be
+looked up by equality, the cookie was verified by **bcrypt-comparing it against every session row**
+until one matched. Two things made that fatal:
+
+- bcrypt at cost 10 measured **82ms per comparison**;
+- nothing ever deleted session rows. Every login added one and only the single row that happened to
+  match was ever cleaned up, so the table grew without bound.
+
+The working DB had accumulated **39 session rows — 13 valid, 26 expired**. Measured:
+
+| | Before | After |
+|---|---|---|
+| `GET /api/admin/orders` | 2957 / 3004 / 2998 ms | 109 / 33 / 47 ms |
+| `GET /api/admin/messages` | 2918 / 2922 / 2892 ms | 103 / 43 / 32 ms |
+| `GET /admin/donations` (page) | ~3s *per API call it fires* | 224 / 113 / 97 ms |
+
+An admin page fires several API calls, which is why a "tab" felt like it took forever.
+
+### Fix
+
+- `sessionKey()` is now `session:<sha256(token)>` — a deterministic digest, so
+  `isAdminAuthenticated()` is **one indexed `findUnique`** with no bcrypt at all.
+- `pruneStaleSessions()` runs on login (rare, and the one moment the table is already being written)
+  and deletes both expired rows and legacy bcrypt-keyed rows, which can never match under the new
+  scheme. Recognising them by shape is what avoids needing a migration script. It is deliberately NOT
+  on the authentication path — sweeping per request would reintroduce the scan.
+
+**Why sha256 is not a downgrade:** bcrypt is slow to defend *low-entropy* secrets a human chose. This
+token is 48 random bytes — nothing to guess, no rainbow table — so the slow hash bought no security
+while costing 80ms per request. The raw token is still never stored, so a DB leak still does not hand
+over live sessions. `bcrypt` is still used for the admin password itself, where it belongs.
+
+Effect on the DB: 39 session rows → 1. Everyone is logged out once, since the key scheme changed.
+
+### Verification
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit` | exit 0 |
+| `npm run build` | exit 0 |
+| `bash scripts/run-e2e.sh` | **465 passed, 0 failed** |
+| `bash scripts/run-e2e-sms.sh` | **156 passed, 0 failed** |
+| all 9 admin routes return real payloads | ✓ |
+| no / forged / wrong-value cookie on an admin API | **401 / 401 / 401** |
+| `/api/auth/check` | `authenticated:false` unauthenticated, `true` with a session |
+
+The suites do not couple to the session scheme — only that login sets `admin_session` and that forged
+cookies 401 — so they pass unchanged. Both were re-run **against a fresh build**: `run-e2e.sh` reuses
+an existing `.next/standalone`, so running it after a source change without rebuilding silently tests
+the old code.
+
+## Live order test, and two order-path bugs (2026-10-04)
+
+Goal: place an order from the public site and watch the whole SMS chain. Two real defects came out,
+both in `src/app/api/orders/route.ts` — the one file in the flow nobody had driven from a browser.
+
+### 1. Ordering through the tunnel was refused with 403
+
+`originAllowed()` accepted an `Origin` only if its host matched the request's own host or
+`NEXTAUTH_URL`'s. Behind a tunnel both are the internal `localhost:3001`, so a browser posting from
+`https://<tunnel>` matched neither and every submit failed. It now also accepts `X-Forwarded-Host`
+(first entry only — the rest of the chain is the proxy's own addressing). Not a CSRF hole: a page
+cannot set `Host`/`Origin`, and adding `X-Forwarded-Host` cross-origin forces a preflight this route
+never approves.
+
+| Request | Before | After |
+|---|---|---|
+| tunnel origin | 403 | **400** (origin passed; empty probe body rejected) |
+| `evil.example.com` origin | 403 | **403** |
+| localhost origin | 400 | 400 |
+
+Tunnel-only gap: on the VPS `NEXTAUTH_URL` is the real public URL so `Origin` matched and live
+ordering was never broken. The fix drops the single-host assumption.
+
+### 2. "We have your order" was queued but never sent
+
+`POST /api/orders` queued `order_placed` inside the transaction and never called `autoDeliver` —
+every other path does (settle, status, admin sales, donations, webhook). The acknowledgement sat
+until an unrelated admin action flushed the queue, usually riding along with the payment text.
+
+| Order | queued → sent |
+|---|---|
+| `VG-O-RN872U` (before) | 115,897 ms |
+| `VG-O-HWPDYB` (after) | **9 ms** |
+
+This was deliberate, not an oversight: the route comment justified it because the endpoint is public
+and unauthenticated, so auto-sending lets a stranger post junk orders and burn `SMS_DAILY_CAP`. The
+user was asked and chose to send immediately — the message is an acknowledgement of receipt, and one
+arriving hours later glued to the payment text is worthless. Abuse stays bounded by the daily cap and
+the route's per-IP/global throttle, the same trade the public donations route already makes. The send
+now runs after the commit, wrapped so a gateway failure cannot turn a committed order into a 500.
+
+`scripts/e2e-sms.mjs` §2 asserted the old behaviour (`'STILL QUEUED — a pending order is not a sale'`)
+and was rewritten to the new policy. **It has not been run.** Cap arithmetic is unchanged: the same
+3 sends before the cap bites, one of them earlier.
+
+### Blocked: real SMS
+
+`.env` is still `SMS_PROVIDER="mock"`, so nothing leaves the machine — sends append to
+`.sms-outbox.log`. httpSMS is not a cloud API: it needs an account (`HTTPSMS_API_KEY`), a gateway
+Android handset online running the app, and that handset's number in `HTTPSMS_FROM`.
+
+The credentials did not land. `H:\My_Projects\basnayake-glm5.2\.env` was reported edited twice but was
+identical both times: 1365 bytes, 30 lines, mtime 10:07, anchored counts `HTTPSMS_API_KEY` 0 /
+`HTTPSMS_FROM` 0. `readlink -f` shows no junction. A second checkout, `basnayake-glm5.2-fixed/`, has
+its own `.env` — most likely where the edits went. `SMS_PROVIDER` was deliberately NOT switched: the
+provider declares `requires = ['HTTPSMS_API_KEY','HTTPSMS_FROM']`, so flipping it with no key moves
+the failure from "quietly mocked" to "hard error mid-order". I also stopped rather than scan the
+sibling repo's `.env` for the key — blocked as credential exploration, correctly.
+
+### State when stopped
+
+- Dev server up on 3001; tunnel restarted as `https://superb-aruba-rate-clerk.trycloudflare.com`
+  (quick tunnels get a new URL on every restart).
+- `SMS_PROVIDER` still `mock`. No restart performed — it would only have re-read the unchanged file.
+- Everything above is **uncommitted**.
+- Not verified: the rewritten e2e-sms assertions (need `npm run build` first — the runners reuse a
+  stale `.next/standalone`), and no human walkthrough of `/admin/orders` yet.
+
+---
+
+## 2026-10-04 (later) — Resumed: suites verified, two defects found and fixed
+
+Picked up from "State when stopped" above. **Still uncommitted, still not deployed.** Prod was
+confirmed to be running the pre-SMS build: `GET https://www.basnayakavermigrow.lk/api/sms/webhook`
+→ **404** (`/order` `/api/catalog` `/` all 200).
+
+### Cleared the outstanding verification
+
+`.next` was stale (source edited 11:23, build 10:47) — rebuilt from clean, then both suites re-run
+**against the fresh build**:
+
+| Suite | Result |
+|---|---|
+| `bash scripts/run-e2e.sh` | **466 passed, 0 failed** (was 465; one assertion added below) |
+| `bash scripts/run-e2e-sms.sh` | **157 passed, 0 failed** — mock 52, fail 13, manual 13, webhook 79 |
+
+The rewritten `order_placed` auto-send assertions (§2) pass, which was the specific thing left unrun.
+
+### Local walkthrough (against a **copy**, `db/local-test.db`)
+
+The working DB was byte-identical before and after (`sha256 ccdf03a3…`); the copy and the walkthrough
+outbox log were deleted afterwards. Whole loop driven by hand:
+
+| Step | Result |
+|---|---|
+| `node scripts/test-data.mjs` | creates a PAID + an UNPAID order on different numbers |
+| placing an order | `order_placed` **auto-sends at once** (the 115,897 ms → 9 ms fix, still holding) |
+| settling it | `order_paid` goes out, donation line correct, invites CONFIRM/CANCEL |
+| text `CONFIRM` | `fulfillment → confirmed`, `status` still **`paid`**, timeline actor **`sms`**, reply text sent |
+| text `CANCEL` (paid) | `cancelRequestedAt` SET, `status` **still `paid`**, donation still in the fund, reply does **not** claim cancellation |
+| text `CANCEL` (unpaid) | order actually cancelled, `order_cancelled` sent |
+| admin move forward | `order_packed` sent |
+| admin step **back** | **nothing sent** — and see the defect below |
+
+Pages were verified at HTTP level only (`/admin/orders` 200, `/admin/orders/<ref>` 200,
+`/api/admin/orders` returns 10 orders with `stageCounts`, `/api/admin/messages` returns 24 outbound +
+6 inbound replies with their reasons). **Nobody has still seen these in a browser.**
+
+### Defect 1 — a step back told the admin the customer had no phone
+
+`setStageTx` returned `{ status: 'no_phone' }` for a **revert** (a step back is deliberately silent).
+But `no_phone` in `notify.ts` genuinely means *"nobody to send to"*, and the UI map turned it into the
+toast **"No mobile on file — nothing was queued."** An admin stepping an order back was told the
+customer had no phone number — while that number was on the screen beside it. A decision reading as a
+data fault.
+
+Fixed by giving the deliberate silence its own word: `StageMessageOutcome` (new type in
+`order-actions.ts`) adds `{ status: 'reverted' }`, and `order-detail.tsx` describes it as
+*"Moved back — no message sent."* Verified live: the route now answers `{"status":"reverted"}`.
+Locked in with a new assertion in `scripts/e2e.mjs` (the 466th).
+
+### Defect 2 — the suites reported failure while every assertion passed
+
+`bash scripts/run-e2e-sms.sh` printed `[manual] 13 passed, 0 failed` and then
+**`2 phase(s) failed`**. Cause was not the system under test:
+
+```
+Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 94
+```
+
+Both suites ended with `process.exit(failed === 0 ? 0 : 1)` immediately after `prisma.$disconnect()`.
+On Windows, exiting while libuv still holds closing async handles aborts the process — measured exit
+code **127** on a phase where all 13 assertions passed. The harness keys off the exit code, so it
+counted a phantom failure. Flaky: it happened on one run and not the next.
+
+Fixed in both `scripts/e2e.mjs` and `scripts/e2e-sms.mjs` by setting `process.exitCode` and letting
+Node drain its own handles instead of calling `process.exit()`. Verified: exit code 0, and the process
+still terminates on its own in ~1 s (undici's keep-alive sockets are not deferred by this). Both
+harnesses now exit 0.
+
+**Worth remembering: a suite that goes red when nothing is wrong is worse than no suite** — it teaches
+whoever runs it to ignore the result.
+
+### Known, not fixed (needs a judgement call)
+
+- **The admin mobile bottom nav is 9 items** at `flex-1` / `text-[9px]`. At 360 px that is 40 px per
+  item, so labels like "Donations" truncate. Not broken, but the farm's users are on phones. Options:
+  five items + a "More" sheet, or a horizontally scrolling bar.
+- `HTTPSMS_API_KEY` / `HTTPSMS_FROM` are **still empty** in `.env`, so `SMS_PROVIDER` stays `mock` and
+  nothing leaves the machine. This is the remaining blocker for real SMS, and it needs an httpSMS
+  account and the gateway handset — not a code change.
+- One text per stage change, bounded by `SMS_DAILY_CAP` (200/day). A full order lifecycle is up to 6
+  texts, so the cap is roughly 33 orders/day before automatic sends start being held.
+
+## 2026-10-04 (evening) — httpSMS abandoned for Text.lk, and a cost bug that doubled every message
+
+The handset arrived, so the gateway was exercised for real for the first time. **Still uncommitted,
+still not deployed.** That is tomorrow's job, together with a Text.lk top-up and a full SMS test
+against the live site.
+
+### httpSMS: the SIM cannot send, and no gateway app will change that
+
+Five sends to the customer number, `SMS_PROVIDER=httpsms` against the real Android gateway. All five:
+`status=failed`, `failure_reason=GENERIC_FAILURE`, `sim=SIM1`, `send_attempt_count=1/2`, `sent_at` and
+`delivered_at` null. Every one took **~2m15s** to fail (`14:45:30→14:47:41`, `14:50:44→14:53:21`,
+`14:55:15→14:57:33`, `14:59:58→15:02:08`) — a timeout, not a refusal. Nothing arrived. The SIM's free
+SMS counter decremented anyway: billed, not delivered.
+
+Three pieces of evidence, in the order they landed:
+
+- **The burst theory was tested and refuted.** The first two sends were three messages inside one
+  second, which looked like the cause — but rows 3, 4 and 5 were sent **solo**, four minutes apart,
+  phone idle, and failed identically. The "gets stuck when I send 5 or 6 at once" symptom is real but
+  it is an *effect*: httpSMS transmits one at a time, so a queue drains at 2m15s per message and six
+  messages is thirteen minutes of apparent hanging.
+- **Two of the five never touched this codebase.** `a817ff1c` (14:55:14) and `62fbb159` (14:59:50) have
+  no `CustomerMessage` row — sent by hand from the httpSMS app — and failed the same way. Our backend
+  is not in their path.
+- **`GENERIC_FAILURE` is `SmsManager.RESULT_ERROR_GENERIC_FAILURE`**, passed through verbatim by
+  `SentReceiver.kt`. It is not `NO_SERVICE`, `RADIO_OFF`, `NULL_PDU` or `LIMIT_EXCEEDED`, so signal,
+  radio and message format were all fine and the **network** declined it.
+
+Do not retry httpSMS on this handset, and do not swap to another Android gateway app — every one
+drives the same `SmsManager` on the same SIM.
+
+### Text.lk: chosen, and verified with a real delivery
+
+`text-lk` was already written from docs and is now exercised live. The request shape was right, but
+two defects had to be fixed first, and either would have made the test lie:
+
+- **`data.uid` was being discarded.** It is the gateway's id for the message and the key its receipts
+  quote back, so a bare `{ ok: true }` left delivery receipts nothing to match on — the `providerMessageId`
+  gap, closed. **The DLR machinery survives the provider change.**
+- **A rejected message read as success.** Text.lk answers HTTP **200** with `{"status": false}` — a
+  *boolean* — and the guard only tested `typeof status === 'string'`, so failures fell through to
+  `{ ok: true }`. Both spellings are now caught.
+
+Verified end to end: a real order through `POST /api/orders` → `providerMessageId=6ac26f1d2f964`, and
+a demo text **arrived on the client's own phone**, confirmed by hand. That handset confirmation is the
+only proof that counts here — it is exactly the assumption that httpSMS punished.
+
+`TextLKDemo` is the free test sender and must not carry production traffic. The real `VermiGrow`
+sender ID has to be requested (free, hours to ~3 days), and since **29 July 2026** TRCSL blocks
+unregistered alphanumeric sender IDs to Dialog, Airtel and Hutch — which is every customer number on
+this site.
+
+### The cost bug: one invisible character doubled every message
+
+`formatLkr` uses `Intl.NumberFormat('en-LK', { currency: 'LKR' })`, and ICU separates the currency
+from the figure with **U+00A0 NO-BREAK SPACE**. It renders exactly like a space. It is **not in the
+GSM-7 alphabet** — and one character outside GSM-7 flips the *whole* body to UCS-2, where a segment
+holds **70** characters instead of 160.
+
+So every message naming an amount, which is every order message, was sent at roughly double:
+
+| Body | Chars | Was (UCS-2) | Now (GSM-7) |
+|---|---|---|---|
+| `order_placed` | 173 | 3 segments | 2 |
+| `order_paid` | 259 | **4 segments** | 2 |
+
+Found by reading the *stored* body out of `CustomerMessage` and listing its non-GSM-7 characters —
+nothing on screen showed it, and the send response only hinted at it via `sms_count: 3`.
+
+Fixed by `toGsm7()` in `src/lib/sms/gsm7.ts`, applied once in `renderMessage`, which is now a thin
+wrapper over `renderRawMessage`. Doing it at that single point means the body **stored** is exactly
+the body **transmitted**, and it covers every source at once — the amount formatter, a customer's
+curly apostrophe, an admin's em dash.
+
+**Deliberately not fixed in `currency.ts`**: U+00A0 does real work in HTML (it stops "LKR" and the
+figure wrapping apart on the donation wall) and that file documents that its output must stay
+byte-identical for that wall. The SMS boundary is where the encoding constraint belongs.
+
+Re-measured after the fix: **0 of 8** bodies carried any non-GSM-7 character, and those same 8 bodies
+went **22 segments → 13**.
+
+### Verified after all of the above
+
+`.next` rebuilt from clean first (the suites reuse a stale standalone and would otherwise report green
+against code that never ran), then:
+
+| Suite | Result |
+|---|---|
+| `bash scripts/run-e2e.sh` | **466 passed, 0 failed** |
+| `bash scripts/run-e2e-sms.sh` | **157 passed, 0 failed** — all phases |
+
+### Left open for tomorrow
+
+- **Top up Text.lk, then test every SMS function against the live site.** Costs units, so the order
+  matters: one probe, then one real order, then replies.
+- **Request the `VermiGrow` sender ID** — the only item with real lead time.
+- **Test data is sitting in the working DB** and was left alone deliberately: `VG-O-DDCE6T`, the
+  `[LOCAL TEST]` product, and the duplicate pair on the customer number (`VG-O-66WW67` paid,
+  `VG-O-SBQHT2` pending). That duplicate will make `findOrderForPhone` answer *ambiguous* for every
+  reply, so clear it before testing CONFIRM/CANCEL.
+- **The DLR route is still undecided** — trust the send response's `"status": "Delivered"` (which
+  httpSMS never offered), poll `GET /api/v3/sms/{uid}`, or wire Text.lk's webhook into the existing
+  `/api/sms/webhook`. Nothing depends on it yet.

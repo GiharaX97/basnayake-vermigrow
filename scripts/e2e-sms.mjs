@@ -23,6 +23,7 @@
 
 import { PrismaClient } from '@prisma/client'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { createHmac } from 'node:crypto'
 
 const BASE = process.env.E2E_BASE ?? 'http://127.0.0.1:3001'
 const PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'admin123'
@@ -159,8 +160,37 @@ async function cleanup() {
   await prisma.product.deleteMany({ where: { id: { in: pids } } })
 }
 
+/**
+ * Make today look untouched, so the daily-cap assertions mean what they say.
+ *
+ * `autoSentToday` counts every automatic send since local midnight across the
+ * WHOLE database, and every phase runs against a fresh copy of the working DB —
+ * one the farm has actually used, so it already has sends in it. Without this,
+ * the cap (`SMS_DAILY_CAP=3` in the mock phase) is spent before the first
+ * assertion, every automatic send is held back, and the phase fails in a way
+ * that is indistinguishable from broken auto-send code.
+ *
+ * The rows are pushed back a day rather than deleted: they are the working DB's,
+ * not this suite's to destroy, and nothing reads `sentAt` except this counter.
+ * Only `sentBy: 'auto'` moves, because that is the only thing the cap counts.
+ */
+async function resetDailyAutoSendCounter() {
+  const midnight = new Date()
+  midnight.setHours(0, 0, 0, 0)
+  const today = await prisma.customerMessage.count({
+    where: { sentBy: 'auto', sentAt: { gte: midnight } },
+  })
+  if (today === 0) return
+  console.log(`  \x1b[2m(i) ${today} automatic send(s) already today — moved back a day for this phase\x1b[0m`)
+  await prisma.customerMessage.updateMany({
+    where: { sentBy: 'auto', sentAt: { gte: midnight } },
+    data: { sentAt: new Date(midnight.getTime() - 24 * 60 * 60 * 1000) },
+  })
+}
+
 async function setup() {
   await cleanup()
+  await resetDailyAutoSendCounter()
   const login = await post('/api/auth/login', { password: PASSWORD }, { cookie: '' })
   must('admin login → 200', login.status === 200, { status: login.status, body: login.json })
 
@@ -188,6 +218,80 @@ async function counterSale(product, qty = 1) {
   must('record a counter sale → 201', res.status === 201, { status: res.status, body: res.json })
   return res.json
 }
+
+/* ----------------------------------------------------- inbound webhooks -- */
+
+/**
+ * Signing a JWT by hand, exactly as httpSMS does. Deliberately not using the
+ * app's own helper: a test that verifies the verifier with the verifier's own
+ * code proves nothing. This is the independent second implementation.
+ */
+const WEBHOOK_SECRET = process.env.HTTPSMS_WEBHOOK_SECRET ?? ''
+const E2E_SENDER = '+94770000000'
+
+const b64url = (s) => Buffer.from(s).toString('base64url')
+
+function signJwt(payload, secret = WEBHOOK_SECRET) {
+  const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+  const claims = b64url(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 300, ...payload }))
+  const sig = createHmac('sha256', secret).update(`${header}.${claims}`).digest('base64url')
+  return `${header}.${claims}.${sig}`
+}
+
+async function postWebhook(body, { authorization, eventType } = {}) {
+  const headers = { 'content-type': 'application/json', 'x-forwarded-for': nextIp() }
+  if (authorization !== undefined) headers.authorization = authorization
+  if (eventType) headers['x-event-type'] = eventType
+  const res = await fetch(`${BASE}/api/sms/webhook`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  })
+  const text = await res.text()
+  let json = null
+  try {
+    json = JSON.parse(text)
+  } catch {
+    /* not JSON */
+  }
+  return { status: res.status, json, text }
+}
+
+/** A signed event in the CloudEvents envelope httpSMS posts. */
+const event = (type, data, id) =>
+  postWebhook({ type, id, data }, { authorization: `Bearer ${signJwt({ type, id, data })}` })
+
+/**
+ * A customer's text arriving. `id` is that message's own id, and must be unique.
+ *
+ * The field is `message_id`, NOT `id` — httpSMS names it differently per event
+ * (message_id for received/expired/missed, id for sent/delivered/failed). Using
+ * the wrong one here would have made the test pass against a payload shape the
+ * real gateway never sends.
+ */
+const reply = (content, contact, id) =>
+  event('message.phone.received', { message_id: id, content, contact, owner: E2E_SENDER }, id)
+
+/** The phone reporting what became of a message we sent (sent/delivered: `id`). */
+const receipt = (type, providerMessageId, id) => event(type, { id: providerMessageId }, id)
+
+/**
+ * A receipt for a send whose response never reached us. We never learned the
+ * gateway's id for that message, so the event is matched by the `request_id` we
+ * sent out — the whole reason that field is set on every outbound message.
+ */
+const receiptByRequestId = (type, requestId, id) => event(type, { request_id: requestId }, id)
+
+/** Every line of an order, as the DB has it. The order IS its rows. */
+const orderLines = (orderRef) =>
+  prisma.sale.findMany({
+    where: { orderRef },
+    select: { status: true, fulfillment: true, cancelRequestedAt: true },
+    orderBy: { createdAt: 'asc' },
+  })
+
+const messageOn = (linkId, template) =>
+  prisma.customerMessage.findFirst({ where: { linkId, template } })
 
 /* -------------------------------------------------------------- the phases -- */
 
@@ -232,7 +336,7 @@ async function phaseMock() {
   const afterSale = await get('/api/admin/messages')
   eq('   sentToday is now 1', afterSale.json?.autoSend?.sentToday, 1)
 
-  /* ---- 2. placing an online order must NOT send or spend ---- */
+  /* ---- 2. placing an online order acknowledges it straight away ---- */
   const order = await post('/api/orders', {
     customerName: BUYER,
     customerPhone: PHONE,
@@ -245,9 +349,15 @@ async function phaseMock() {
   const orderLink = await linkFor('order', orderRef)
   must('DB: order message queued', orderLink?.messages?.length === 1, { n: orderLink?.messages?.length })
   eq('   order_placed', orderLink.messages[0].template, 'order_placed')
-  eq('   STILL QUEUED — a pending order is not a sale', orderLink.messages[0].status, 'queued')
+  // This endpoint is public and unauthenticated, so this is the one automatic
+  // send a stranger can trigger directly. It is bounded by SMS_DAILY_CAP and the
+  // order throttle on the route rather than held for an admin: the message is an
+  // acknowledgement of receipt, and one that arrives hours later — glued to the
+  // payment text — is not worth sending at all.
+  eq('   SENT at creation — acknowledged now, not held', orderLink.messages[0].status, 'sent')
+  eq('   attributed to the machine', orderLink.messages[0].sentBy, 'auto')
   const afterOrder = await get('/api/admin/messages')
-  eq('   the order spent nothing', afterOrder.json?.autoSend?.sentToday, 1)
+  eq('   the order spent one automatic send', afterOrder.json?.autoSend?.sentToday, 2)
 
   /* ---- 3. settling it sends both messages, oldest first ---- */
   const settled = await post(`/api/admin/orders/${orderRef}/settle`, { action: 'pay', method: 'cash' })
@@ -376,9 +486,374 @@ async function phaseManual() {
   eq('   the queued message is STILL queued', after.status, 'queued')
 }
 
+/* ------------------------------------------------------- inbound webhooks -- */
+
+/**
+ * The httpSMS callback: delivery receipts, and customers texting back.
+ *
+ * This is the only public, unauthenticated endpoint in the app, so the tests
+ * start with the gate — everything else is worthless if a stranger can post to
+ * it. After that they walk the policy table: a receipt changes only delivery
+ * columns, CONFIRM moves a paid order, and CANCEL refuses to touch a paid one.
+ *
+ * `SMS_MOCK_FAIL=0` matters here: the mock's predictable `mock-<id>` send id is
+ * what a receipt is matched against, so the send must actually succeed.
+ */
+async function phaseWebhook() {
+  const product = await setup()
+
+  /* ---- 1. the signature is the whole gate ---- */
+  // Counted as a delta, not against zero: the DB is a copy of the working one,
+  // which may already hold real webhook events. "Nothing was written" is the
+  // claim being tested, and it is just as true against a non-empty table.
+  const eventsBefore = await prisma.smsEvent.count()
+
+  const unsigned = await postWebhook({ type: 'message.phone.delivered', id: 'e0', data: { id: 'x' } })
+  eq('an unsigned event → 401', unsigned.status, 401)
+
+  const malformed = await postWebhook(
+    { type: 'message.phone.delivered', id: 'e0', data: { id: 'x' } },
+    { authorization: 'Bearer not-a-jwt' }
+  )
+  eq('a malformed token → 401', malformed.status, 401)
+
+  const wrongKey = await postWebhook(
+    { type: 'message.phone.delivered', id: 'e0', data: { id: 'x' } },
+    { authorization: `Bearer ${signJwt({ type: 'message.phone.delivered' }, 'not-the-key')}` }
+  )
+  eq('a token signed with the wrong key → 401', wrongKey.status, 401)
+
+  // `alg: none` is the classic bypass: a token with no signature at all must be
+  // rejected rather than treated as "already verified".
+  const head = b64url(JSON.stringify({ alg: 'none', typ: 'JWT' }))
+  const claim = b64url(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 300 }))
+  const noneAlg = await postWebhook(
+    { type: 'message.phone.delivered', id: 'e0', data: { id: 'x' } },
+    { authorization: `Bearer ${head}.${claim}.` }
+  )
+  eq('an alg=none token → 401', noneAlg.status, 401)
+
+  const expired = await postWebhook(
+    { type: 'message.phone.delivered', id: 'e0', data: { id: 'x' } },
+    {
+      authorization: `Bearer ${signJwt({
+        type: 'message.phone.delivered',
+        exp: Math.floor(Date.now() / 1000) - 3600,
+      })}`,
+    }
+  )
+  eq('an expired token → 401', expired.status, 401)
+
+  eq('   none of that wrote anything', await prisma.smsEvent.count(), eventsBefore)
+
+  /* ---- 2. an order to talk about ---- */
+  const placed = await post('/api/orders', {
+    customerName: BUYER,
+    customerPhone: PHONE,
+    customerEmail: 'sms-webhook@example.com',
+    items: [{ productId: product.id, quantity: 1 }],
+  })
+  must('place an online order → 201', placed.status === 201, {
+    status: placed.status,
+    body: placed.json,
+  })
+  const orderRef = placed.json.orderRef
+
+  /* ---- 3. CONFIRM on an UNPAID order is recorded, not obeyed ---- */
+  const tooEarly = await reply('CONFIRM', E164, 'in-early')
+  eq('CONFIRM on an unpaid order → 200', tooEarly.status, 200)
+  check('   it says nothing was acted on', /not acted on/i.test(tooEarly.json?.note ?? ''), {
+    note: tooEarly.json?.note,
+  })
+  const unpaidLines = await orderLines(orderRef)
+  eq('DB: the order is STILL unpaid', unpaidLines.every((l) => l.status === 'pending'), true)
+  eq('   and was not moved along', unpaidLines[0].fulfillment, null)
+  eq(
+    '   but the admin can see the customer asked',
+    await prisma.orderEvent.count({ where: { orderRef, type: 'sms_inbound' } }),
+    1
+  )
+
+  /* ---- 4. pay for it, which sends the texts ---- */
+  const settled = await post(`/api/admin/orders/${orderRef}/settle`, { action: 'pay', method: 'cash' })
+  must('settle the order → 200', settled.status === 200, { status: settled.status, body: settled.json })
+
+  const orderLink = await linkFor('order', orderRef)
+  const paidMsg = orderLink.messages.find((m) => m.template === 'order_paid')
+  const placedMsg = orderLink.messages.find((m) => m.template === 'order_placed')
+  must('the order_paid text went out', paidMsg?.status === 'sent', { status: paidMsg?.status })
+  must(
+    '   the gateway id was kept — a receipt has something to match',
+    !!paidMsg.providerMessageId,
+    { id: paidMsg?.providerMessageId }
+  )
+
+  /* ---- 5. a delivery receipt attaches to that message ---- */
+  const delivered = await receipt('message.phone.delivered', paidMsg.providerMessageId, 'ev-deliv')
+  eq('a delivered receipt → 200', delivered.status, 200)
+
+  const afterDelivery = await prisma.customerMessage.findUnique({ where: { id: paidMsg.id } })
+  eq('   the message now reads delivered', afterDelivery.deliveryStatus, 'delivered')
+  check('   with a time', !!afterDelivery.deliveredAt)
+  // Our own status is what WE did (handed it to the gateway) and must not be
+  // rewritten by the gateway's opinion of what happened next.
+  eq('   but our own status is untouched', afterDelivery.status, 'sent')
+
+  // httpSMS retries. The same event must not be applied twice.
+  const again = await receipt('message.phone.delivered', paidMsg.providerMessageId, 'ev-deliv')
+  eq('the same receipt again → 200', again.status, 200)
+  eq('   answered as a duplicate', again.json?.duplicate, true)
+  eq(
+    '   and stored exactly once',
+    await prisma.smsEvent.count({
+      where: { eventType: 'message.phone.delivered', providerMessageId: paidMsg.providerMessageId },
+    }),
+    1
+  )
+
+  // A send whose response was lost still carries request_id — our own id — so a
+  // receipt naming that instead must find the message too.
+  const viaRequestId = await receiptByRequestId('message.phone.sent', placedMsg.id, 'ev-sent')
+  eq('a receipt naming our own id → 200', viaRequestId.status, 200)
+  eq(
+    '   matched through request_id',
+    (await prisma.customerMessage.findUnique({ where: { id: placedMsg.id } })).deliveryStatus,
+    'sent'
+  )
+
+  // The two failure receipts, which between them cover BOTH of the gateway's
+  // naming quirks: `message.send.failed` names the message `id` and carries
+  // `error_message`, while `message.send.expired` names it `message_id` and
+  // carries no reason at all.
+  must(
+    'the order_placed text kept its gateway id too',
+    !!placedMsg.providerMessageId,
+    { id: placedMsg.providerMessageId }
+  )
+  const failed = await event(
+    'message.send.failed',
+    { id: placedMsg.providerMessageId, error_message: 'MOBILE_APP_INACTIVE' },
+    'ev-failed'
+  )
+  eq('a failed receipt → 200', failed.status, 200)
+  const afterFail = await prisma.customerMessage.findUnique({ where: { id: placedMsg.id } })
+  eq('   the message reads failed', afterFail.deliveryStatus, 'failed')
+  check(
+    '   carrying the gateway’s own reason',
+    /MOBILE_APP_INACTIVE/.test(afterFail.error ?? ''),
+    { error: afterFail.error }
+  )
+
+  const expiredReceipt = await event(
+    'message.send.expired',
+    { message_id: placedMsg.providerMessageId },
+    'ev-expired'
+  )
+  eq('an expired receipt (which names it message_id) → 200', expiredReceipt.status, 200)
+  eq(
+    '   matched, and reads expired',
+    (await prisma.customerMessage.findUnique({ where: { id: placedMsg.id } })).deliveryStatus,
+    'expired'
+  )
+
+  // A receipt for a message we have no row for must not invent one, and must not
+  // fail loudly either — httpSMS would retry a lookup that can never succeed.
+  const orphan = await receipt('message.phone.delivered', 'no-such-message-id', 'ev-orphan')
+  eq('a receipt for an unknown message → 200', orphan.status, 200)
+  check('   recorded as unmatched', /no message matched/i.test(orphan.json?.note ?? ''), {
+    note: orphan.json?.note,
+  })
+  eq(
+    '   and no delivery was claimed anywhere',
+    await prisma.customerMessage.count({ where: { deliveryStatus: 'delivered' } }),
+    1
+  )
+
+  /* ---- 6. CONFIRM on the paid order moves it ---- */
+  const confirmed = await reply('CONFIRM', E164, 'in-confirm')
+  eq('CONFIRM on a paid order → 200', confirmed.status, 200)
+  eq('DB: the order is now Confirmed', (await orderLines(orderRef))[0].fulfillment, 'confirmed')
+  eq(
+    '   the timeline credits the customer, not an admin',
+    await prisma.orderEvent.count({ where: { orderRef, type: 'confirmed', actor: 'sms' } }),
+    1
+  )
+
+  const confirmMsg = await messageOn(orderLink.id, 'order_confirmed')
+  must('   the customer is texted about it', !!confirmMsg)
+  eq('   and it went out automatically', confirmMsg.sentBy, 'auto')
+  check('   the gateway received it', confirmMsg.status === 'sent', { status: confirmMsg.status })
+
+  const confirmedAgain = await reply('CONFIRM', E164, 'in-confirm-2')
+  eq('a second CONFIRM → 200', confirmedAgain.status, 200)
+  check('   it explains the order is already there', /already Confirmed/i.test(confirmedAgain.json?.note ?? ''), {
+    note: confirmedAgain.json?.note,
+  })
+  eq('   and the stage did not move', (await orderLines(orderRef))[0].fulfillment, 'confirmed')
+
+  /* ---- 7. ordinary chatter is kept, never obeyed ---- */
+  const chatter = await reply('no problem thanks', E164, 'in-chatter')
+  eq('an ordinary message → 200', chatter.status, 200)
+  check('   not mistaken for CANCEL', /not recognised/i.test(chatter.json?.note ?? ''), {
+    note: chatter.json?.note,
+  })
+  eq('   the order is untouched', (await orderLines(orderRef))[0].status, 'paid')
+  eq(
+    '   but it is on the record for a human to read',
+    await prisma.smsEvent.count({ where: { body: 'no problem thanks' } }),
+    1
+  )
+
+  /* ---- 8. CANCEL on a PAID order flags it — the money already moved ---- */
+  const cancelPaid = await reply('CANCEL', E164, 'in-cancel-paid')
+  eq('CANCEL on a paid order → 200', cancelPaid.status, 200)
+  const paidLine = (await orderLines(orderRef))[0]
+  eq('DB: the paid order is STILL paid', paidLine.status, 'paid')
+  check('   and flagged for the office', !!paidLine.cancelRequestedAt)
+  eq(
+    '   the timeline records who asked',
+    await prisma.orderEvent.count({ where: { orderRef, type: 'cancel_requested', actor: 'sms' } }),
+    1
+  )
+  const cancelMsg = await messageOn(orderLink.id, 'order_cancel_requested')
+  must('   the customer is answered', !!cancelMsg)
+  check(
+    '   without claiming it was cancelled',
+    !/has been cancelled/i.test(cancelMsg.body),
+    { body: cancelMsg.body }
+  )
+  // The flag is a QUESTION for the office, not an answer. The money must still be
+  // banked and the donation must still be in the public fund.
+  const paidSaleIds = (
+    await prisma.sale.findMany({ where: { orderRef }, select: { id: true } })
+  ).map((s) => s.id)
+  eq(
+    '   its donation is still in the fund',
+    await prisma.fundEntry.count({
+      where: { channel: 'sale', refId: { in: paidSaleIds }, status: 'paid' },
+    }),
+    1
+  )
+
+  /* ---- 9. CANCEL on an UNPAID order really cancels it ---- */
+  const PHONE_UNPAID = '0775550002'
+  const PHONE_SHARED = '0775550003'
+  const PHONE_STRANGER = '0775550009'
+  for (const p of [PHONE_UNPAID, PHONE_SHARED, PHONE_STRANGER]) {
+    const n = await prisma.sale.count({ where: { customerPhone: p } })
+    must(`the test number ${p} is unused in this DB copy`, n === 0, { n })
+  }
+
+  const unpaid = await post('/api/orders', {
+    customerName: 'E2E SMS Unpaid',
+    customerPhone: PHONE_UNPAID,
+    customerEmail: 'sms-unpaid@example.com',
+    items: [{ productId: product.id, quantity: 1 }],
+  })
+  must('place a second, unpaid order → 201', unpaid.status === 201, { body: unpaid.json })
+  const unpaidRef = unpaid.json.orderRef
+
+  const cancelled = await reply('0', '+94775550002', 'in-cancel-unpaid')
+  eq('CANCEL (as "0") on an unpaid order → 200', cancelled.status, 200)
+  eq(
+    'DB: the order is cancelled',
+    (await orderLines(unpaidRef)).every((l) => l.status === 'cancelled'),
+    true
+  )
+  const unpaidLink = await linkFor('order', unpaidRef)
+  must('   the customer is told', !!unpaidLink)
+  check(
+    '   with an order_cancelled message',
+    unpaidLink.messages.some((m) => m.template === 'order_cancelled')
+  )
+
+  /* ---- 10. two live orders on one number: refuse to guess ---- */
+  const sharedA = await post('/api/orders', {
+    customerName: 'E2E SMS Shared A',
+    customerPhone: PHONE_SHARED,
+    customerEmail: 'shared-a@example.com',
+    items: [{ productId: product.id, quantity: 1 }],
+  })
+  const sharedB = await post('/api/orders', {
+    customerName: 'E2E SMS Shared B',
+    customerPhone: PHONE_SHARED,
+    customerEmail: 'shared-b@example.com',
+    items: [{ productId: product.id, quantity: 1 }],
+  })
+  must('two orders share one number', sharedA.status === 201 && sharedB.status === 201)
+
+  const ambiguous = await reply('CANCEL', '+94775550003', 'in-ambiguous')
+  eq('a reply from a shared number → 200', ambiguous.status, 200)
+  check('   it refuses to pick an order', /ambiguous/i.test(ambiguous.json?.note ?? ''), {
+    note: ambiguous.json?.note,
+  })
+  const untouched = await orderLines(sharedA.json.orderRef)
+  eq('   and NOTHING was cancelled', untouched.every((l) => l.status === 'pending'), true)
+
+  /* ---- 11. a number with no order at all ---- */
+  const stranger = await reply('CANCEL', '+94775550009', 'in-stranger')
+  eq('a reply from an unknown number → 200', stranger.status, 200)
+  check('   it says nothing matched', /no live order/i.test(stranger.json?.note ?? ''), {
+    note: stranger.json?.note,
+  })
+
+  /* ---- 12. events we do not act on are stored and ignored ---- */
+  const heartbeat = await event('phone.heartbeat.online', {}, 'ev-heartbeat')
+  eq('a heartbeat → 200', heartbeat.status, 200)
+  eq(
+    '   stored for the record',
+    await prisma.smsEvent.count({ where: { eventType: 'phone.heartbeat.online' } }),
+    1
+  )
+  eq(
+    '   and marked as unhandled rather than silently dropped',
+    (await prisma.smsEvent.findFirst({ where: { eventType: 'phone.heartbeat.online' } }))?.error
+      ?.includes('unhandled'),
+    true
+  )
+
+  // Signed but event-less: authentic, and still not something to act on.
+  const notAnEvent = await postWebhook(
+    { hello: 'world' },
+    { authorization: `Bearer ${signJwt({ hello: 'world' })}` }
+  )
+  eq('a signed body with no event in it → 400', notAnEvent.status, 400)
+
+  /* ---- 13. the admin can SEE all of it ---- */
+  // A reply that moved an order shows on that order's timeline. One that matched
+  // nothing has no order to appear on, and silently dropping it is how a customer
+  // ends up ignored — so the outbox lists them for a person to read.
+  const list = await get('/api/admin/messages')
+  eq('GET /api/admin/messages → 200', list.status, 200)
+  const inbound = list.json?.inbound ?? []
+  check('the admin list carries the customer replies', inbound.length >= 5, {
+    n: inbound.length,
+    bodies: inbound.map((r) => r.body),
+  })
+  const unattached = inbound.filter((r) => !r.orderRef)
+  check('   including the ones that matched no order', unattached.length >= 3, {
+    n: unattached.length,
+  })
+  check(
+    '   each with the reason it went nowhere',
+    unattached.every((r) => !!r.error),
+    unattached.map((r) => r.error)
+  )
+  check(
+    '   and the customer’s own words',
+    inbound.some((r) => r.body === 'no problem thanks'),
+    inbound.map((r) => r.body)
+  )
+  check(
+    '   a reply that moved an order points at it',
+    inbound.some((r) => r.orderRef === orderRef),
+    inbound.map((r) => r.orderRef)
+  )
+}
+
 /* ------------------------------------------------------------------ main -- */
 
-const PHASES = { mock: phaseMock, fail: phaseFail, manual: phaseManual }
+const PHASES = { mock: phaseMock, fail: phaseFail, manual: phaseManual, webhook: phaseWebhook }
 
 async function main() {
   if (!/sms-e2e/i.test(DB_URL)) {
@@ -412,7 +887,17 @@ async function main() {
   }
 
   await prisma.$disconnect()
-  process.exit(failed === 0 ? 0 : 1)
+  // Set the code and let Node drain its own handles; do NOT call process.exit().
+  //
+  // On Windows, exiting while libuv still holds closing async handles aborts the
+  // process with `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` and a
+  // non-zero status — so a phase where every assertion PASSED was reported by the
+  // harness as a failed phase. The failure was in the exit path, not the system
+  // under test, which is the worst kind: it makes a green suite look red.
+  //
+  // Nothing here needs forcing: undici's keep-alive sockets go quiet on their own,
+  // so the loop empties a few seconds after the last request.
+  process.exitCode = failed === 0 ? 0 : 1
 }
 
 main()

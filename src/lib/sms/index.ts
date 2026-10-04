@@ -1,4 +1,4 @@
-import type { DeliveryResult, SmsSender } from './types'
+import type { DeliveryResult, SmsSendOptions, SmsSender } from './types'
 import * as mock from './providers/mock'
 import * as webhook from './providers/webhook'
 import * as notifyLk from './providers/notify-lk'
@@ -97,7 +97,11 @@ export function providerStatus(): ProviderStatus {
  * the admin unsure whether anything was sent. Each provider upholds the same
  * contract; this only picks one and covers the misconfigured case.
  */
-export async function sendSms(to: string, body: string): Promise<DeliveryResult> {
+export async function sendSms(
+  to: string,
+  body: string,
+  options?: SmsSendOptions
+): Promise<DeliveryResult> {
   const provider = configuredProvider()
   const mod = PROVIDERS[provider]
 
@@ -108,5 +112,5 @@ export async function sendSms(to: string, body: string): Promise<DeliveryResult>
     }
   }
 
-  return mod.send(to, body)
+  return mod.send(to, body, options)
 }

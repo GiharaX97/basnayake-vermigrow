@@ -1,7 +1,7 @@
 import { appendFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { toE164 } from '../msisdn'
-import type { DeliveryResult } from '../types'
+import type { DeliveryResult, SmsSendOptions } from '../types'
 
 /**
  * Development provider. Writes the message to a file instead of sending it.
@@ -21,20 +21,34 @@ import type { DeliveryResult } from '../types'
  * That difference is the whole reason src/lib/sms/msisdn.ts exists, and a mock
  * that skipped it would hide a number-normalisation bug from the test that is
  * supposed to catch one.
+ *
+ * It also returns a `providerMessageId`, which a real gateway would. Without one
+ * the entire delivery-receipt path — webhook, id lookup, `deliveryStatus` — could
+ * only ever be tested against a live phone, which is precisely the thing the mock
+ * exists to avoid.
  */
 const LOG_PATH = process.env.SMS_MOCK_LOG || join(process.cwd(), '.sms-outbox.log')
 
 export const requires: string[] = []
 
-export async function send(to: string, body: string): Promise<DeliveryResult> {
+export async function send(
+  to: string,
+  body: string,
+  options?: SmsSendOptions
+): Promise<DeliveryResult> {
   if (process.env.SMS_MOCK_FAIL === '1' || process.env.SMS_MOCK_FAIL === 'true') {
     return { ok: false, error: 'mock provider configured to fail (SMS_MOCK_FAIL)' }
   }
 
-  const line = `[${new Date().toISOString()}] to=${toE164(to)} body=${JSON.stringify(body)}\n`
+  const line =
+    `[${new Date().toISOString()}] to=${toE164(to)}` +
+    `${options?.requestId ? ` request_id=${options.requestId}` : ''} body=${JSON.stringify(body)}\n`
   try {
     await appendFile(LOG_PATH, line, 'utf8')
-    return { ok: true }
+    // Predictable, not random: a test that asserts a receipt names this message
+    // would otherwise have to read the id back out of the provider first.
+    const id = options?.requestId ? `mock-${options.requestId}` : `mock-${Date.now()}`
+    return { ok: true, providerMessageId: id }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'could not write mock log' }
   }

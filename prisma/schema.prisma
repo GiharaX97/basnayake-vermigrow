@@ -173,8 +173,55 @@ model Sale {
   paidAt         DateTime?
   orderRef       String?
   note           String?
+  // Fulfilment pipeline for an ONLINE ORDER, moved by hand from Admin → Orders.
+  // NULL means 'new' — placed, not yet confirmed. Deliberately NOT Sale.status:
+  // that column drives seat capacity (ACTIVE_SALE_STATUSES in src/lib/orders.ts),
+  // the sold counts, and the fund, so overloading it would move money and
+  // capacity as a side effect of a packing decision. NULLABLE on purpose: a
+  // nullable column is a plain ALTER TABLE ADD COLUMN on the live SQLite DB,
+  // whereas NOT NULL DEFAULT rewrites the table on `db push` (see the Product
+  // comment). Fulfilment is order-scoped, so every line of one order carries the
+  // same value and the order reads from the common one.
+  fulfillment       String?   // 'confirmed' | 'packed' | 'dispatched' | 'delivered'
+  // When the current stage was set. Denormalised from the OrderEvent timeline on
+  // purpose: the orders list shows "Delivered 2 days ago" for every row, and
+  // reading that from the event table would mean a join per order on the one
+  // query that must stay bounded.
+  fulfillmentAt     DateTime?
+  // Set when a customer replies CANCEL to a PAID order. Never cancels anything by
+  // itself: money has moved, so that is a refund decision for the admin, and a
+  // mistyped or forwarded SMS must not undo a paid order. An UNPAID order is
+  // cancelled outright by the reply, since nothing has been received.
+  cancelRequestedAt DateTime?
   payments       Payment[]
   createdAt      DateTime  @default(now())
+}
+
+// One thing that happened to one online order: a status move, an internal note, or
+// an inbound-SMS event. This is the order timeline, the note store, and the audit
+// trail in one table.
+//
+// A NEW table, so it may carry the @@index freely — the schema rule that forbids
+// adding uniques/indexes applies to altering EXISTING tables (a unique on an
+// existing table makes `db push` abort under the deploy's data-loss gate).
+//
+// `orderRef` is a plain string with no FK, exactly like Sale.orderRef and
+// Pack.orderRef: an FK to an existing table would force a full table redefinition
+// on the live DB. `actor` distinguishes a human move from one a customer's SMS
+// caused, which is the first question asked when a status change looks wrong.
+model OrderEvent {
+  id        String   @id @default(cuid())
+  orderRef  String
+  type      String // 'note' | 'settled' | 'cancelled' | 'confirmed' | 'packed' | 'dispatched'
+  //           | 'delivered' | 'stage_reverted' | 'cancel_requested'
+  //           | 'cancel_request_dismissed' | 'sms_inbound'
+  fromStage String?
+  toStage   String?
+  actor     String   @default("admin") // 'admin' | 'sms' | 'system'
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([orderRef, createdAt])
 }
 
 // A gift with no purchase. This cannot live on Sale: Sale.productId is required
@@ -349,7 +396,47 @@ model CustomerMessage {
   sentAt    DateTime?
   sentBy    String?
   error     String?
+  // The gateway's own id for the text (httpSMS returns data.id). Nullable ADD
+  // COLUMN. This is what an inbound delivery receipt is matched against — without
+  // it a webhook saying "delivered" has nothing to attach to. Deliberately NOT
+  // @unique: a unique on an EXISTING table makes the deploy's `db push` abort.
+  providerMessageId String?
+  // The GATEWAY's view of delivery: 'sent' | 'delivered' | 'failed' | 'expired'.
+  // Kept separate from `status`, which is OURS ('sent' here means transmitted, and
+  // an httpSMS 2xx only means "accepted into the phone's queue", never delivered).
+  // Nothing but a webhook may write this; a local send must not claim delivery.
+  deliveryStatus    String?
+  deliveredAt       DateTime?
   createdAt DateTime     @default(now())
 
   @@unique([linkId, template])
+}
+
+// One inbound event from the SMS gateway (httpSMS webhooks). Raw, append-only.
+//
+// Two jobs. First, idempotency: httpSMS retries a 5XX up to 4 times, so
+// @@unique([eventType, providerMessageId]) — free on a NEW table — makes a replay
+// a no-op. Second, audit: an inbound reply that could not be matched to any order
+// has to be visible somewhere, or a customer's "CANCEL" silently vanishes.
+//
+// `payload` keeps the whole body verbatim. When a real reply is mishandled, the
+// question is always "what exactly did the phone send?", and re-deriving it from
+// parsed columns never answers that.
+model SmsEvent {
+  id                String    @id @default(cuid())
+  eventType         String // 'message.phone.received' | 'message.phone.sent'
+  //                   | 'message.phone.delivered' | 'message.send.failed'
+  //                   | 'message.send.expired' | ... (heartbeats are stored and ignored)
+  providerMessageId String?
+  from              String?
+  to                String?
+  body              String?
+  payload           String
+  orderRef          String?
+  processedAt       DateTime?
+  error             String?
+  createdAt         DateTime  @default(now())
+
+  @@unique([eventType, providerMessageId])
+  @@index([createdAt])
 }

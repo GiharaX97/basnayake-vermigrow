@@ -16,28 +16,32 @@ import {
   HeartHandshake,
   Warehouse,
   Package,
+  ClipboardList,
 } from 'lucide-react'
 
 /**
  * `short` is what the mobile bottom nav renders. That bar divides the full width
- * between its items with no wrapping, so adding Catalog took it to 8 — the point
- * where the longest labels ("Content Editor", "Media Library") start colliding
- * at a 360px viewport. An explicit short label beats shrinking the font until
- * nothing fits.
+ * between its items with no wrapping, and Orders took it to NINE — roughly 40px
+ * per item at a 360px viewport. Every other label was shortened to fit that width
+ * (Warehouse → "Stock", Inquiries → "Inquiry") rather than dropping a destination
+ * from the phone, because an admin out at the workshop is exactly the person who
+ * needs to open an order and mark it paid.
  */
 const navItems = [
   { href: '/admin', label: 'Dashboard', short: 'Home', icon: LayoutDashboard },
+  { href: '/admin/orders', label: 'Orders', short: 'Orders', icon: ClipboardList },
   { href: '/admin/content', label: 'Content Editor', short: 'Content', icon: FileText },
-  { href: '/admin/warehouse', label: 'Warehouse', short: 'Warehouse', icon: Warehouse },
+  { href: '/admin/warehouse', label: 'Warehouse', short: 'Stock', icon: Warehouse },
   { href: '/admin/catalog', label: 'Catalog', short: 'Catalog', icon: Package },
   { href: '/admin/donations', label: 'Donations', short: 'Donations', icon: HeartHandshake },
-  { href: '/admin/inquiries', label: 'Inquiries', short: 'Inquiries', icon: MessageSquare },
+  { href: '/admin/inquiries', label: 'Inquiries', short: 'Inquiry', icon: MessageSquare },
   { href: '/admin/media', label: 'Media Library', short: 'Media', icon: Image },
   { href: '/admin/settings', label: 'Settings', short: 'Settings', icon: Settings },
 ]
 
 const breadcrumbLabels: Record<string, string> = {
   '/admin': 'Dashboard',
+  '/admin/orders': 'Orders',
   '/admin/content': 'Content Editor',
   '/admin/warehouse': 'Warehouse',
   '/admin/catalog': 'Catalog',
@@ -45,6 +49,35 @@ const breadcrumbLabels: Record<string, string> = {
   '/admin/inquiries': 'Inquiries',
   '/admin/media': 'Media Library',
   '/admin/settings': 'Settings',
+}
+
+/**
+ * The label for whatever `/admin/...` page is open.
+ *
+ * Exact matches win. Otherwise the LONGEST section prefix wins, so
+ * `/admin/orders/ORD-1234` reads "Orders" — and a hypothetical
+ * `/admin/orders/archive` would not be mislabelled by a shorter unrelated match.
+ */
+function labelFor(pathname: string): string {
+  const exact = breadcrumbLabels[pathname]
+  if (exact) return exact
+
+  const prefix = Object.entries(breadcrumbLabels)
+    .filter(([href]) => href !== '/admin' && pathname.startsWith(`${href}/`))
+    .sort((a, b) => b[0].length - a[0].length)[0]
+  return prefix?.[1] ?? 'Admin'
+}
+
+/**
+ * Whether a nav item is the section the admin is currently in.
+ *
+ * A prefix match, not equality, so opening one order keeps "Orders" highlighted.
+ * `/admin` is excluded from prefix matching — it prefixes every other route, and
+ * "Home" must not light up while the admin is in Settings.
+ */
+function isActive(pathname: string, href: string): boolean {
+  if (href === '/admin') return pathname === '/admin'
+  return pathname === href || pathname.startsWith(`${href}/`)
 }
 
 export default function AdminLayoutClient({
@@ -63,7 +96,7 @@ export default function AdminLayoutClient({
     window.location.href = '/admin/login'
   }
 
-  const currentLabel = breadcrumbLabels[pathname] ?? 'Admin'
+  const currentLabel = labelFor(pathname)
 
   return (
     <div className="min-h-screen flex bg-muted/30">
@@ -81,7 +114,7 @@ export default function AdminLayoutClient({
         <nav className="flex-1 p-3 space-y-0.5">
           {navItems.map((item) => {
             const Icon = item.icon
-            const active = pathname === item.href
+            const active = isActive(pathname, item.href)
             return (
               <Link key={item.href} href={item.href}>
                 <div
@@ -160,7 +193,7 @@ export default function AdminLayoutClient({
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t z-50 flex pb-2 shadow-2xl">
         {navItems.map((item) => {
           const Icon = item.icon
-          const active = pathname === item.href
+          const active = isActive(pathname, item.href)
           return (
             <Link
               key={item.href}

@@ -75,3 +75,6 @@ db/custom.db
 db/*.db-*
 # throwaway copy the e2e suite runs against (scripts/run-e2e.sh)
 db/e2e.db
+# ...and the one the SMS suite runs against (scripts/run-e2e-sms.sh). Both are
+# copies of the live DB, so neither may ever be committed.
+db/sms-e2e.db

@@ -14,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { OrdersTab } from '@/components/admin/orders-tab'
 import { DirectDonationsTab } from '@/components/admin/direct-donations-tab'
 import { PaymentsTab } from '@/components/admin/payments-tab'
 import { MessagesTab } from '@/components/admin/messages-tab'
@@ -180,8 +179,12 @@ export default function AdminDonationsPage() {
       <div>
         <h1 className="text-2xl font-semibold">Donations</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Confirm customer orders, record store sales, and log gifts — every one adds its own
-          donation to the live public total. Products and workshop details live in{' '}
+          Record store sales and log gifts — every one adds its own donation to the live public
+          total. Customer orders are worked on their own page, under{' '}
+          <a href="/admin/orders" className="text-emerald-700 dark:text-emerald-400 hover:underline">
+            Orders
+          </a>
+          . Products and workshop details live in{' '}
           <a href="/admin/catalog" className="text-emerald-700 dark:text-emerald-400 hover:underline">
             Catalog
           </a>
@@ -234,22 +237,18 @@ export default function AdminDonationsPage() {
         </Card>
       </div>
 
-      {/* Orders open first on purpose: a pending order is the only thing on this
-          page that is waiting on someone. Sales and gifts are recorded after the
-          fact, so they never need chasing. */}
-      <Tabs defaultValue="orders">
+      {/* Orders used to open first here, because a pending order is the only thing
+          that waits on someone. They now have their own page (Admin → Orders),
+          with the fulfilment pipeline and messaging — so this page opens on the
+          sales it actually records. */}
+      <Tabs defaultValue="sales">
         <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="sales">Record & view sales</TabsTrigger>
           <TabsTrigger value="direct">Direct gifts</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="messages">Messages</TabsTrigger>
           <TabsTrigger value="qr">QR code</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="orders">
-          <OrdersTab onSettled={load} />
-        </TabsContent>
 
         {/* Sales */}
         <TabsContent value="sales" className="space-y-6">
@@ -407,8 +406,9 @@ export default function AdminDonationsPage() {
         </TabsContent>
 
         {/* Messages — the outbox: who we still owe a message to, and who has had
-            one. Deliberately a TAB and not a 9th admin nav item: the mobile
-            bottom bar is already full at 8 (see admin-layout-client.tsx). */}
+            one. Stays a TAB rather than becoming a nav item: the mobile bottom bar
+            is already at nine (see admin-layout-client.tsx), and the outbox is a
+            list to work through occasionally, not a destination. */}
         <TabsContent value="messages">
           <MessagesTab />
         </TabsContent>

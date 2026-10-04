@@ -41,10 +41,21 @@ fi
 
 echo "[e2e] starting the standalone server on :$PORT against the copy"
 pushd .next/standalone >/dev/null
+# SMS IS EXPLICITLY DISABLED HERE, not left to the developer's .env.
+#
+# This suite tests the NO-GATEWAY path on purpose — every message queues and
+# nothing transmits, and section K asserts the transport reports 'manual'. A
+# developer who sets SMS_PROVIDER in .env for local testing (a reasonable thing
+# to do, and the documented way to try the SMS features) would otherwise break
+# this suite from a file the suite never mentions. Next.js does not let a .env
+# file override a real environment variable, so an empty value here wins —
+# `configuredProvider()` treats '' as unset and falls through to 'manual'.
 PORT="$PORT" HOSTNAME=127.0.0.1 NODE_ENV=production \
   DATABASE_URL="$DB_URL" \
   NEXTAUTH_URL="http://localhost:$PORT" \
   UPLOADS_DIR="${ROOT_FS}/public/uploads" \
+  SMS_PROVIDER="" \
+  SMS_GATEWAY_URL="" \
   node server.js > "${TMPDIR:-/tmp}/e2e-server.log" 2>&1 &
 SRV=$!
 popd >/dev/null

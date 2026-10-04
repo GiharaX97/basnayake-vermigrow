@@ -10,7 +10,7 @@ import {
   assertSeatsAvailable,
   generateOrderRef,
 } from '@/lib/orders'
-import { queueMessage, linkExpiry } from '@/lib/notify'
+import { queueMessage, linkExpiry, autoDeliver } from '@/lib/notify'
 import { z } from 'zod'
 
 /**
@@ -81,24 +81,48 @@ function isBusyError(e: unknown): boolean {
   return /SQLITE_BUSY|database is locked|write conflict/i.test(msg)
 }
 
+/** The host of a URL, or null if it will not parse. */
+function hostOf(url: string | undefined | null): string | null {
+  if (!url) return null
+  try {
+    return new URL(url).host
+  } catch {
+    return null
+  }
+}
+
 /**
  * Reject cross-origin posts. A browser sends `Origin` on cross-origin POSTs, so
  * a mismatch here means another site is trying to place orders as this one. An
  * absent header is allowed — it cannot be verified, and the throttle still
  * applies — rather than breaking clients that legitimately omit it.
+ *
+ * "Us" cannot be a single value. Match the Origin against *every* host this
+ * request could legitimately have arrived on:
+ *
+ *  - `x-forwarded-host` — what the browser actually used, when a tunnel or
+ *    reverse proxy is in front. Without this an order placed through the public
+ *    URL was refused with 403: Next sees the request's own host as the internal
+ *    `localhost:3001`, which matches neither the Origin nor NEXTAUTH_URL (both
+ *    also localhost). Only the first entry is read — the rest of the chain is
+ *    the proxy's own addressing, not the client's.
+ *  - `host` and the request URL — direct access, no proxy.
+ *  - NEXTAUTH_URL — the configured public URL.
+ *
+ * Trusting a forwarded header here is not a CSRF hole: a page cannot set `Host`
+ * or `Origin`, and adding `X-Forwarded-Host` to a cross-origin request makes it
+ * non-simple, so the browser sends a preflight that this route never approves.
  */
 function originAllowed(request: Request): boolean {
   const origin = request.headers.get('origin')
   if (!origin) return true
-  try {
-    const from = new URL(origin).host
-    const self = new URL(request.url).host
-    if (from === self) return true
-    const configured = process.env.NEXTAUTH_URL
-    return !!configured && from === new URL(configured).host
-  } catch {
-    return false
-  }
+
+  const from = hostOf(origin)
+  if (!from) return false
+
+  const forwarded = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
+  return [forwarded, request.headers.get('host'), hostOf(request.url), hostOf(process.env.NEXTAUTH_URL)]
+    .some((host) => host === from)
 }
 
 export async function POST(request: Request) {
@@ -220,8 +244,7 @@ export async function POST(request: Request) {
       // One message for the whole order, queued in the same transaction as the
       // Sale rows for the same reason the ledger write is: a message must never
       // survive an order that rolled back. Only the receipt LINK is created here
-      // — nothing is transmitted. Sending is a deliberate admin action, because
-      // this endpoint is public and unauthenticated. See src/lib/notify.ts.
+      // — nothing is transmitted. The send happens after the commit, below.
       const queued = await queueMessage(tx, {
         refType: 'order',
         refId: orderRef,
@@ -257,6 +280,28 @@ export async function POST(request: Request) {
       if (isBusyError(e)) result = await attempt()
       else throw e
     }
+
+    // Tell the customer we have their order. After the commit, so the gateway
+    // never holds the order's write lock; outside the transaction, so a gateway
+    // failure cannot undo an order that is already real.
+    //
+    // This endpoint is public and unauthenticated, so auto-sending here really
+    // does let a stranger spend the SMS budget: junk orders could burn
+    // SMS_DAILY_CAP and leave real customers untexted. That is what the
+    // per-IP/global throttles above and the daily cap exist to bound, and it is
+    // the same trade the public donations route makes. The alternative — holding
+    // the message until an admin acted — protected the budget but broke the only
+    // thing this message is for: an acknowledgement of receipt is worthless
+    // hours late, and arrived glued to the payment text.
+    try {
+      await autoDeliver(prisma, 'order', result.orderRef)
+    } catch {
+      // The order is committed and the customer must see their receipt. A
+      // gateway hiccup here must not become a 500 they read as "your order
+      // failed" — and would then retry. The message stays queued and the next
+      // autoDeliver for this order picks it up.
+    }
+
     return NextResponse.json({ success: true, ...result }, { status: 201 })
   } catch (e) {
     if (e instanceof CapacityError) {

@@ -9,6 +9,7 @@ import {
   smsDailyCap,
 } from '@/lib/notify'
 import { providerStatus } from '@/lib/sms'
+import { EVENT_RECEIVED } from '@/lib/sms/inbound'
 
 /**
  * The outbox. Everything we owe a customer, whatever produced it.
@@ -23,6 +24,12 @@ const MESSAGE_LIMIT = 200
 /** One click sends at most this many. See the POST handler. */
 const BULK_LIMIT = 50
 
+/**
+ * How many of the customer's own replies are listed. Bounded like every other
+ * list here: this is a "what have people said lately" panel, not an archive.
+ */
+const INBOUND_LIMIT = 25
+
 const SENT_BY = 'admin'
 
 export async function GET() {
@@ -30,7 +37,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const [messages, queuedCount, failedCount, sentToday] = await Promise.all([
+  const [messages, queuedCount, failedCount, sentToday, inbound] = await Promise.all([
     prisma.customerMessage.findMany({
       orderBy: { createdAt: 'desc' },
       take: MESSAGE_LIMIT,
@@ -50,6 +57,24 @@ export async function GET() {
     prisma.customerMessage.count({ where: { status: 'queued' } }),
     prisma.customerMessage.count({ where: { status: 'failed' } }),
     autoSentToday(prisma),
+    // What the CUSTOMER said. Replies that changed an order show up on that
+    // order's own timeline, but one that matched nothing — an unknown number, a
+    // number on two orders, a message that was not a command — has no order to
+    // appear on, and a public webhook that silently ate it would be worse than
+    // having no webhook at all. So they are listed here, for a person to read.
+    prisma.smsEvent.findMany({
+      where: { eventType: EVENT_RECEIVED },
+      orderBy: { createdAt: 'desc' },
+      take: INBOUND_LIMIT,
+      select: {
+        id: true,
+        from: true,
+        body: true,
+        orderRef: true,
+        error: true,
+        createdAt: true,
+      },
+    }),
   ])
 
   // The transport is reported so the UI can tell the admin whether tapping Send
@@ -63,6 +88,7 @@ export async function GET() {
     messages,
     queuedCount,
     failedCount,
+    inbound,
     transport: activeTransport(),
     provider: providerStatus(),
     autoSend: {

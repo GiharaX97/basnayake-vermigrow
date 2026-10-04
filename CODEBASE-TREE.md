@@ -4,8 +4,10 @@ Structural map of Basnayaka Vermigrow. One line per entry, no code bodies.
 **Purpose:** stop re-discovering the same layout every session.
 Keep this updated when files are added or removed.
 
-Last updated: 2026-09-27 · HEAD `85a801e` + uncommitted catalog/orders/ledger/customer-messaging
-work, the SEO/server-rendering change (see "SEO & rendering"), and the e2e suite (see "Testing").
+Last updated: 2026-10-04 · HEAD `16ba497` + uncommitted order-management work (fulfilment pipeline,
+`/admin/orders`, httpSMS inbound webhook). Applies on top of the catalog/orders/ledger/
+customer-messaging work, the SEO/server-rendering change (see "SEO & rendering"), and the e2e suite
+(see "Testing").
 
 ---
 
@@ -39,7 +41,9 @@ Section anchors in use: `work` `products` `map` `photos` `events` `notices` `tra
 | `/admin/dashboard` | Counts only (inquiries/media/content). No money metrics. Own `quickActions` + `stats` arrays. |
 | `/admin/content` | The real CMS editor (~958 lines). Duplicates the whole type set locally. Single "Save All". |
 | `/admin/catalog` | Products **and** services CRUD: kind/price/unit/description/image/eventDate/location/capacity/active. Flags over-capacity and unpriced rows. (`/donations` used to own product CRUD.) |
-| `/admin/donations` | Tabs: `orders` (default) · `sales` · `direct` · `payments` · `messages` · `qr`. Product CRUD moved to `/admin/catalog`; the newer tabs are extracted components. **`messages` is a TAB and not a 9th nav item on purpose** — the mobile bottom bar is already full at 8. |
+| `/admin/orders` | **The order book.** List + search + filters (`all`/`pending`/`active`/`delivered`/`cancelled`/`cancel_requested`, applied client-side) + summary tiles. Finding and judging only — every action is on the detail page. Nav item #2. |
+| `/admin/orders/[orderRef]` | **Every order action lives here**: record payment, cancel, move stage, notes, dismiss a cancel request. Lines, payments, vouchers, the `OrderEvent` timeline, and the order's SMS history. The receipt **token is deliberately not returned** by the detail API. |
+| `/admin/donations` | Tabs: `sales` (default) · `direct` · `payments` · `messages` · `qr`. The `orders` tab was **removed** — orders moved to `/admin/orders`. Product CRUD moved to `/admin/catalog`. **`messages` is a TAB and not its own nav item on purpose** — the mobile bottom bar now holds 9 items (Warehouse→"Stock" and Inquiries→"Inquiry" were shortened to fit; worth eyeballing at 360px). |
 | `/admin/warehouse` | ~707 lines. Tabs: `dispatch` (generate + dispatch), `dispatches`, `lookup`, `flags`. |
 | `/admin/inquiries` | List + detail pane, mark read. |
 | `/admin/media` | Uploads grid, copy-URL, delete. |
@@ -47,9 +51,9 @@ Section anchors in use: `work` `products` `map` `photos` `events` `notices` `tra
 
 ## Routes — API
 
-**Public:** `GET|POST /api/content` (GET public, POST admin) · `GET|POST /api/donations` · `POST /api/donations/scan` · `POST /api/inquiries` · `GET /api/catalog` · `POST /api/orders`.
+**Public:** `GET|POST /api/content` (GET public, POST admin) · `GET|POST /api/donations` · `POST /api/donations/scan` · `POST /api/inquiries` · `GET /api/catalog` · `POST /api/orders` · **`POST /api/sms/webhook`** (httpSMS callbacks — public, gated by a signed JWT, not by the admin cookie; see "Inbound SMS").
 
-**Admin:** `auth/{login,logout,check}` · `admin/products` + `[id]` · `admin/sales` + `[id]` · `admin/packs` · `admin/dispatches` + `[id]` · `admin/orders` · `admin/orders/[orderRef]/settle` · `admin/donations` + `[id]` · `admin/payments` · `admin/messages` + `[id]` · `inquiries` (GET) + `[id]` · `media` · `upload` · `settings/password`.
+**Admin:** `auth/{login,logout,check}` · `admin/products` + `[id]` · `admin/sales` + `[id]` · `admin/packs` · `admin/dispatches` + `[id]` · `admin/orders` · `admin/orders/[orderRef]` (detail) · `admin/orders/[orderRef]/settle` · `admin/orders/[orderRef]/status` · `admin/donations` + `[id]` · `admin/payments` · `admin/messages` + `[id]` · `inquiries` (GET) + `[id]` · `media` · `upload` · `settings/password`.
 
 **Conventions every route follows:**
 - Admin gate is the **first statement**: `if (!(await isAdminAuthenticated())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })`.
@@ -127,6 +131,77 @@ Idempotency is the database's job: `@@unique([channel, refId])` + an upsert mean
 
 ---
 
+## Order management & fulfilment (`Sale.fulfillment`)
+
+**An order is not a table.** It is the set of `Sale` rows sharing an `orderRef` (a plain nullable
+string — no FK, no unique). The DB stays row-shaped; the admin UI is order-shaped. Nothing about
+this feature changed that.
+
+**Two orthogonal axes, and they must stay apart:**
+- `Sale.status` = **money** (`pending` | `paid` | `cancelled`). It drives seat capacity
+  (`ACTIVE_SALE_STATUSES`), sold counts and the fund. Fulfilment must **never** write it.
+- `Sale.fulfillment` = **what has been done with a paid order** (`confirmed` | `packed` |
+  `dispatched` | `delivered`). Nullable, and **`NULL` means `new`** — so every pre-existing order
+  reads as New with no backfill.
+
+**Stage moves require a fully paid order.** `setStageTx()` refuses otherwise, because confirming an
+order nobody has paid for would contradict the receipt in the customer's hand. Forward jumps are
+allowed; exactly **one step back** is offered to fix a mis-click. A revert writes an `OrderEvent`
+(`stage_reverted`) and **sends no text** — quietly un-packing a box must not be announced as news.
+
+**`dispatched` is labelled "Sent to customer", not "Dispatched".** `Pack.status='dispatched'` and
+the `Dispatch` model already mean stock sent to a **retailer**. Two features sharing one word is how
+they get confused. Keep the label.
+
+**Every move writes an `OrderEvent`** (timeline + internal notes + audit). `OrderEvent.actor` is
+`admin` | `sms` | `system`, which is how the timeline shows a stage the *customer* triggered.
+
+**UI split:** the list (`/admin/orders`) is for FINDING and judging; every action lives on the detail
+page (`/admin/orders/<ref>`). Money-touching and customer-texting actions do not belong on a
+scrolling list. `orders-tab.tsx` was **deleted** and the Orders tab removed from `/admin/donations`.
+
+## Inbound SMS (httpSMS webhooks)
+
+`POST /api/sms/webhook` is **the only public, unauthenticated endpoint in the app.** Its gate is a
+JWT signed with `HTTPSMS_WEBHOOK_SECRET`, verified in `src/lib/sms/webhook-verify.ts`. The signature
+is checked **before the body is parsed** — an unsigned request is not read at all.
+
+- **HS256 only, hand-rolled with `node:crypto`.** No JWT library is installed (deps are deliberately
+  pruned) and `alg: none` / RS256→HS256 confusion is refused outright. Constant-time compare, with a
+  length check first (`timingSafeEqual` throws on a length mismatch).
+- **Status codes are a contract**, because httpSMS retries 5xx up to 4×: `401` bad signature (no
+  writes) · `400` not event-shaped · **`200` for every outcome we understood, including "we chose to
+  do nothing"** · `500` only when we broke. A refusal like "already cancelled" is a real answer and
+  must not be retried forever.
+- **Idempotency:** `SmsEvent.@@unique([eventType, providerMessageId])`, and the insert sits **inside
+  the same transaction as its effect** — a duplicate trips the constraint and returns 200, while a
+  failure rolls the row back so the retry starts clean. (SQLite treats NULLs as distinct, so an event
+  with no message id is not deduped; those are heartbeats, stored and ignored.)
+- **Correlation, both ways:** every outbound message carries `request_id = CustomerMessage.id`,
+  and the gateway's `data.id` is persisted as `CustomerMessage.providerMessageId`. A receipt matches
+  on the provider id first, then ours — so a send whose response was lost is still matchable.
+- **`deliveryStatus` is written ONLY by a webhook.** A 2xx from httpSMS means "accepted into the
+  phone's queue", never "delivered". It is deliberately a second vocabulary from our own
+  `status` (`queued`/`sent`/`skipped`/`failed`): `status='sent'` + `deliveryStatus='failed'` is a
+  true and useful combination.
+- **The policy table lives in `src/lib/sms/inbound.ts`**, not the route, so it is readable and
+  testable on its own. The safety property is the asymmetry in `parseKeyword`: bare `YES`/`NO`/`1`/`0`
+  count only as the **whole** message (so "no problem, thanks" never cancels), while only
+  `CONFIRM`/`CANCEL` may open a short sentence. `STOP` is deliberately **not** a cancel — in SMS it
+  means unsubscribe.
+- **A reply that can change an order must match EXACTLY ONE live order** for that number (compared in
+  E.164, since the stored column holds whatever the customer typed). A shared phone that appears on
+  two orders gets recorded and **nothing moves** — guessing which order a bare "0" meant is not a
+  machine's call.
+- **`CANCEL` on a PAID order never cancels.** It sets `Sale.cancelRequestedAt` and texts the customer
+  something that does not claim cancellation; the office resolves it. An **unpaid** order is cancelled
+  by reply, through the same `cancelOrderTx()` the admin's Cancel button uses.
+- **Unmatched replies are still surfaced.** They have no order page to appear on, so `/api/admin/messages`
+  returns a bounded `inbound` list and the Messages tab renders it. A webhook that silently ate a
+  customer's CANCEL would be worse than no webhook.
+
+---
+
 ## `src/lib/`
 
 | File | Purpose |
@@ -138,12 +213,15 @@ Idempotency is the database's job: `@@unique([channel, refId])` + an upsert mean
 | `structured-data.ts` | `buildSiteJsonLd()` (LocalBusiness + WebSite), `buildProductsJsonLd()` (Product `ItemList`, priced items only), `serializeJsonLd()` (escapes `<` so CMS text can't close the script tag). |
 | `currency.ts` | `formatLkr()` — the single formatter. |
 | `fund.ts` | `recordFundEntry()` (idempotent, transactional), `fundTotal()`, `cancelFundEntry()`. **All donation math lives here.** |
-| `notify.ts` | `queueMessage()`, `renderMessage()`, `ensureLink()`, `deliverMessage()`, `revokeLink()`, `maskPhone()`, `requiredPhone`/`optionalPhone`, `linkExpiry()`. **Queues; never sends from a public path.** See "Customer messaging". |
+| `fulfilment.ts` | The order pipeline vocabulary: `FULFILMENT_STAGES`, `FULFILMENT_ORDER`, `FULFILMENT_LABELS` (note `dispatched` → **"Sent to customer"**), `deriveFulfilment()`, `allowedStages()`, `STAGE_TEMPLATES`, `orderStatusSchema`. `new` is never stored — it is `fulfillment IS NULL`. |
+| `order-actions.ts` | **The one place an order's state moves**: `setStageTx()`, `cancelOrderTx()`, `requestCancelTx()`, `addNote()`, `dismissCancelRequest()`. Admin routes and the SMS webhook both go through here, so money-safe cancelling cannot grow a second implementation. |
+| `notify.ts` | `queueMessage()`, `renderMessage()`, `ensureLink()`, `deliverMessage()`, `autoDeliver()`, `revokeLink()`, `maskPhone()`, `requiredPhone`/`optionalPhone`, `linkExpiry()`. **Queues; never sends from a public path.** See "Customer messaging". |
 | `receipt-actions.ts` | `'use server'` · `revealVouchers(token, reference)` — the gated reveal of workshop voucher codes on `/r/[token]`. Throttled 8/15min. |
 | `orders.ts` | `ONLINE_RETAILER` sentinel, `generateOrderRef()`, order caps, `ACTIVE_SALE_STATUSES`, `CapacityError`, `seatsTaken()`, `assertSeatsAvailable()`. |
 | `pack-codes.ts` | `generatePackCode(s)`, `PACK_CODE_REGEX = /^VG-[A-HJ-NP-Z2-9]{6}$/`. 32-char ambiguity-free alphabet. |
 | `payments.ts` | The money vocabulary: `paymentMethodSchema`, labels, `optionalText()`, `deriveOrderStatus()`, `OrderStateError`, `settleSchema`, `STALE_PENDING_HOURS`. |
 | `prisma.ts` | The `PrismaClient` singleton. |
+| `sms/` | The gateway seam. `index.ts` (`sendSms()`, `providerStatus()`, `activeTransport()`), `types.ts` (`SmsSender` / `DeliveryResult.providerMessageId` / `SmsSendOptions.requestId`), `msisdn.ts` (`toE164()`, `DEFAULT_COUNTRY`), `providers/{httpsms,textlk,notify,mock,webhook,_http}.ts`, **`webhook-verify.ts`** (HS256 by hand), **`inbound.ts`** (what an inbound event MEANS — the reply policy table). |
 | `product-schema.ts` | `productSchema` / `productUpdateSchema`. Note: zod `.partial()` does **not** neutralize `.default()`. |
 | `throttle.ts` | `clientIp()`, `createThrottle({windowMs,max,maxKeys})`. `check()` returns **true when throttled**. Map is capped. |
 | `uploads.ts` | `uploadsDir()` → `UPLOADS_DIR` env or `public/uploads`. |
@@ -155,7 +233,7 @@ Idempotency is the database's job: `@@unique([channel, refId])` + an upsert mean
 ## `src/components/`
 
 - `ui/*` — 48 shadcn primitives. Admin actually uses only: button, card, input, label, switch, tabs, select, dialog, table, alert-dialog, badge, alert, textarea. `breadcrumb`, `chart`, `sidebar`, `command`, `carousel`, `calendar`, `pagination`, `form` are **unused**. `react-hook-form` is **not a dependency** — all forms are plain controlled `useState`. `toast.tsx`/`toaster.tsx`/`use-toast.ts` are the legacy set; **sonner** is what's mounted.
-- `admin/` — `file-upload.tsx`, plus the tabs extracted out of `/admin/donations`: `orders-tab.tsx` (grouped orders, settle, stale badge), `direct-donations-tab.tsx`, `payments-tab.tsx`, `messages-tab.tsx` (the outbox).
+- `admin/` — `file-upload.tsx`, plus the tabs extracted out of `/admin/donations`: `direct-donations-tab.tsx`, `payments-tab.tsx`, `messages-tab.tsx` (the outbox **+ the inbound-replies panel**), and `message-meta.ts` (template/status labels + colours, shared so the order detail cannot name them differently). `orders-tab.tsx` was **deleted** — orders now live in `admin/orders/`: `order-list.tsx` (find + judge), `order-detail.tsx` (every action), `order-badges.tsx` (the shared pills).
 - `site/*` — one file per home-page section. `edit-panel.tsx` is **dead code** (writes only to localStorage, mounted nowhere). `donations-client.tsx` is the live donation page; `order-client.tsx` is the ordering page; `receipt-vouchers.tsx` is the `/r/[token]` voucher reveal (renders the QR codes in-browser, same `QRCode.toDataURL` pattern as the admin QR tab).
 
 ## Content model

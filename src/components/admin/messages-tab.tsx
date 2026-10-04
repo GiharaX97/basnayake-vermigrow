@@ -1,8 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+// The labels live in message-meta.ts because the order detail page renders the
+// same messages and must not name or colour them differently.
+import { STATUS_LABELS, STATUS_STYLES, TEMPLATE_LABELS } from '@/components/admin/message-meta'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import {
@@ -46,10 +50,25 @@ interface Message {
   }
 }
 
+/**
+ * A reply the customer sent us. `orderRef` is set only when we could attach it to
+ * one order; `error` carries why nothing was done when we could not (or when the
+ * reply was understood but the order was not in a state to act on).
+ */
+interface InboundReply {
+  id: string
+  from: string | null
+  body: string | null
+  orderRef: string | null
+  error: string | null
+  createdAt: string
+}
+
 interface MessagesResponse {
   messages: Message[]
   queuedCount: number
   failedCount: number
+  inbound: InboundReply[]
   transport: 'manual' | 'http'
   provider: {
     transport: 'manual' | 'http'
@@ -63,29 +82,6 @@ interface MessagesResponse {
     cap: number
     sentToday: number
   }
-}
-
-const TEMPLATE_LABELS: Record<string, string> = {
-  order_placed: 'Order placed',
-  order_paid: 'Payment received',
-  order_cancelled: 'Order cancelled',
-  sale_thanks: 'Store purchase',
-  scan_thanks: 'Pack scanned',
-  gift_thanks: 'Gift given',
-}
-
-const STATUS_STYLES: Record<string, string> = {
-  queued: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
-  sent: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
-  skipped: 'bg-muted text-muted-foreground',
-  failed: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  queued: 'Queued',
-  sent: 'Sent',
-  skipped: 'Skipped',
-  failed: 'Failed',
 }
 
 /**
@@ -268,6 +264,46 @@ export function MessagesTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* What the customers said back. Replies that moved an order also appear on
+          that order's own timeline; this panel exists for the ones that went
+          nowhere — an unknown number, a number on two orders, or a text that was
+          not a command — which have no order page to be seen on. A webhook that
+          silently swallowed those would be worse than having none. Hidden when
+          there is nothing to read, so it is never an empty box on the page. */}
+      {(data?.inbound.length ?? 0) > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <MessageSquare className="size-4 text-emerald-600" /> Replies from customers
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(data?.inbound ?? []).map((r) => (
+              <div key={r.id} className="border-l-2 border-muted pl-3 space-y-1">
+                <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">{r.from ?? 'Unknown number'}</span>
+                  <span>{format(new Date(r.createdAt), 'd MMM, HH:mm')}</span>
+                  {r.orderRef ? (
+                    <Link
+                      href={`/admin/orders/${encodeURIComponent(r.orderRef)}`}
+                      className="text-emerald-700 dark:text-emerald-400 hover:underline"
+                    >
+                      order {r.orderRef}
+                    </Link>
+                  ) : (
+                    <span className="text-amber-700 dark:text-amber-400">
+                      not matched to an order
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm">&ldquo;{r.body ?? '(no text)'}&rdquo;</p>
+                {r.error && <p className="text-xs text-muted-foreground">{r.error}</p>}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex items-center gap-2">
         <Button

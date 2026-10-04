@@ -309,6 +309,7 @@ async function main() {
   await M_fundIntegrity()
   await N_guards()
   await O_adminPages()
+  await P_fulfilment()
 
   console.log(`\n${'─'.repeat(64)}`)
   console.log(`\x1b[1m${passed} passed, ${failed} failed\x1b[0m`)
@@ -321,7 +322,12 @@ async function main() {
     for (const f of failures) console.log(`  • ${f}`)
   }
   await prisma.$disconnect()
-  process.exit(failed === 0 ? 0 : 1)
+  // Set the code and let Node drain its own handles; do NOT call process.exit().
+  // On Windows, exiting while libuv still holds closing async handles aborts with
+  // `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` and a non-zero status,
+  // so a run where every assertion passed reports as a failed suite. Same fix as
+  // scripts/e2e-sms.mjs, where it was observed: 13/13 passing, exit code 127.
+  process.exitCode = failed === 0 ? 0 : 1
 }
 
 /* ============================================================== A public == */
@@ -1511,6 +1517,205 @@ async function O_adminPages() {
     allMsgs.filter((m) => !linkIds.has(m.linkId)).length,
     0
   )
+}
+
+/* ================================================== P order fulfilment == */
+
+/**
+ * The fulfilment pipeline, and what it must NOT touch.
+ *
+ * Two invariants matter more than the happy path, and both are asserted here:
+ *  1. Moving an order along the pipeline never changes the public fund total or
+ *     releases seats. Fulfilment is not payment, and `Sale.status` — which drives
+ *     both — is deliberately a different column.
+ *  2. Only a fully PAID order can be moved, and only forwards is the customer
+ *     texted. A step back is a correction: an audit row, no message.
+ */
+async function P_fulfilment() {
+  start('P. order fulfilment pipeline')
+
+  // The 2-seat service order settled in F: paid, two vouchers, a phone on file.
+  const ref = S.svcOrderA
+  const link = await prisma.customerLink.findFirst({ where: { refType: 'order', refId: ref } })
+  const msgCount = () => prisma.customerMessage.count({ where: { linkId: link.id } })
+  const fundBefore = await publicTotal()
+  const seatsBefore = (await get('/api/admin/products')).json?.find((p) => p.id === S.service.id)?.seatsTaken
+
+  /* ---- the detail endpoint ---- */
+  const detail = await get(`/api/admin/orders/${ref}`)
+  eq('GET order detail → 200', detail.status, 200)
+  eq('   status paid', detail.json?.order?.status, 'paid')
+  eq('   fulfilment starts at new', detail.json?.order?.fulfillment, 'new')
+  check('   offers the first move', detail.json?.order?.allowedStages?.includes('confirmed'))
+  eq('   carries the booking line', detail.json?.order?.lines?.length, 1)
+  eq('   two seats on that one line', detail.json?.order?.lines?.[0]?.quantity, 2)
+  eq('   carries both vouchers', detail.json?.order?.vouchers?.length, 2)
+  eq('   carries the customer phone', detail.json?.order?.customer?.phone, '0771234567')
+  // The order's link is reported by its state, never by its token: /r/<token> is a
+  // WRITE capability (it reveals and redeems workshop QR codes), and the admin has
+  // no use for it. The message BODIES below legitimately quote the receipt URL —
+  // that is the SMS history, which is what the customer was actually sent.
+  check('   the link token is not returned as a field', !('token' in (detail.json?.order?.link ?? {})))
+  const detailMsgCount = detail.json?.messages?.length ?? 0
+
+  const unauth = await get(`/api/admin/orders/${ref}`, { cookie: '' })
+  eq('order detail requires auth → 401', unauth.status, 401)
+
+  const unknown = await get('/api/admin/orders/E2E-NO-SUCH-ORDER')
+  eq('unknown order ref → 404', unknown.status, 404)
+
+  /* ---- one step forward ---- */
+  const before = await msgCount()
+  const step = await post(`/api/admin/orders/${ref}/status`, { action: 'set_stage', stage: 'confirmed' })
+  eq('move new → confirmed → 200', step.status, 200, )
+  eq('   from is reported', step.json?.from, 'new')
+  eq('   to is reported', step.json?.to, 'confirmed')
+
+  const lines = await prisma.sale.findMany({ where: { orderRef: ref } })
+  check('DB: every line is confirmed', lines.every((l) => l.fulfillment === 'confirmed'))
+  check('DB: fulfillmentAt stamped', lines.every((l) => !!l.fulfillmentAt))
+  eq('DB: one OrderEvent written', await prisma.orderEvent.count({ where: { orderRef: ref, type: 'confirmed' } }), 1)
+
+  const after = await msgCount()
+  eq('a forward move queues exactly one message', after - before, 1)
+  const stageMsg = await prisma.customerMessage.findFirst({
+    where: { linkId: link.id, template: 'order_confirmed' },
+  })
+  check('   template order_confirmed', !!stageMsg)
+  check('   still queued (no gateway is sending)', stageMsg?.status === 'queued')
+  // The /r/<token> receipt is a WRITE capability — it reveals and redeems the
+  // workshop QR codes. A status text must never carry it, nor a voucher code.
+  check('   the message does NOT print the receipt urls', !stageMsg.body.includes('/r/'))
+  check(
+    '   the message does NOT print a voucher code',
+    S.svcVoucherCodes.every((code) => !stageMsg.body.includes(code))
+  )
+
+  eq('the fund is untouched by a stage move', money((await publicTotal()) - fundBefore), 0)
+  const seatsAfter = (await get('/api/admin/products')).json?.find((p) => p.id === S.service.id)?.seatsTaken
+  eq('   and the seats stay taken', seatsAfter, seatsBefore)
+
+  /* ---- a forward JUMP is allowed (real life is not one step at a time) ---- */
+  const jump = await post(`/api/admin/orders/${ref}/status`, { action: 'set_stage', stage: 'delivered' })
+  eq('confirm → delivered in one move → 200', jump.status, 200)
+  eq('   to is delivered', jump.json?.to, 'delivered')
+
+  /* ---- a step BACK is a correction: logged, but nobody is texted ----
+     Exactly ONE step. `allowedStages` allows a mis-click fix, not an arbitrary
+     unwind — going two stages back would be a different decision and is refused
+     (asserted below). */
+  const beforeRevert = await msgCount()
+  const revert = await post(`/api/admin/orders/${ref}/status`, { action: 'set_stage', stage: 'dispatched' })
+  eq('delivered → dispatched (a fix) → 200', revert.status, 200)
+  eq(
+    'DB: recorded as a reverted stage, not a stage',
+    await prisma.orderEvent.count({ where: { orderRef: ref, type: 'stage_reverted' } }),
+    1
+  )
+  eq('a step back queues NO message', (await msgCount()) - beforeRevert, 0)
+  // Deliberately silent is NOT the same as having nobody to text. Reporting the
+  // revert as `no_phone` made the admin UI announce "No mobile on file" for an
+  // order whose number was on screen beside it — a decision reading as a fault.
+  eq('   and reports the revert as such, not a missing phone', revert.json?.message?.status, 'reverted')
+
+  const backLines = await prisma.sale.findMany({ where: { orderRef: ref } })
+  check('DB: fulfilment moved back with it', backLines.every((l) => l.fulfillment === 'dispatched'))
+
+  /* ---- refusals ---- */
+  const same = await post(`/api/admin/orders/${ref}/status`, { action: 'set_stage', stage: 'dispatched' })
+  eq('moving to the stage it is already on → 409', same.status, 409)
+
+  // From 'dispatched' the legal backwards move is exactly one: 'packed'. Two
+  // stages back ('confirmed') is not a mis-click fix any more, and is refused.
+  const backwardsTooFar = await post(`/api/admin/orders/${ref}/status`, {
+    action: 'set_stage',
+    stage: 'confirmed',
+  })
+  eq('going back two stages → 409 (only a one-step fix is allowed)', backwardsTooFar.status, 409)
+
+  const notAStage = await post(`/api/admin/orders/${ref}/status`, { action: 'set_stage', stage: 'new' })
+  eq('"new" is not a stage you can move TO → 400', notAStage.status, 400)
+  const noStage = await post(`/api/admin/orders/${ref}/status`, { action: 'set_stage' })
+  eq('set_stage with no stage → 400', noStage.status, 400)
+  const badAction = await post(`/api/admin/orders/${ref}/status`, { action: 'explode' })
+  eq('an unknown action → 400', badAction.status, 400)
+  const statusUnauth = await post(`/api/admin/orders/${ref}/status`, { action: 'note', note: 'x' }, { cookie: '' })
+  eq('the status route requires auth → 401', statusUnauth.status, 401)
+
+  const unknownStatus = await post('/api/admin/orders/E2E-NO-SUCH-ORDER/status', {
+    action: 'set_stage',
+    stage: 'confirmed',
+  })
+  eq('an unknown order ref → 404', unknownStatus.status, 404)
+
+  /* ---- an UNPAID order must not move ---- */
+  // A fresh booking, because the one F made (svcOrderC) is cancelled later in that
+  // section to free its seat. Unpaid and live is the state that matters here.
+  const unpaidOrder = await post('/api/orders', {
+    customerName: 'E2E Fulfilment Unpaid',
+    customerPhone: '0771234599',
+    items: [{ productId: S.product.id, quantity: 1 }],
+  })
+  must('place an unpaid order → 201', unpaidOrder.status === 201, { status: unpaidOrder.status })
+  const unpaidRef = unpaidOrder.json.orderRef
+
+  const unpaid = await post(`/api/admin/orders/${unpaidRef}/status`, {
+    action: 'set_stage',
+    stage: 'confirmed',
+  })
+  eq('moving an unpaid order → 409', unpaid.status, 409)
+  check('   and it says money is the reason', /payment/i.test(unpaid.json?.error ?? ''), unpaid.json)
+  const unpaidLines = await prisma.sale.findMany({ where: { orderRef: unpaidRef } })
+  check('DB: the unpaid order is untouched', unpaidLines.every((l) => l.fulfillment === null))
+  check(
+    'DB: no stage message was queued for it',
+    (await prisma.customerMessage.findMany({
+      where: { template: 'order_confirmed' },
+      include: { link: true },
+    })).every((m) => m.link.refId !== unpaidRef)
+  )
+  // And it must not be offered a move it cannot make: the API that decides is the
+  // same one that serves the buttons.
+  const unpaidDetail = await get(`/api/admin/orders/${unpaidRef}`)
+  eq('   the unpaid order offers no stages', unpaidDetail.json?.order?.allowedStages?.length, 0)
+
+  /* ---- notes are internal: they never text anyone ---- */
+  const beforeNote = await msgCount()
+  const note = await post(`/api/admin/orders/${ref}/status`, {
+    action: 'note',
+    note: 'E2E: customer will collect on Saturday',
+  })
+  eq('adding a note → 200', note.status, 200)
+  eq('   an OrderEvent of type note', await prisma.orderEvent.count({ where: { orderRef: ref, type: 'note' } }), 1)
+  eq('   and NO message was queued', (await msgCount()) - beforeNote, 0)
+
+  /* ---- the detail page now reports the moved state ---- */
+  const after_detail = await get(`/api/admin/orders/${ref}`)
+  eq('detail reports the new stage', after_detail.json?.order?.fulfillment, 'dispatched')
+  eq('   and the events are there', after_detail.json?.events?.length > 0, true)
+  check('   the note is on the timeline', after_detail.json.events.some((e) => e.type === 'note'))
+  eq('   messages grew by the two stage texts', after_detail.json?.messages?.length, detailMsgCount + 2)
+  check(
+    '   allowedStages is server-computed',
+    Array.isArray(after_detail.json?.order?.allowedStages)
+  )
+  check('   a dispatched order can move forward', after_detail.json.order.allowedStages.includes('delivered'))
+
+  /* ---- the list carries fulfilment too ---- */
+  const list = await get('/api/admin/orders?fulfilment=dispatched&limit=200')
+  eq('filtering the list by stage → 200', list.status, 200)
+  check('   the dispatched order is in it', list.json?.orders?.some((o) => o.orderRef === ref))
+  check('   every result is actually dispatched', list.json.orders.every((o) => o.fulfillment === 'dispatched'))
+  check('   stageCounts came back', !!list.json?.stageCounts)
+  eq('   counts the dispatched order', list.json.stageCounts.dispatched >= 1, true)
+
+  const search = await get(`/api/admin/orders?q=${encodeURIComponent('E2E Seat Buyer A')}`)
+  check('searching by customer name finds it', search.json?.orders?.some((o) => o.orderRef === ref))
+  const searchByRef = await get(`/api/admin/orders?q=${encodeURIComponent(ref)}`)
+  check('searching by order ref finds it', searchByRef.json?.orders?.some((o) => o.orderRef === ref))
+
+  /* ---- the whole section, in one number ---- */
+  eq('fulfilment never moved the fund', money((await publicTotal()) - fundBefore), 0)
 }
 
 main().catch(async (e) => {

@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto'
 import { z } from 'zod'
 import type { Prisma } from '@prisma/client'
 import { formatLkr } from '@/lib/currency'
+import { toGsm7 } from '@/lib/sms/gsm7'
 
 /**
  * Telling customers what they did.
@@ -42,6 +43,17 @@ export type Template =
   | 'order_placed'
   | 'order_paid'
   | 'order_cancelled'
+  // One per fulfilment stage an admin can move an order to (src/lib/fulfilment.ts).
+  // Each is queued in the same transaction as the stage change, so the customer is
+  // told only about a move that actually committed.
+  | 'order_confirmed'
+  | 'order_packed'
+  | 'order_dispatched'
+  | 'order_delivered'
+  // NOT a cancellation: the customer asked to cancel an order they had already
+  // paid for, and a human now has to decide. Saying "cancelled" here would be a
+  // lie, and would contradict the receipt they hold.
+  | 'order_cancel_requested'
   | 'sale_thanks'
   | 'scan_thanks'
   | 'gift_thanks'
@@ -217,7 +229,7 @@ function hi(name?: string | null): string {
  * Bodies are kept short on purpose — a long SMS is billed as several, and the
  * carrier splits it into parts that can arrive out of order.
  */
-export function renderMessage(template: Template, data: MessageData): string {
+function renderRawMessage(template: Template, data: MessageData): string {
   const { name, orderRef, total, amount, donation, passes, url } = data
   const ref = orderRef ?? ''
 
@@ -228,6 +240,9 @@ export function renderMessage(template: Template, data: MessageData): string {
    * it would read as though the donation had been forgotten.
    */
   const statesDonation = typeof donation === 'number' && Number.isFinite(donation)
+
+  /** "order VG-O-ABC123", or a wording that still reads when no ref was given. */
+  const refText = ref ? `order ${ref}` : 'your order'
 
   switch (template) {
     case 'order_placed':
@@ -253,11 +268,43 @@ export function renderMessage(template: Template, data: MessageData): string {
         (statesDonation ? ` ${formatLkr(donation as number)} of it went to the community fund.` : '') +
         (passes
           ? ` Your ${passes === 1 ? 'workshop pass is' : `${passes} workshop passes are`} ready — open ${url} and enter the reference we sent when you booked.`
-          : ` Your receipt: ${url}`)
+          : ` Your receipt: ${url}`) +
+        // The one message that invites a reply, because it is the one a customer
+        // has a reason to answer: "we have your money" is exactly the moment to
+        // confirm the order or say something is wrong. The words are the whole
+        // interface — there is no app, and a reply that says "yeah ok" is handled
+        // as unrecognised rather than guessed at.
+        ` Reply CONFIRM to confirm your order, or CANCEL if you need to change it.`
       )
 
     case 'order_cancelled':
       return `${hi(name)}order ${ref} has been cancelled. Nothing further is owed. If this is unexpected, please call us.`
+
+    // The four fulfilment stages. Short, one sentence each, and — like
+    // order_cancelled above — NO url and no codes. The receipt link and the order
+    // reference are the two halves of the voucher gate on /r/<token>; a status
+    // text must never hand out both, and it has nothing to do with money, so it
+    // states none.
+    case 'order_confirmed':
+      // The CANCEL offer is repeated here, and nowhere else: this is the last
+      // stage before anything is packed, so it is the last moment a change costs
+      // the farm nothing. After this the customer is told to call instead.
+      return `${hi(name)}${refText} is confirmed. We will let you know when it is on the way. Reply CANCEL if anything changes.`
+
+    case 'order_packed':
+      return `${hi(name)}${refText} is packed and getting ready to go.`
+
+    case 'order_dispatched':
+      return `${hi(name)}${refText} is on its way to you.`
+
+    case 'order_delivered':
+      return `${hi(name)}${refText} has been delivered. Thank you for buying from us!`
+
+    // Not a cancellation, and worded so it cannot be mistaken for one — the
+    // customer still holds a receipt saying they paid, and that stays true until
+    // an admin decides what to do.
+    case 'order_cancel_requested':
+      return `${hi(name)}we have your request about ${refText}. As payment was already received, our team will call you to sort it out.`
 
     case 'sale_thanks':
       // The total is its own sentence rather than a clause glued on with "and".
@@ -289,6 +336,23 @@ export function renderMessage(template: Template, data: MessageData): string {
       // throwing, because a throw here would roll back the money movement.
       return `${hi(name)}here is your receipt: ${url}`
   }
+}
+
+/**
+ * Render a template into the text a customer actually receives.
+ *
+ * The raw render is pushed through `toGsm7` before it leaves this module, so the
+ * body stored on CustomerMessage is exactly the body transmitted. Doing it here,
+ * rather than in each provider, is what makes that true — and it catches every
+ * source of a stray character at once, the amount formatter and a customer's own
+ * name alike, because this is the single point every template passes through.
+ * See src/lib/sms/gsm7.ts for the arithmetic and the measured bill behind it.
+ *
+ * This does not make a long message cheap: it halves the cost of a message that
+ * was already being billed at double. The length advice above still stands.
+ */
+export function renderMessage(template: Template, data: MessageData): string {
+  return toGsm7(renderRawMessage(template, data))
 }
 
 export interface QueueMessageInput {
@@ -435,7 +499,11 @@ export async function deliverMessage(
   })
   if (claimed.count === 0) return { ok: false, already: true, error: 'Already sent' }
 
-  const result = await sendViaGateway(message.toPhone, message.body)
+  // The message id goes WITH the send: it is what a later delivery receipt quotes
+  // back at us, so without it the outbox can never learn that a text arrived. Only
+  // written when the gateway gave one — overwriting a good id with null on a
+  // re-send that returned nothing would lose the only link we have.
+  const result = await sendViaGateway(message.toPhone, message.body, { requestId: id })
   if (!result.ok) {
     // sentAt AND sentBy ARE CLEARED, not left behind. The claim above stamped
     // them optimistically so a crash mid-send would not leave the row looking
@@ -448,6 +516,15 @@ export async function deliverMessage(
       data: { status: 'failed', error: result.error ?? 'Send failed', sentAt: null, sentBy: null },
     })
     return { ok: false, error: result.error }
+  }
+  if (result.providerMessageId) {
+    await client.customerMessage.update({
+      where: { id },
+      // `deliveryStatus` is deliberately NOT set here. A 2xx means the gateway
+      // accepted the message, not that it went anywhere, and the only writer of
+      // delivery state is the webhook that reports what actually happened.
+      data: { providerMessageId: result.providerMessageId },
+    })
   }
   return { ok: true }
 }

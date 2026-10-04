@@ -56,6 +56,36 @@ NEXTAUTH_SECRET="$(openssl rand -base64 32)"     # generate once, keep private
 # hit /api/settings/password once, then it is stored hashed in the DB.
 ```
 
+### SMS (optional — see `docs` in `.env.production.example` for the full list)
+
+```bash
+SMS_PROVIDER="httpsms"              # the Android handset is the gateway
+HTTPSMS_API_KEY="..."               # https://httpsms.com/settings
+HTTPSMS_FROM="+94771234567"         # the phone's own number — customers see and reply to it
+HTTPSMS_WEBHOOK_SECRET="$(openssl rand -hex 32)"
+SMS_COUNTRY_CODE="94"
+SMS_DAILY_CAP="200"                 # automatic sends only; a human's Send is never capped
+SMS_AUTOSEND=""                     # set "off" to stop automatic sending without a redeploy
+```
+
+**`HTTPSMS_WEBHOOK_SECRET` is a separate secret from the API key**, and it is the only thing
+protecting a **public** endpoint. Without it `/api/sms/webhook` answers `503` to everything and no
+delivery receipt or customer reply ever arrives — sending still works, the feedback loop does not.
+
+In the httpSMS dashboard, point the webhook at:
+
+```
+https://basnayakavermigrow.lk/api/sms/webhook
+```
+
+and enable `message.phone.received` (this is what makes a customer's CONFIRM / CANCEL work),
+`message.phone.sent`, `message.phone.delivered`, `message.send.failed`, `message.send.expired`.
+
+Operational reality of this gateway, worth telling whoever runs it: **the handset must stay on,
+charged and online.** A `2xx` from the API means the message was accepted into the *phone's* queue —
+not that it was sent, and not that it arrived. Nothing here claims delivery locally; only a signed
+webhook can, which is why the Messages tab shows the gateway's own word separately.
+
 ---
 
 ## 2. Caddyfile (auto-HTTPS on the public domain)

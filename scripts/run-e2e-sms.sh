@@ -13,6 +13,11 @@
 #   fail    SMS_MOCK_FAIL=1 — the gateway refuses everything, and the sale must
 #           survive anyway.
 #   manual  No gateway — unchanged behaviour, and bulk-send must refuse.
+#   webhook SMS_PROVIDER=mock plus HTTPSMS_WEBHOOK_SECRET — the inbound httpSMS
+#           callback: a signed delivery receipt must land on the right message, a
+#           customer's CONFIRM must move a paid order, CANCEL must cancel an
+#           unpaid one and only FLAG a paid one, and an unsigned or missigned
+#           request must be refused without writing anything.
 #
 # Nothing here can spend money: the mock provider writes to .sms-outbox.log and
 # never opens a socket to a gateway.
@@ -39,6 +44,13 @@ DB_URL="file:${ROOT_FS}/db/sms-e2e.db"
 LOG="${ROOT_FS}/.sms-outbox.log"
 SERVER_LOG="${TMPDIR:-/tmp}/e2e-sms-server.log"
 
+# The webhook signing key, given to BOTH the server and the test process. The test
+# signs its own events with it (independently of the app's verifier, so the check
+# is a real one); if only the server had it, every correctly-signed event would
+# look like a forgery and the whole inbound phase would fail for the wrong reason.
+# Set for every phase, since only the webhook phase reads it.
+WEBHOOK_SECRET="e2e-webhook-secret"
+
 if [ ! -f .next/BUILD_ID ]; then
   echo "[sms-e2e] no build found — running npm run build"
   npm run build
@@ -64,6 +76,7 @@ run_phase() {
     NEXTAUTH_URL="http://localhost:$PORT" \
     UPLOADS_DIR="${ROOT_FS}/public/uploads" \
     SMS_MOCK_LOG="$LOG" \
+    HTTPSMS_WEBHOOK_SECRET="$WEBHOOK_SECRET" \
     "$@" \
     node server.js > "$SERVER_LOG" 2>&1 &
   local srv=$!
@@ -84,6 +97,7 @@ run_phase() {
   fi
 
   if ! E2E_BASE="http://127.0.0.1:$PORT" DATABASE_URL="$DB_URL" SMS_MOCK_LOG="$LOG" \
+       HTTPSMS_WEBHOOK_SECRET="$WEBHOOK_SECRET" \
        node scripts/e2e-sms.mjs "$phase"; then
     TOTAL_FAILED=$((TOTAL_FAILED + 1))
   fi
@@ -96,6 +110,7 @@ run_phase() {
 run_phase mock   env SMS_PROVIDER=mock SMS_MOCK_FAIL=0 SMS_DAILY_CAP=3
 run_phase fail   env SMS_PROVIDER=mock SMS_MOCK_FAIL=1 SMS_DAILY_CAP=200
 run_phase manual env SMS_PROVIDER= SMS_DAILY_CAP=200
+run_phase webhook env SMS_PROVIDER=mock SMS_MOCK_FAIL=0 SMS_DAILY_CAP=200
 
 echo
 if [ "$TOTAL_FAILED" -eq 0 ]; then

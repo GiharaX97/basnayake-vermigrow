@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
-import { recordFundEntry, cancelFundEntry } from '@/lib/fund'
+import { recordFundEntry } from '@/lib/fund'
 import { settleSchema, OrderStateError } from '@/lib/payments'
 import { generatePackCodes } from '@/lib/pack-codes'
 import { queueMessage, autoDeliver } from '@/lib/notify'
+import { cancelOrderTx } from '@/lib/order-actions'
 
 /**
  * Settle a customer order: either take the money ('pay') or call it off
@@ -117,6 +118,15 @@ export async function POST(
           },
         })
 
+        // The order's own timeline entry. Written in the same transaction as the
+        // money, so the history can never claim a settlement that did not happen
+        // — nor miss one that did. Fulfilment stays where it is (null = New):
+        // taking the money is not the same as confirming the order, and the two
+        // are deliberately separate moves.
+        await tx.orderEvent.create({
+          data: { orderRef, type: 'settled', actor: 'admin', note },
+        })
+
         // Tell the customer the money landed — and, for a service order, that
         // their passes are ready. Queued inside the same transaction as the
         // status flip and the ledger write, so a message can never contradict the
@@ -160,23 +170,16 @@ export async function POST(
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const lines = await tx.sale.findMany({
-        where: { orderRef, status: { in: ['pending', 'paid'] } },
+      // The status flips, the ledger rows and the OrderEvent all live in
+      // cancelOrderTx — shared with the SMS webhook so a reply-driven cancel and
+      // an admin cancel cannot drift apart. Any Payment already recorded is
+      // deliberately LEFT ALONE: if money did arrive, cancelling is a refund
+      // question, not a reason to erase the record that it was received.
+      const cancelled = await cancelOrderTx(tx, {
+        orderRef,
+        actor: 'admin',
+        note: parsed.data.note,
       })
-      if (lines.length === 0) {
-        throw new OrderStateError('This order has nothing left to cancel.')
-      }
-
-      let donationRemoved = 0
-      for (const line of lines) {
-        await tx.sale.update({ where: { id: line.id }, data: { status: 'cancelled' } })
-        if (line.status === 'paid') donationRemoved += line.donationAmount
-        // Cancels the ledger rows that exist and is a harmless no-op for lines
-        // that were never paid. The rows are KEPT as 'cancelled', not deleted,
-        // so the fund's history stays auditable — same reasoning as deleting a
-        // single sale in ../sales/[id].
-        await cancelFundEntry(tx, 'sale', line.id)
-      }
 
       // A customer who was told "paid — your passes are ready" and then has the
       // order cancelled must be told that too, or the receipt they hold keeps
@@ -186,15 +189,12 @@ export async function POST(
         refType: 'order',
         refId: orderRef,
         template: 'order_cancelled',
-        data: { name: lines[0].customerName, orderRef },
-        toName: lines[0].customerName,
-        toPhone: lines[0].customerPhone,
+        data: { name: cancelled.customerName, orderRef },
+        toName: cancelled.customerName,
+        toPhone: cancelled.customerPhone,
       })
 
-      // Any Payment already recorded is deliberately LEFT ALONE. If money did
-      // arrive, cancelling the order is a refund question, not a reason to
-      // erase the record that it was received.
-      return { lines: lines.length, donationRemoved }
+      return { lines: cancelled.lines, donationRemoved: cancelled.donationRemoved }
     })
 
     // A cancellation is news the customer must have, for the same reason the
