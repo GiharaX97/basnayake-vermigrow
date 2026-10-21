@@ -160,14 +160,15 @@
    un-fixed for print and cells become atomic inline-blocks — a row of stickers
    moves to the next page whole instead of being sliced mid-QR. */
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 8mm;
-  }
+  /* No @page size/margin here: the QR sheet dialog injects the chosen paper at
+     runtime. A static rule would compete with it; a fallback would silently
+     print A4 when a label sheet was chosen. */
   /* Hide the app page (display, not visibility — hidden-but-laid-out blocks
-     would only push blank pages ahead of the sheet). The Radix dialog portal
-     is a direct child of <body>, everything else goes. */
-  body > *:not([data-slot="dialog-portal"]) {
+     would only push blank pages ahead of the sheet). Radix's portal renders
+     NO wrapper element: the dialog content itself is a direct child of <body>.
+     So hide by "does not contain the sheet", not by a portal attribute that
+     never exists — otherwise this rule hides the dialog too and prints blank. */
+  body > *:not(:has(.print-sheet)) {
     display: none !important;
   }
   [data-slot="dialog-overlay"],
@@ -178,6 +179,13 @@
   [data-slot="dialog-content"]:has(> .print-sheet) {
     position: static !important;
     transform: none !important;
+    /* Tailwind v4 centres the dialog with the individual `translate` property
+       (`translate: var(--tw-translate-x) var(--tw-translate-y)`), which
+       `transform: none` does not reset. Zero the variables it reads — declaring
+       `translate: none` here gets dropped by the CSS minifier. Without this the
+       sheet prints shifted half its width/height off the page. */
+    --tw-translate-x: 0 !important;
+    --tw-translate-y: 0 !important;
     width: 100% !important;
     max-width: none !important;
     max-height: none !important;
@@ -189,17 +197,28 @@
   }
   [data-slot="dialog-content"]:has(> .print-sheet) > .print-sheet {
     display: block !important;
+    overflow: visible !important;
+    text-align: center !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
+  /* Sticker geometry comes from the dialog's CSS variables, which are computed
+     by the same layout module that draws the PDF. */
   .print-sheet > div {
     display: inline-block !important;
-    width: 46mm !important;
-    margin: 0 2mm 2mm 0 !important;
+    width: var(--qr-cell-w, 45mm) !important;
+    height: var(--qr-cell-h, 58.5mm) !important;
+    margin: 0 var(--qr-gap, 2mm) var(--qr-gap, 2mm) 0 !important;
     vertical-align: top !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
+  .print-sheet .qr-cell-inner {
+    padding: var(--qr-pad, 1.5mm) !important;
+  }
   .print-sheet img {
-    width: 42mm !important;
-    height: 42mm !important;
+    width: var(--qr-size, 42mm) !important;
+    height: var(--qr-size, 42mm) !important;
+    image-rendering: pixelated;
   }
 }

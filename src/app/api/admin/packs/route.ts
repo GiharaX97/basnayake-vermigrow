@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     const packs = await prisma.pack.findMany({
       where: { dispatchId },
       orderBy: { createdAt: 'asc' },
-      select: { code: true, status: true },
+      select: { code: true, status: true, product: { select: { name: true } } },
     })
     return NextResponse.json(packs)
   }

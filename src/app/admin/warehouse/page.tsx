@@ -9,14 +9,6 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -43,7 +35,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { format, formatDistanceToNow } from 'date-fns'
-import QRCode from 'qrcode'
+import { QrSheetDialog, type QrSheet } from '@/components/admin/qr-sheet-dialog'
 import {
   AlertTriangle,
   Boxes,
@@ -132,9 +124,7 @@ export default function AdminWarehousePage() {
   const [lookingUp, setLookingUp] = useState(false)
 
   // Print sheet
-  const [sheet, setSheet] = useState<{ title: string; codes: string[] } | null>(null)
-  const [sheetUrls, setSheetUrls] = useState<string[]>([])
-  const [sheetPreparing, setSheetPreparing] = useState(false)
+  const [sheet, setSheet] = useState<QrSheet | null>(null)
 
   const [deleteDispatchId, setDeleteDispatchId] = useState<string | null>(null)
 
@@ -177,8 +167,11 @@ export default function AdminWarehousePage() {
         return
       }
       toast.success(`${body.created} pack codes generated`)
-      const productName = products.find((p) => p.id === genProductId)?.name ?? 'Packs'
-      openSheet(`${productName} — ${body.created} new packs`, body.packs.map((p: { code: string }) => p.code))
+      const productName = products.find((p) => p.id === genProductId)?.name ?? 'Pack'
+      openSheet(
+        `${productName} — ${body.created} new packs`,
+        body.packs.map((p: { code: string }) => ({ code: p.code, product: productName }))
+      )
       load()
     } catch {
       toast.error('Network error')
@@ -207,7 +200,11 @@ export default function AdminWarehousePage() {
         return
       }
       toast.success(`${body.packs.length} packs dispatched to ${body.retailer}`)
-      openSheet(`${body.retailer} — ${format(new Date(), 'd MMM yyyy')}`, body.packs)
+      const productName = products.find((p) => p.id === dispProductId)?.name ?? 'Pack'
+      openSheet(
+        `${body.retailer} — ${format(new Date(), 'd MMM yyyy')}`,
+        (body.packs as string[]).map((code) => ({ code, product: productName }))
+      )
       setDispRetailer('')
       setDispNote('')
       load()
@@ -244,8 +241,11 @@ export default function AdminWarehousePage() {
         toast.error('Could not load pack codes')
         return
       }
-      const packs: { code: string }[] = await res.json()
-      openSheet(`${d.retailer} — ${format(new Date(d.createdAt), 'd MMM yyyy')}`, packs.map((p) => p.code))
+      const packs: { code: string; product?: { name: string } }[] = await res.json()
+      openSheet(
+        `${d.retailer} — ${format(new Date(d.createdAt), 'd MMM yyyy')}`,
+        packs.map((p) => ({ code: p.code, product: p.product?.name ?? '' }))
+      )
     } catch {
       toast.error('Network error')
     }
@@ -263,35 +263,9 @@ export default function AdminWarehousePage() {
     setDeleteDispatchId(null)
   }
 
-  const openSheet = (title: string, codes: string[]) => {
+  const openSheet = (title: string, codes: QrSheet['codes']) => {
     setSheet({ title, codes })
-    setSheetUrls([])
-    setSheetPreparing(true)
   }
-
-  // Render QR data URLs whenever a sheet opens
-  useEffect(() => {
-    if (!sheet) return
-    let cancelled = false
-    ;(async () => {
-      const origin = window.location.origin
-      const urls: string[] = []
-      for (const code of sheet.codes) {
-        const url = await QRCode.toDataURL(`${origin}/donations?c=${code}`, {
-          width: 220,
-          margin: 1,
-          color: { dark: '#111827', light: '#ffffff' },
-        })
-        urls.push(url)
-        if (cancelled) return
-      }
-      if (!cancelled) {
-        setSheetUrls(urls)
-        setSheetPreparing(false)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [sheet])
 
   if (loading) {
     return (
@@ -645,40 +619,7 @@ export default function AdminWarehousePage() {
       </Tabs>
 
       {/* QR sticker sheet dialog */}
-      <Dialog open={sheet !== null} onOpenChange={(o) => !o && setSheet(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>QR sticker sheet</DialogTitle>
-            <DialogDescription>
-              {sheet?.title} — {sheet?.codes.length} sticker(s). Print and cut; each QR opens the Donation Wall with the code pre-filled.
-            </DialogDescription>
-          </DialogHeader>
-          {sheetPreparing ? (
-            <div className="flex items-center gap-2 py-12 justify-center text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" /> Rendering {sheet?.codes.length} QR codes…
-            </div>
-          ) : (
-            <div className="print-sheet grid grid-cols-4 gap-3">
-              {sheetUrls.map((url, i) => (
-                <div key={i} className="flex flex-col items-center border rounded-md p-1.5">
-                  <img src={url} alt={sheet?.codes[i]} className="h-full w-full" />
-                  <span className="font-mono text-[9px] mt-0.5">{sheet?.codes[i]}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSheet(null)}>Close</Button>
-            <Button
-              onClick={() => window.print()}
-              disabled={sheetPreparing}
-              className="bg-emerald-600 hover:bg-emerald-500"
-            >
-              <Printer className="size-4" /> Print
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <QrSheetDialog sheet={sheet} onClose={() => setSheet(null)} />
 
       {/* Confirm dispatch removal */}
       <AlertDialog open={deleteDispatchId !== null} onOpenChange={(o) => !o && setDeleteDispatchId(null)}>

@@ -108,7 +108,7 @@ function cookieHeader() {
     .join('; ')
 }
 
-async function req(method, path, { body, headers = {}, cookie, ip, noJar } = {}) {
+async function req(method, path, { body, headers = {}, cookie, ip, noJar, binary = false } = {}) {
   const h = { ...headers }
   if (ip !== null) h['x-forwarded-for'] = ip ?? nextIp()
   const c = cookie !== undefined ? cookie : noJar ? '' : cookieHeader()
@@ -123,15 +123,23 @@ async function req(method, path, { body, headers = {}, cookie, ip, noJar } = {})
   }
   if (method === 'POST' && path === '/api/orders') orderAttempts++
   const res = await fetch(`${BASE}${path}`, { method, headers: h, body: payload, redirect: 'manual' })
-  const text = await res.text()
+  let text
+  let bytes = null
   let json = null
-  try {
-    json = JSON.parse(text)
-  } catch {
-    /* html / empty / rsc */
+  if (binary) {
+    // res.text() replaces invalid UTF-8 and would corrupt a PDF.
+    bytes = Buffer.from(await res.arrayBuffer())
+    text = bytes.toString('latin1')
+  } else {
+    text = await res.text()
+    try {
+      json = JSON.parse(text)
+    } catch {
+      /* html / empty / rsc */
+    }
   }
   absorbCookies(res)
-  return { status: res.status, headers: res.headers, text, json }
+  return { status: res.status, headers: res.headers, text, json, bytes }
 }
 
 const get = (p, o) => req('GET', p, o)
@@ -513,6 +521,73 @@ async function D_warehouseQr() {
   eq('codes for a dispatch → 200', byDispatch.status, 200)
   eq('   3 codes listed', byDispatch.json?.length, 3)
   check('   all now dispatched', byDispatch.json?.every((p) => p.status === 'dispatched'))
+  check('   dispatch rows carry the product name', byDispatch.json?.every((p) => !!p.product?.name))
+
+  /* ---- downloadable QR sticker PDF ---- */
+  const a4 = {
+    paper: 'a4', widthMm: 210, heightMm: 297,
+    orientation: 'portrait', marginMm: 8, qrMm: 42, gapMm: 2,
+  }
+  const PDFDocument = (await import('pdf-lib')).PDFDocument
+
+  const pdfUnauth = await post('/api/admin/packs/pdf', { codes: S.packs, layout: a4 }, { cookie: '' })
+  eq('PDF sheet without auth → 401', pdfUnauth.status, 401)
+
+  const pdf = await req('POST', '/api/admin/packs/pdf', {
+    body: { codes: S.packs, layout: a4 },
+    binary: true,
+  })
+  must('PDF sheet → 200', pdf.status === 200, { status: pdf.status, body: pdf.text.slice(0, 200) })
+  check('   content-type is application/pdf',
+    (pdf.headers.get('content-type') ?? '').startsWith('application/pdf'))
+  check('   attachment filename',
+    /^attachment; filename="[^"]+\.pdf"$/.test(pdf.headers.get('content-disposition') ?? ''))
+  check('   %PDF- signature', pdf.text.startsWith('%PDF-'))
+  check('   content-length matches the bytes',
+    Number(pdf.headers.get('content-length')) === pdf.bytes.length)
+
+  const docA4 = await PDFDocument.load(pdf.bytes)
+  eq('A4: 5 stickers fit on 1 page', docA4.getPageCount(), 1)
+  const a4Size = docA4.getPage(0).getSize()
+  check('   A4 MediaBox = 210 × 297 mm',
+    Math.abs(a4Size.width - 595.28) < 1 && Math.abs(a4Size.height - 841.89) < 1, a4Size)
+
+  const tinyLayout = {
+    paper: 'custom', widthMm: 80, heightMm: 120,
+    orientation: 'portrait', marginMm: 5, qrMm: 40, gapMm: 2,
+  }
+  const pdfTiny = await req('POST', '/api/admin/packs/pdf', {
+    body: { codes: S.packs, layout: tinyLayout },
+    binary: true,
+  })
+  eq('custom 80×120 mm → 200', pdfTiny.status, 200)
+  const docTiny = await PDFDocument.load(pdfTiny.bytes)
+  eq('   one sticker per page → 5 pages', docTiny.getPageCount(), 5)
+  const tinySize = docTiny.getPage(0).getSize()
+  check('   custom MediaBox = 80 × 120 mm',
+    Math.abs(tinySize.width - 226.77) < 1 && Math.abs(tinySize.height - 340.16) < 1, tinySize)
+
+  const pdfLand = await req('POST', '/api/admin/packs/pdf', {
+    body: { codes: S.packs, layout: { ...a4, orientation: 'landscape' } },
+    binary: true,
+  })
+  eq('landscape → 200', pdfLand.status, 200)
+  const landSize = (await PDFDocument.load(pdfLand.bytes)).getPage(0).getSize()
+  check('   MediaBox swaps to 297 × 210 mm',
+    Math.abs(landSize.width - 841.89) < 1 && Math.abs(landSize.height - 595.28) < 1, landSize)
+
+  const badQr = await post('/api/admin/packs/pdf', { codes: S.packs, layout: { ...a4, qrMm: 5 } })
+  eq('QR size below the minimum → 400', badQr.status, 400)
+  eq('   validation envelope', badQr.json?.error, 'Validation failed')
+
+  const badPaper = await post('/api/admin/packs/pdf', { codes: S.packs, layout: { ...a4, paper: 'a9' } })
+  eq('unknown paper → 400', badPaper.status, 400)
+
+  const noCodes = await post('/api/admin/packs/pdf', { codes: [], layout: a4 })
+  eq('empty code list → 400', noCodes.status, 400)
+
+  const unknownPdf = await post('/api/admin/packs/pdf', { codes: ['VG-ZZZZZZ'], layout: a4 })
+  eq('unknown pack code → 404', unknownPdf.status, 404)
 
   const dispList = await get('/api/admin/dispatches')
   const row = dispList.json?.find?.((d) => d.id === S.dispatchId)
