@@ -18,13 +18,14 @@ GitHub is the remaining step and needs your own credentials (§3).
 | **Live site** | https://www.basnayakavermigrow.lk — HTTP 200, systemd `basnayaka` active |
 | **VPS app HEAD** | `3a6f397` (QR sticker sheets) — **prod is 2 commits behind local** |
 | **Local repo** | `H:\My_Projects\basnayake-glm5.2`, branch `main`, **all work committed** (see below), working tree clean apart from gitignored files |
-| **Unpushed commits** | `d5069be` (order book + Text.lk), `3a6f397` (QR PDFs), `c0d5182` (payments) + the docs/tools commits — **none are on GitHub yet** |
+| **GitHub** | **PUSHED 2026-10-30** to `GiharaX97/basnayake-vermigrow` (`personal`), `3a6f397..cb4dbe0`. The repo moved from `Giharax97` → **`GiharaX97`** (capital X) |
 | **Committed, not deployed** | Payments.lk card payments (Phase 5) + "Apeksha Hospital" copy changes |
 | **Verified** | `tsc --noEmit` clean; `next build --webpack` succeeded; demo card flow exercised end-to-end on 2026-10-29 |
 
-**The one risk that matters:** none of these commits are on GitHub yet. Until the push in §3
-succeeds, they exist only on this desktop (and `3a6f397` on the VPS). Either push before
-leaving or copy the folder (§6).
+**The one risk that matters (now resolved):** the commits are on GitHub at
+`https://github.com/GiharaX97/basnayake-vermigrow` as of 2026-10-30. You can clone instead of
+copying the folder; only the gitignored files (`.env`, `SECRETS.local.md`, `db/*.db`, the SSH key)
+still need to be copied by hand (§6).
 
 ---
 
@@ -104,7 +105,7 @@ but not pushed and not deployed. `PAYMENTS-PLAN.md` said "Phase 5 not started"; 
 | Desktop working tree | `main` @ the docs commit | **The only copy of the new commits** |
 | VPS `/var/www/.../app` | `3a6f397` | Deployed, running |
 | `origin` GitHub (`basnayakavermigrowdev-alt/basnayaka-vermigrow`) | behind `3a6f397` | Push needs credentials |
-| `personal` GitHub (`Giharax97/basnayake-vermigrow`) | unknown | User-created, never successfully pushed from here |
+| `personal` GitHub (`GiharaX97/basnayake-vermigrow`) | **`cb4dbe0`** | Pushed 2026-10-30 (repo moved: `Giharax97` → `GiharaX97`) |
 
 **Commits added 2026-10-30 (unpushed):**
 
@@ -114,19 +115,18 @@ but not pushed and not deployed. `PAYMENTS-PLAN.md` said "Phase 5 not started"; 
 | *docs commit* | `PAYMENTS-PLAN.md`, `SECURITY-AUDIT-2026-10-09.html`, this handoff, `AGENTS.md` |
 | *tools commit* | `deck/` QR sources + PDFs, `scripts/_*.mjs` probes, `.gitignore` scratch/DB rules |
 
-GitHub credentials are **not available to the agent shell** on this desktop: HTTPS hangs on the
-credential-manager prompt, `git@github.com` says `Permission denied (publickey)`, and `gh` is not
-installed. The push must be run by you in your own terminal so the login/GUI prompt can complete:
+**Push completed 2026-10-30:** `git push personal main` → `3a6f397..cb4dbe0`. The stored
+credential (`credential.helper=store`) worked even though `git@github.com` has no key and `gh` is
+not installed. `personal` now points at `GiharaX97/basnayake-vermigrow` (the old `Giharax97`
+spelling redirects).
+
+`origin` (the client's `basnayakavermigrowdev-alt` repo) may still be behind; the VPS pulls from
+`origin`, so a deploy needs the commits reachable from whatever remote the VPS clone reads
+(§8). Clone URL for the laptop:
 
 ```powershell
-cd H:\My_Projects\basnayake-glm5.2
-git push personal main      # Giharax97 account; complete the browser/GUI sign-in
-# or, for the client's repo:
-git push origin main
+git clone https://github.com/GiharaX97/basnayake-vermigrow.git
 ```
-
-If neither remote accepts you, the fallback is the folder copy in §6 — the commits travel with
-`.git`, so nothing is lost.
 
 ---
 
