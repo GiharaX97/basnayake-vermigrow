@@ -1,0 +1,1512 @@
+<title>Vermigrow Security Audit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* ============================================================
+     Layout: single readable column, findings as severity-chipped
+     cards, mono face reserved for code and file references.
+     ============================================================ */
+  :root {
+    --bg: #f6f8f5;
+    --surface: #ffffff;
+    --surface-2: #eef2ec;
+    --fg: #17211b;
+    --fg-muted: #5b6a61;
+    --line: #dbe3da;
+    --line-strong: #c3cfc4;
+    --accent: #1c6b45;
+    --accent-soft: #e4f0e8;
+
+    --sev-critical-bg: #fbeceb;
+    --sev-critical-fg: #8d1c18;
+    --sev-critical-line: #e8c4c0;
+    --sev-high-bg: #fdf0e6;
+    --sev-high-fg: #9a4408;
+    --sev-high-line: #eed6bd;
+    --sev-medium-bg: #fbf7e2;
+    --sev-medium-fg: #7d6207;
+    --sev-medium-line: #e8dfb8;
+    --sev-low-bg: #eef3f8;
+    --sev-low-fg: #37526f;
+    --sev-low-line: #cddae5;
+    --sev-info-bg: #f0f1ef;
+    --sev-info-fg: #4e534f;
+    --sev-info-line: #dcdfda;
+
+    --ok: #1c6b45;
+    --ok-bg: #e4f0e8;
+    --ok-line: #bcd8c6;
+
+    --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+    --measure: 68ch;
+    --radius: 10px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1411;
+      --surface: #161e19;
+      --surface-2: #1d2721;
+      --fg: #e5ece7;
+      --fg-muted: #9daca3;
+      --line: #27332c;
+      --line-strong: #35443b;
+      --accent: #63c894;
+      --accent-soft: #17291f;
+
+      --sev-critical-bg: #2c1614;
+      --sev-critical-fg: #f2a49d;
+      --sev-critical-line: #4a2320;
+      --sev-high-bg: #2b1d12;
+      --sev-high-fg: #eab984;
+      --sev-high-line: #46301d;
+      --sev-medium-bg: #2a2513;
+      --sev-medium-fg: #ddcd86;
+      --sev-medium-line: #453d1e;
+      --sev-low-bg: #17222c;
+      --sev-low-fg: #9dc0dd;
+      --sev-low-line: #2a3c4b;
+      --sev-info-bg: #1e211f;
+      --sev-info-fg: #a9b0aa;
+      --sev-info-line: #313734;
+
+      --ok: #63c894;
+      --ok-bg: #17291f;
+      --ok-line: #2c4a37;
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0e1411;
+    --surface: #161e19;
+    --surface-2: #1d2721;
+    --fg: #e5ece7;
+    --fg-muted: #9daca3;
+    --line: #27332c;
+    --line-strong: #35443b;
+    --accent: #63c894;
+    --accent-soft: #17291f;
+
+    --sev-critical-bg: #2c1614;
+    --sev-critical-fg: #f2a49d;
+    --sev-critical-line: #4a2320;
+    --sev-high-bg: #2b1d12;
+    --sev-high-fg: #eab984;
+    --sev-high-line: #46301d;
+    --sev-medium-bg: #2a2513;
+    --sev-medium-fg: #ddcd86;
+    --sev-medium-line: #453d1e;
+    --sev-low-bg: #17222c;
+    --sev-low-fg: #9dc0dd;
+    --sev-low-line: #2a3c4b;
+    --sev-info-bg: #1e211f;
+    --sev-info-fg: #a9b0aa;
+    --sev-info-line: #313734;
+
+    --ok: #63c894;
+    --ok-bg: #17291f;
+    --ok-line: #2c4a37;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    padding-block: 0;
+  }
+
+  .wrap {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 40px 80px;
+  }
+
+  /* ---------- masthead ---------- */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(1.9rem, 5vw, 2.7rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin: 14px 0 0;
+  }
+  .standfirst {
+    font-size: 1.08rem;
+    color: var(--fg-muted);
+    max-width: var(--measure);
+    margin-top: 14px;
+  }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--fg-muted);
+  }
+
+  /* ---------- tiles ---------- */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 30px;
+  }
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .tile .n {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.9rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .tile .l {
+    font-size: 0.82rem;
+    color: var(--fg-muted);
+    margin-top: 6px;
+  }
+  .tile.sev-critical .n { color: var(--sev-critical-fg); }
+  .tile.sev-high .n { color: var(--sev-high-fg); }
+  .tile.sev-medium .n { color: var(--sev-medium-fg); }
+  .tile.ok .n { color: var(--ok); }
+
+  /* ---------- sections ---------- */
+  section { margin-top: 56px; }
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.45rem;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 0 0 6px;
+  }
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin: 36px 0 8px;
+    text-wrap: balance;
+  }
+  h4 {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin: 24px 0 6px;
+  }
+  .phase-num {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid var(--ok-line);
+    border-radius: 999px;
+    padding: 3px 10px;
+    margin-bottom: 12px;
+  }
+  p { max-width: var(--measure); margin: 10px 0; }
+  ul, ol { max-width: var(--measure); padding-left: 22px; margin: 10px 0; }
+  li { margin: 5px 0; }
+  li > ul, li > ol { margin: 5px 0; }
+  strong { font-weight: 600; }
+
+  /* ---------- tables ---------- */
+  .scroll { overflow-x: auto; margin: 18px 0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.9rem;
+    min-width: 520px;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    border-bottom: 1px solid var(--line-strong);
+    white-space: nowrap;
+  }
+  td code, th code { white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  /* ---------- code ---------- */
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  pre {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    line-height: 1.55;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 14px 0;
+  }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .ref {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+  }
+
+  /* ---------- chips ---------- */
+  .chip {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    padding: 3px 9px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .chip.critical { background: var(--sev-critical-bg); color: var(--sev-critical-fg); border-color: var(--sev-critical-line); }
+  .chip.high     { background: var(--sev-high-bg);     color: var(--sev-high-fg);     border-color: var(--sev-high-line); }
+  .chip.medium   { background: var(--sev-medium-bg);   color: var(--sev-medium-fg);   border-color: var(--sev-medium-line); }
+  .chip.low      { background: var(--sev-low-bg);      color: var(--sev-low-fg);      border-color: var(--sev-low-line); }
+  .chip.info     { background: var(--sev-info-bg);     color: var(--sev-info-fg);     border-color: var(--sev-info-line); }
+  .chip.ok       { background: var(--ok-bg);           color: var(--ok);              border-color: var(--ok-line); }
+  .chip.tag      { background: transparent;            color: var(--fg-muted);        border-color: var(--line-strong); }
+
+  /* ---------- finding cards ---------- */
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin: 16px 0;
+  }
+  .finding > header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .finding .fid {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--fg-muted);
+  }
+  .finding h4 {
+    margin: 0;
+    font-size: 1.02rem;
+    font-family: var(--font-display);
+    font-weight: 600;
+    flex: 1 1 260px;
+  }
+  .finding .ref { margin: 2px 0 10px; }
+  .finding dl {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 4px 14px;
+    margin: 12px 0 0;
+    font-size: 0.92rem;
+  }
+  .finding dt {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    padding-top: 4px;
+  }
+  .finding dd { margin: 0; min-width: 0; }
+  .finding pre { margin: 8px 0 0; }
+  @media (max-width: 560px) {
+    .finding dl { grid-template-columns: 1fr; gap: 2px; }
+    .finding dt { padding-top: 10px; }
+  }
+
+  /* ---------- callouts ---------- */
+  .callout {
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin: 20px 0;
+  }
+  .callout.gate { border-color: var(--accent); background: var(--accent-soft); }
+  .callout h3 { margin-top: 0; }
+  .callout p, .callout ul, .callout ol { max-width: none; }
+
+  .decision {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 4px 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .decision:last-child { border-bottom: none; }
+  .decision .did {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 0.82rem;
+    color: var(--accent);
+  }
+  .decision .q { font-weight: 600; }
+  .decision .o { color: var(--fg-muted); font-size: 0.92rem; }
+  @media (max-width: 560px) { .decision { grid-template-columns: 1fr; } }
+
+  /* ---------- mermaid ---------- */
+  pre.mermaid {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    text-align: center;
+  }
+
+  hr.rule { border: none; border-top: 1px solid var(--line); margin: 40px 0 0; }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    max-width: var(--measure);
+  }
+  a { color: var(--accent); }
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Read-only investigation &middot; no files changed</p>
+  <h1>Basnayaka Vermigrow security audit and Payments.lk plan</h1>
+  <p class="standfirst">
+    A security review of the live farm shop, followed by the design and implementation plan for
+    adding Payments.lk hosted checkout. Phases&nbsp;1&ndash;4. Nothing was modified, no live data was
+    touched, and no payment code has been written.
+  </p>
+
+  <div class="meta-row">
+    <span>Target: <strong>www.basnayakavermigrow.lk</strong> (Contabo VPS, Caddy, SQLite)</span>
+    <span>Repo: <strong>basnayake-glm5.2</strong> &middot; branch main</span>
+    <span>Method: source trace + provider spec verification</span>
+  </div>
+
+  <div class="tiles">
+    <div class="tile sev-critical"><div class="n">0</div><div class="l">Critical in app code</div></div>
+    <div class="tile sev-high"><div class="n">3</div><div class="l">High</div></div>
+    <div class="tile sev-medium"><div class="n">5</div><div class="l">Medium</div></div>
+    <div class="tile sev-low"><div class="n">6</div><div class="l">Low</div></div>
+    <div class="tile"><div class="n">6</div><div class="l">Informational</div></div>
+    <div class="tile ok"><div class="n">12</div><div class="l">Safeguards verified present</div></div>
+  </div>
+
+  <!-- ======================= DECISION GATE ======================= -->
+  <section id="decisions">
+    <span class="phase-num">Approval gate</span>
+    <h2>What I need from you before I change anything</h2>
+    <p>
+      Two things came out of the audit that should be fixed before a payment gateway is added, and
+      four product decisions are genuinely yours to make. Everything else in this document is
+      information.
+    </p>
+
+    <div class="callout gate">
+      <div class="decision">
+        <div class="did">D1</div>
+        <div>
+          <div class="q">May I upgrade Next.js 16.2.10 &rarr; 16.3.8+ (and sharp 0.35.5)?</div>
+          <div class="o">
+            The installed Next.js carries 17 open security advisories including critical remote-code-execution
+            ones. Most need conditions this site does not meet, but I will not build a payment webhook on a
+            framework version with an unpatched middleware-bypass class of bug. This is the one dependency
+            change I consider mandatory pre-work. It is also the riskiest change in the whole plan, so it gets
+            its own deploy and its own test pass.
+          </div>
+        </div>
+      </div>
+      <div class="decision">
+        <div class="did">D2</div>
+        <div>
+          <div class="q">Will you rotate the leaked GitHub token? (your action, on GitHub)</div>
+          <div class="o">
+            A personal access token is still sitting in plaintext in <code>.git/config</code>. I cannot fix this
+            from here and I will not print the value. Revoke it at GitHub, then we replace the remote URL with
+            the read-only deploy key the server already uses.
+          </div>
+        </div>
+      </div>
+      <div class="decision">
+        <div class="did">D3</div>
+        <div>
+          <div class="q">Which security fixes should I implement now, before the gateway?</div>
+          <div class="o">
+            My recommendation is the four labelled <span class="chip tag">do first</span> below: login rate
+            limiting, the CMS link-scheme check, the inquiry throttle, and the SVG upload handling. They are
+            small, contained, and each one weakens the payment work if left undone.
+          </div>
+        </div>
+      </div>
+      <div class="decision">
+        <div class="did">D4</div>
+        <div>
+          <div class="q">When an online checkout expires unpaid, should the held seats and stock be released?</div>
+          <div class="o">
+            Today an unpaid order holds its workshop seats until a human cancels it. With online payment a
+            checkout expires automatically after 30 minutes. Releasing the seats then is more accurate but it is
+            new behaviour that touches capacity. I lean toward releasing, on the <code>checkout.expired</code>
+            event only, and never touching a paid or part-paid order.
+          </div>
+        </div>
+      </div>
+      <div class="decision">
+        <div class="did">D5</div>
+        <div>
+          <div class="q">Should online card payment sit alongside "pay at the counter", or replace it?</div>
+          <div class="o">
+            The existing flow (customer orders, office records cash or a bank transfer by hand) must keep
+            working for walk-in customers. I plan to offer card payment as an additional option on
+            <code>/order</code>, with the manual settle path untouched.
+          </div>
+        </div>
+      </div>
+      <div class="decision">
+        <div class="did">D6</div>
+        <div>
+          <div class="q">Are refunds in scope now, or later?</div>
+          <div class="o">
+            Payments.lk has a full refund API. I recommend leaving refunds out of the first build and doing them
+            in the provider dashboard, so the first release has one money-moving path to get right. Say the word
+            if you want a refund button in the admin from day one.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= PHASE 1 ======================= -->
+  <section id="phase1">
+    <span class="phase-num">Phase 1</span>
+    <h2>What the system actually is</h2>
+
+    <h3>Stack and shape</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Layer</th><th>What is there</th></tr></thead>
+        <tbody>
+          <tr><td>Frontend / backend</td><td>One Next.js 16.2.10 App Router app (TypeScript, React 19). Server route handlers under <code>src/app/api/**</code> are the API; there is no separate backend service.</td></tr>
+          <tr><td>Database</td><td>SQLite via Prisma 6.19.3, one file, one writer. Prod path <code>/var/www/basnayakavermigrow/db/custom.db</code>. 17 tables.</td></tr>
+          <tr><td>Auth</td><td>Custom. One shared admin password (bcrypt-12 hash in <code>SiteContent</code>), plus opaque 48-byte session tokens stored as SHA-256 digests. No user accounts, no customer logins. Admin pages under <code>/admin/*</code>.</td></tr>
+          <tr><td>Deployment</td><td>Contabo VPS, Ubuntu 24.04, systemd unit <code>basnayaka.service</code> on 127.0.0.1:3001, Caddy v2 with auto-HTTPS, www canonical. Deploy = <code>git pull</code> then <code>npm ci</code>, <code>prisma db push</code>, <code>next build</code>, restart.</td></tr>
+          <tr><td>Package manager</td><td>npm (<code>package-lock.json</code> present).</td></tr>
+          <tr><td>Hosting of media</td><td>Uploads stored off-app and served by Caddy at <code>/uploads/*</code>, bypassing Next entirely.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>How money and stock are modelled</h3>
+    <p>
+      This matters for the gateway, because the schema was designed so that money is never a client-supplied
+      number and never a single flag.
+    </p>
+    <ul>
+      <li><strong><code>Product</code></strong> carries <code>price</code> (LKR), <code>donationPerUnit</code>, an optional <code>capacity</code> for services, and <code>active</code>.</li>
+      <li><strong><code>Sale</code></strong> is a money-bearing row. <code>unitPrice</code> and <code>donationAmount</code> are snapshotted at creation, so later price edits never rewrite history. <code>orderRef</code> groups the lines of one order (a multi-line order is several rows sharing one reference).</li>
+      <li><strong><code>Sale.status</code></strong> is <code>pending | paid | cancelled</code> and is the money column. It drives seat capacity, sold counts and the fund.</li>
+      <li><strong><code>Sale.fulfillment</code></strong> is a separate column (<code>confirmed | packed | dispatched | delivered</code>, NULL means New). The codebase treats merging these two as a serious bug.</li>
+      <li><strong><code>Payment</code></strong> records a physical receipt (cash, bank transfer). A sale's paid total is the sum of its payments, so split payments need no special case.</li>
+      <li><strong><code>FundEntry</code></strong> is the public donation ledger, one row per contribution, with <code>@@unique([channel, refId])</code> making double-counting impossible in the database.</li>
+      <li><strong><code>Pack</code></strong> is a scannable unit: a physical pack (<code>in_warehouse &rarr; dispatched &rarr; sold</code>) or a workshop seat voucher (<code>issued &rarr; redeemed</code>).</li>
+      <li><strong><code>CustomerLink</code> / <code>CustomerMessage</code></strong> are the SMS receipt system: an unguessable token per record, and an outbox written inside the same transaction as the money movement.</li>
+    </ul>
+
+    <h3>The customer journey today</h3>
+    <ol>
+      <li>The customer browses <code>/</code> and <code>/order</code>, which read live data from <code>GET /api/catalog</code>.</li>
+      <li>The form posts product ids and quantities to <code>POST /api/orders</code>. That route reads prices from the database, re-derives every figure, checks workshop capacity inside the transaction, and writes <code>Sale</code> rows at <code>status: 'pending'</code>.</li>
+      <li>A <code>pending</code> order contributes <strong>nothing</strong> to the public fund and mints <strong>no</strong> vouchers. It does hold workshop seats.</li>
+      <li>The customer is texted an acknowledgement and a receipt link (<code>/r/&lt;token&gt;</code>).</li>
+      <li>The office records the money by hand in <code>/admin/donations</code> &rarr; Orders: <code>POST /api/admin/orders/&lt;ref&gt;/settle</code> with <code>action: 'pay'</code>. In one transaction it flips the lines to <code>paid</code>, writes the <code>FundEntry</code> rows, mints service vouchers, writes one <code>Payment</code> row, and queues the customer's "we received your payment" text.</li>
+      <li>Fulfilment then moves by hand, or by the customer replying CONFIRM / CANCEL by SMS.</li>
+    </ol>
+
+    <p>
+      <strong>There is no payment gateway anywhere in the codebase.</strong> I searched for PayHere, Stripe,
+      PayPal and Payments.lk references across <code>src/</code>, <code>prisma/</code> and the config: zero
+      matches. All money is offline, and <code>next.config.ts</code> even sends
+      <code>Permissions-Policy: payment=()</code> site-wide.
+    </p>
+
+    <h3>Can this architecture support hosted checkout and public HTTPS webhooks?</h3>
+    <p>Yes, and cleanly. The specific reasons:</p>
+    <ul>
+      <li><strong>The pending-order gate already exists.</strong> The design already separates "customer said they want this" from "money received", which is exactly the state machine a gateway needs. Payment becomes a second way to reach <code>paid</code>, not a new order model.</li>
+      <li><strong>There is a working, well-built webhook pattern to copy.</strong> <code>POST /api/sms/webhook</code> verifies a signed JWT over the raw body before parsing anything, uses a constant-time comparison, rejects <code>alg: none</code>, and deduplicates on a unique event id. A payment webhook is the same shape with a different signature scheme.</li>
+      <li><strong>HTTPS on a public hostname is already in place</strong> (Caddy, Let's Encrypt, port 443), which is what the provider requires for a production webhook endpoint.</li>
+      <li><strong>Idempotency has a house pattern:</strong> a unique index doing the deduplication work, instead of every caller remembering to ask "have I done this already?".</li>
+    </ul>
+    <p>The constraints to design around are SQLite's single-writer model, the rule that a unique index can never be added to an existing table on this deploy path, and the fact that money fields must stay server-derived.</p>
+
+    <h3>Baseline checks I ran (Phase 1, item 6)</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Check</th><th>Result</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><td><code>npx tsc --noEmit</code></td><td><span class="chip ok">clean</span></td><td>Exit 0.</td></tr>
+          <tr><td><code>npm run lint</code></td><td><span class="chip medium">10 errors, 1 warning</span></td><td>All pre-existing. React hooks rules in shadcn boilerplate (<code>use-mobile.ts</code>, carousel, chart). Not security related; recorded as the baseline so I can prove I did not add to it.</td></tr>
+          <tr><td><code>npm audit</code></td><td><span class="chip high">1 critical, 15 high, 1 moderate</span></td><td>Concentrated in <code>next</code> and <code>sharp</code>, plus build-time transitive packages. Detailed in F02.</td></tr>
+          <tr><td>E2E suites</td><td><span class="chip tag">not run</span></td><td><code>run-e2e.sh</code> and <code>run-e2e-sms.sh</code> mutate a copy of the database and start a server. I did not run them in a read-only pass. They should be the acceptance gate for every change in Phase 5 and 6, and I will run them there.</td></tr>
+          <tr><td>Working tree</td><td><span class="chip ok">clean of unrelated edits</span></td><td>Four untracked scratch scripts (<code>scripts/_*.mjs</code>) from earlier SMS work. I left them alone.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <h4>One discrepancy to settle before any deploy</h4>
+      <p style="margin-top:6px">
+        On 2026-10-04 production was measured as the <em>pre-SMS</em> build: <code>/api/sms/webhook</code>
+        returned 404 while the public pages returned 200. The order-book and inbound-SMS work is now committed
+        (<code>d5069be</code>), but I have no evidence it has been deployed. Almost everything the payment work
+        builds on lives in that undeployed code. <strong>Before Phase 6 we must deploy and verify the current
+        main branch on its own</strong>, with its schema push, and confirm the order pages work in production.
+        Layering a payment gateway on top of a production server that is three weeks behind the repo would make
+        every failure ambiguous.
+      </p>
+    </div>
+  </section>
+
+  <!-- ======================= PHASE 2 ======================= -->
+  <section id="phase2">
+    <span class="phase-num">Phase 2</span>
+    <h2>Security findings</h2>
+    <p>
+      Ordered by what an attacker gains, not by how easy the fix is. Every finding below is from reading the
+      code; where a claim depends on a version or an advisory, I say so. I have deliberately not listed
+      anything I could not point at in the source.
+    </p>
+
+    <div class="callout">
+      <p style="margin:0">
+        <strong>Headline.</strong> There is <strong>no critical vulnerability in the application's own code</strong>.
+        The money paths are unusually careful: prices, totals, donations and payment status are all derived
+        server-side, the donation ledger cannot double-count, vouchers are minted inside the payment
+        transaction, and the existing webhook verifies its signature before reading a byte of body. The real
+        risks are a dependency that needs upgrading, one unprotected login, one leaked token, and a small
+        number of hardening gaps that matter more once card payments exist.
+      </p>
+    </div>
+
+    <h3>Summary</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>ID</th><th>Sev</th><th>Finding</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><code>F01</code></td><td><span class="chip high">High</span></td><td>Admin login has no rate limit, no lockout, and a weak password floor</td><td>Confirmed</td></tr>
+          <tr><td><code>F02</code></td><td><span class="chip high">High</span></td><td>Next.js 16.2.10 ships 17 open advisories, three of them critical RCEs</td><td>Confirmed (versions); preconditions analysed below</td></tr>
+          <tr><td><code>F03</code></td><td><span class="chip high">High</span></td><td>A GitHub personal access token is stored in plaintext in <code>.git/config</code></td><td>Confirmed present</td></tr>
+          <tr><td><code>F04</code></td><td><span class="chip medium">Medium</span></td><td>CMS-editable links are not restricted to safe URL schemes (stored XSS)</td><td>Confirmed</td></tr>
+          <tr><td><code>F05</code></td><td><span class="chip medium">Medium</span></td><td>Public contact form is unauthenticated and unthrottled</td><td>Confirmed</td></tr>
+          <tr><td><code>F06</code></td><td><span class="chip medium">Medium</span></td><td>Uploads accept SVG and trust the browser's declared file type</td><td>Confirmed</td></tr>
+          <tr><td><code>F07</code></td><td><span class="chip medium">Medium</span></td><td>Client IP is read from a spoofable header; two public routes have no global backstop</td><td>Confirmed</td></tr>
+          <tr><td><code>F08</code></td><td><span class="chip medium">Medium</span></td><td>The <code>/admin</code> page guard checks that a cookie exists, not that it is valid</td><td>Confirmed (impact bounded)</td></tr>
+          <tr><td><code>F09</code></td><td><span class="chip low">Low</span></td><td>An unauthenticated GET performs a database write (password seeding)</td><td>Confirmed</td></tr>
+          <tr><td><code>F10</code></td><td><span class="chip low">Low</span></td><td>Inquiry status is written with no validation</td><td>Confirmed</td></tr>
+          <tr><td><code>F11</code></td><td><span class="chip low">Low</span></td><td>Duplicate payment/voucher writes rely on an application check, not a constraint</td><td>Suspected (race only)</td></tr>
+          <tr><td><code>F12</code></td><td><span class="chip low">Low</span></td><td>No Content-Security-Policy and no HSTS header</td><td>Confirmed absent</td></tr>
+          <tr><td><code>F13</code></td><td><span class="chip low">Low</span></td><td>Two admin links open a new tab without <code>rel="noopener"</code></td><td>Confirmed</td></tr>
+          <tr><td><code>F14</code></td><td><span class="chip low">Low</span></td><td>Live admin password strength and rotation are unverifiable from here</td><td>Cannot verify</td></tr>
+          <tr><td><code>F15</code></td><td><span class="chip info">Info</span></td><td>Dead function returns the stored password hash or raw env value</td><td>Confirmed, no callers</td></tr>
+          <tr><td><code>F16</code></td><td><span class="chip info">Info</span></td><td>Pre-seed password fallback uses a non-constant-time comparison</td><td>Confirmed</td></tr>
+          <tr><td><code>F17</code></td><td><span class="chip info">Info</span></td><td>Live credentials sit on the dev machine in <code>.env</code> / <code>.env.bak</code></td><td>Confirmed, gitignored, never committed</td></tr>
+          <tr><td><code>F18</code></td><td><span class="chip info">Info</span></td><td>Malformed JSON to the login endpoint returns 500 instead of 400</td><td>Confirmed</td></tr>
+          <tr><td><code>F19</code></td><td><span class="chip info">Info</span></td><td>Build-time transitive dependency advisories (postcss, micromatch, js-yaml, nanoid)</td><td>Confirmed via audit</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Details</h3>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F01</span>
+        <h4>Admin login: no rate limit, no lockout, weak floor</h4>
+        <span class="chip high">High</span>
+        <span class="chip tag">do first</span>
+      </header>
+      <p class="ref">src/app/api/auth/login/route.ts:4-12 &middot; src/lib/admin-auth.ts:144-163</p>
+      <p>
+        One shared password guards every admin API: orders, settle, donations, packs, messages, uploads. The
+        login handler validates nothing else and counts nothing.
+      </p>
+      <pre><code>export async function POST(request: Request) {
+  const { password } = await request.json()
+  const valid = await checkPassword(password)
+  if (valid) { await setAdminCookie(); return NextResponse.json({ success: true }) }
+  return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
+}</code></pre>
+      <p>
+        <code>checkPassword</code> accepts anything of length 4 or more. bcrypt at cost 12 slows each attempt to
+        roughly 250&nbsp;ms, which is real but not decisive: no lockout means an attacker can grind indefinitely
+        and the attempt rate is bounded only by the CPU.
+      </p>
+      <dl>
+        <dt>Impact</dt><dd>Full administrative takeover: read every order and customer phone number, mark orders paid, mint vouchers, change the password. This is the single highest-value target in the system.</dd>
+        <dt>Fix</dt><dd>Per-IP throttle plus a global bucket on the login route, using the existing <code>createThrottle</code> helper, and an escalating delay after repeated failures for the same IP. Raise the minimum to 10 characters and require it to be changed if the stored hash matches a known-weak value. Keep the response body as it is: it already leaks nothing.</dd>
+        <dt>Regression test</dt><dd>Twelve wrong passwords in a row from one IP: the first ten answer 401, the remainder answer 429, and a correct password from a fresh key still succeeds. Assert the global bucket also trips.</dd>
+      </dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F02</span>
+        <h4>Next.js 16.2.10 carries 17 open advisories, three critical</h4>
+        <span class="chip high">High</span>
+        <span class="chip tag">do first</span>
+      </header>
+      <p class="ref">package.json:48 &middot; installed: next 16.2.10, sharp 0.34.5 &middot; safe line: next &ge; 16.3.8, sharp 0.35.5</p>
+      <p>
+        <code>npm audit</code> reports 1 critical, 15 high and 1 moderate. Three criticals are Next.js remote
+        code execution. I checked each precondition against this site rather than assuming:
+      </p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Advisory</th><th>Precondition</th><th>Does it apply here?</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>RCE in image optimization with AVIF<br><span class="ref">GHSA-2xp9-vwfh-vxw4</span></td>
+              <td>AVIF files being optimized</td>
+              <td><strong>Probably not.</strong> <code>next.config.ts</code> sets no <code>images.formats</code>, so the optimizer emits WebP, not AVIF. Worth removing all doubt by upgrading.</td>
+            </tr>
+            <tr>
+              <td>RCE on Windows-hosted servers<br><span class="ref">GHSA-p293-qw3h-jr36</span></td>
+              <td>Server on a Windows filesystem; no workaround exists</td>
+              <td><strong>Yes, for your dev machine.</strong> Production is Linux, but this repo is developed on Windows and the dev server has previously been exposed through a Cloudflare tunnel. That combination is exactly the affected case.</td>
+            </tr>
+            <tr>
+              <td>RCE in <code>next/og</code><br><span class="ref">GHSA-vcvr-r3jv-pc5j</span></td>
+              <td>App uses <code>ImageResponse</code></td>
+              <td><strong>No.</strong> No <code>next/og</code> import anywhere.</td>
+            </tr>
+            <tr>
+              <td>Middleware / proxy auth bypass<br><span class="ref">GHSA-6gpp-xcg3-4w24</span></td>
+              <td>App Router + Turbopack + a single entry in <code>config.i18n.locales</code></td>
+              <td><strong>No.</strong> No i18n config exists. Relevant anyway: it is the reason nothing security-critical may live in <code>middleware.ts</code>.</td>
+            </tr>
+            <tr>
+              <td>Server Action DoS and SSRF, image-optimization SSRF, cache confusion</td>
+              <td>Various</td>
+              <td><strong>Partly.</strong> The site uses Server Actions (the receipt voucher reveal), so the Server Action DoS and SSRF advisories are live.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <dl>
+        <dt>Impact</dt><dd>An unpatched framework under a payment endpoint. The honest assessment is that no critical RCE is reachable in production configuration today, so this is a <strong>High</strong> rather than a Critical. The recommendation stands regardless: upgrade before adding money.</dd>
+        <dt>Fix</dt><dd><code>next</code> to &ge;16.3.8, <code>sharp</code> to 0.35.5 (a semver-major bump), then a full build plus both E2E suites on a database copy. Run <code>npm audit fix</code> for the transitive set and re-check. Do not use <code>--force</code> blindly.</dd>
+        <dt>Regression test</dt><dd>Both E2E suites green after the upgrade, plus a manual pass over the pages that use <code>next/image</code> and the Server Action that reveals voucher codes.</dd>
+      </dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F03</span>
+        <h4>GitHub token in plaintext in <code>.git/config</code></h4>
+        <span class="chip high">High</span>
+        <span class="chip tag">your action</span>
+      </header>
+      <p class="ref">.git/config &rarr; remote.origin.url &middot; credential.helper = store</p>
+      <p>
+        The push remote embeds a personal access token in the URL. It is not tracked by git, but it lives in
+        plaintext on disk, is copied by any clone or archive that includes <code>.git</code>, and was previously
+        printed verbatim into a terminal session. <code>credential.helper = store</code> means the same or a
+        related token may also be sitting in <code>%USERPROFILE%\.git-credentials</code>.
+      </p>
+      <dl>
+        <dt>Impact</dt><dd>Anyone with read access to this machine, or to a copy of the repository folder, gets push access to the private server repository. From there, code that runs as the site.</dd>
+        <dt>Fix</dt><dd>Revoke the token at GitHub (Settings &rarr; Developer settings &rarr; Tokens). Set the remote to the plain HTTPS URL and rely on the read-only deploy key the server already uses for pulls. Clear the stored credential. I will not print the value, and I have not.</dd>
+        <dt>Regression test</dt><dd><code>git config --get remote.origin.url</code> shows no credentials, and <code>git ls-remote</code> still works.</dd>
+      </dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F04</span>
+        <h4>CMS links accept <code>javascript:</code> URLs</h4>
+        <span class="chip medium">Medium</span>
+        <span class="chip tag">do first</span>
+      </header>
+      <p class="ref">src/components/site/contact.tsx:105-114 &middot; src/components/site/navbar.tsx:79,148 &middot; written at src/app/api/content/route.ts:29-34</p>
+      <pre><code>{content.socials.map((s) =&gt; (
+  &lt;a key={s.id} href={s.url} target="_blank" rel="noopener noreferrer"&gt;</code></pre>
+      <p>
+        The content endpoint stores whatever the admin editor sends after checking only that a
+        <code>brand</code> key exists. React escapes the attribute value, so there is no quotation-mark breakout,
+        but React does not block a <code>javascript:</code> scheme. A stored value of
+        <code>javascript:&lt;payload&gt;</code> executes for any visitor who clicks that footer or navbar link.
+      </p>
+      <dl>
+        <dt>Impact</dt><dd>Escalation from "can edit the website" to "runs script for every visitor". Practical here chiefly as a weapon after an admin session is stolen, which is precisely the scenario F01 describes.</dd>
+        <dt>Fix</dt><dd>Validate URL fields in the content schema: allow only <code>http:</code>, <code>https:</code>, <code>mailto:</code> and <code>tel:</code>, and reject anything else at save time. Render-time filtering as a second layer for already-stored values.</dd>
+        <dt>Regression test</dt><dd>POST content with <code>socials[0].url = "javascript:alert(1)"</code> &rarr; 400. A legitimate <code>https://</code> value still saves, and the footer renders it.</dd>
+      </dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F05</span>
+        <h4>The public contact form is unthrottled</h4>
+        <span class="chip medium">Medium</span>
+        <span class="chip tag">do first</span>
+      </header>
+      <p class="ref">src/app/api/inquiries/route.ts:20-39</p>
+      <p>
+        The route is public by design and validates field lengths, but calls no throttle at all. Every valid post
+        is a database row.
+      </p>
+      <dl>
+        <dt>Impact</dt><dd>Unbounded row growth in the one database the whole site shares, and flooding of the admin inbox so genuine enquiries are hard to find. Field lengths are bounded, so a single row is small.</dd>
+        <dt>Fix</dt><dd>The same <code>createThrottle</code> treatment the order form already has: a per-IP limit plus a global backstop. Consider a honeypot field, matching the order route.</dd>
+        <dt>Regression test</dt><dd>Six valid posts from one IP inside a minute: the sixth answers 429. A legitimate first post still answers 201.</dd>
+      </dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F06</span>
+        <h4>Uploads accept SVG and trust the declared type</h4>
+        <span class="chip medium">Medium</span>
+        <span class="chip tag">do first</span>
+      </header>
+      <p class="ref">src/app/api/upload/route.ts:7-19,43-62 &middot; served by Caddy per Caddyfile.production:12-15</p>
+      <p>
+        The allow-list includes <code>image/svg+xml</code> and <code>.svg</code>, and validation trusts
+        <code>file.type</code> and the extension from the filename. There is no magic-byte check. The write path
+        is safe: the stored filename is server-generated from a timestamp and random suffix, so traversal is not
+        possible. The delete path is also safe: it runs <code>path.basename()</code> first.
+      </p>
+      <p>
+        The gap is what happens after storage. Uploads are served by Caddy directly at <code>/uploads/*</code>,
+        which means they bypass the <code>X-Content-Type-Options: nosniff</code> header set in
+        <code>next.config.ts</code>. An SVG is active XML, so a script inside one runs in the site's origin when
+        the file is opened directly.
+      </p>
+      <dl>
+        <dt>Impact</dt><dd>Persistent script on the public origin, plantable by anyone holding an admin session. Bounded by the admin-only gate, which is why this is Medium and not High.</dd>
+        <dt>Fix</dt><dd>Simplest: drop SVG from the allow-list; the farm's imagery is raster. If SVG is genuinely wanted, add magic-byte sniffing and serve <code>/uploads/*</code> with <code>nosniff</code> plus <code>Content-Disposition: attachment</code> for SVG from Caddy.</dd>
+        <dt>Regression test</dt><dd>Upload a file whose bytes begin <code>&lt;svg</code> but whose declared type is <code>image/png</code>: expects 400. A genuine JPEG still uploads.</dd>
+      </dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F07</span>
+        <h4>Spoofable client IP, and two public routes with no global limit</h4>
+        <span class="chip medium">Medium</span>
+      </header>
+      <p class="ref">src/lib/throttle.ts:35-38 &middot; used by api/orders, api/donations, api/donations/scan, lib/receipt-actions.ts</p>
+      <pre><code>export function clientIp(request: Request): string {
+  const fwd = request.headers.get('x-forwarded-for')
+  return fwd?.split(',')[0]?.trim() || 'unknown'
+}</code></pre>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Route</th><th>Per-IP limit</th><th>Global backstop</th></tr></thead>
+          <tbody>
+            <tr><td><code>POST /api/orders</code></td><td>5 / 30 min</td><td><span class="chip ok">yes</span> 60 / hour</td></tr>
+            <tr><td><code>POST /api/donations</code></td><td>5 / 30 min</td><td><span class="chip high">none</span></td></tr>
+            <tr><td><code>POST /api/donations/scan</code></td><td>30 / min</td><td><span class="chip high">none</span></td></tr>
+            <tr><td>reveal voucher codes</td><td>8 / 15 min</td><td><span class="chip high">none</span></td></tr>
+            <tr><td><code>POST /api/inquiries</code></td><td><span class="chip high">none</span></td><td><span class="chip high">none</span></td></tr>
+            <tr><td><code>POST /api/auth/login</code></td><td><span class="chip high">none</span></td><td><span class="chip high">none</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        The module's own comment says the header is spoofable, and the order route was given a global bucket for
+        exactly that reason. The donations routes never were.
+      </p>
+      <dl>
+        <dt>Impact</dt><dd>An attacker rotating the header can write donor rows, trigger scans and queue SMS without limit. Real-world damage is bounded by the daily SMS cap and by pack codes being unguessable, so this is a nuisance and cost risk rather than a breach.</dd>
+        <dt>Fix</dt><dd>Add a global bucket to both donations routes and to the voucher reveal. Take the client IP from a trusted position in the forwarded chain once Caddy is known to overwrite it, or key the throttle on something the attacker cannot rotate.</dd>
+        <dt>Regression test</dt><dd>Twenty posts to <code>/api/donations</code> each with a different <code>x-forwarded-for</code> value: the global bucket trips and returns 429.</dd>
+      </dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F08</span>
+        <h4>The <code>/admin</code> page guard validates presence, not validity</h4>
+        <span class="chip medium">Medium</span>
+      </header>
+      <p class="ref">src/middleware.ts:19-30</p>
+      <pre><code>const session = request.cookies.get('admin_session')
+if (!session?.value || session.value.length &lt; 20) {
+  return NextResponse.redirect(loginUrl)
+}</code></pre>
+      <p>
+        Middleware never checks the token against the database. A forged cookie of 20+ characters gets the
+        <code>/admin</code> shell rendered. This was measured on 2026-10-04 through a public tunnel:
+        <code>/admin/orders</code> returned 200 with a forged cookie.
+      </p>
+      <p>
+        The impact is genuinely small right now, and this is worth stating precisely because it is easy to
+        overstate. Every admin page is a client component that fetches its data through API routes, and I
+        verified that <strong>all 31 admin route files call <code>isAdminAuthenticated()</code> as their first
+        statement</strong>, comparing the token against the database. A forged cookie yields an empty interface
+        and 401s. No password hash is read back by any endpoint, and no page imports Prisma directly.
+      </p>
+      <dl>
+        <dt>Impact</dt><dd>Exposure of the admin interface's existence and layout to unauthenticated visitors. No data, no actions.</dd>
+        <dt>Fix</dt><dd>Have the admin layout validate the session server-side and redirect, so the shell is never rendered without a real session. Keep the API checks as the actual enforcement.</dd>
+        <dt>Regression test</dt><dd>A forged 96-character cookie on <code>/admin/orders</code> &rarr; redirect to login. A real session still renders the page.</dd>
+      </dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F09</span>
+        <h4>An unauthenticated GET writes to the database</h4>
+        <span class="chip low">Low</span>
+      </header>
+      <p class="ref">src/app/api/settings/password/route.ts:44-47</p>
+      <p>
+        <code>GET</code> calls <code>seedAdminPassword()</code> with no guard. It only acts when no hash exists,
+        seeding from the <code>ADMIN_PASSWORD</code> environment variable, and it returns no secret. Still, an
+        anonymous caller can trigger a write, and a state-changing GET is the shape of bug that becomes a
+        serious one later.
+      </p>
+      <dl><dt>Fix</dt><dd>Remove the endpoint, or move seeding into the deploy script where it belongs.</dd>
+      <dt>Regression test</dt><dd><code>GET /api/settings/password</code> &rarr; 401 or 404.</dd></dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F10</span>
+        <h4>Inquiry status is written unvalidated</h4>
+        <span class="chip low">Low</span>
+      </header>
+      <p class="ref">src/app/api/inquiries/[id]/route.ts:11-15</p>
+      <pre><code>data: { status: body.status, readAt: body.status === 'read' ? new Date() : null },</code></pre>
+      <p>Admin-only, so this is input integrity rather than access control. A non-string value throws and becomes a 500.</p>
+      <dl><dt>Fix</dt><dd><code>z.enum(['new','read'])</code> on the body, matching the pattern used everywhere else.</dd>
+      <dt>Regression test</dt><dd><code>{"status": 5}</code> &rarr; 400 with a field error.</dd></dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F11</span>
+        <h4>Duplicate payment and voucher writes rest on an application check</h4>
+        <span class="chip low">Low</span>
+        <span class="chip tag">relevant to Phase 6</span>
+      </header>
+      <p class="ref">src/app/api/admin/orders/[orderRef]/settle/route.ts:43-161 &middot; prisma/schema.prisma:252-270</p>
+      <p>
+        Settlement reads pending lines, then updates them. The donation ledger and the customer messages are
+        protected by unique indexes, so they genuinely cannot double-count. <code>Payment</code> and the service
+        vouchers have no such constraint: a pair of truly concurrent requests that both read
+        <code>status: 'pending'</code> could in theory each create a receipt and a voucher set. In practice
+        SQLite's write lock makes the loser fail, and the sequential case is caught by the re-check.
+      </p>
+      <dl>
+        <dt>Impact</dt><dd>Two receipt rows and two sets of vouchers for one order, in a narrow race. The money figure itself never changes, because the fund ledger is constraint-protected.</dd>
+        <dt>Fix</dt><dd>This is where the gateway work changes the picture: a webhook can legitimately arrive twice, so I will add a dedicated payment-intent table with a unique key and route both the webhook and the manual settle through one transactional function. Do not add a unique index to the existing <code>Payment</code> table: on this deploy path, <code>prisma db push</code> aborts the deploy rather than prompting.</dd>
+        <dt>Regression test</dt><dd>Fire two settle calls concurrently against a database copy: exactly one <code>Payment</code> row and one voucher set exist afterwards.</dd>
+      </dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F12</span>
+        <h4>No CSP, no HSTS</h4>
+        <span class="chip low">Low</span>
+      </header>
+      <p class="ref">next.config.ts:15-50</p>
+      <p>
+        The five headers present are sensible (<code>nosniff</code>, <code>X-Frame-Options</code>,
+        <code>Referrer-Policy</code>, <code>Permissions-Policy</code>) and the <code>/r/*</code> block is
+        carefully ordered so its <code>no-referrer</code> wins. Missing: a Content-Security-Policy, which would
+        blunt F04 and F06, and Strict-Transport-Security.
+      </p>
+      <dl><dt>Fix</dt><dd>Add HSTS at Caddy (the right layer, and it gets <code>includeSubDomains</code> right). Add a CSP in report-only mode first, because this app loads Leaflet and inline JSON-LD, and a wrong CSP breaks the site silently.</dd>
+      <dt>Regression test</dt><dd>Response headers show HSTS on the HTTPS host; the CSP report-only run shows no legitimate blocked resource on the home, order, donations and receipt pages.</dd></dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F13</span>
+        <h4>Two admin links open a new tab without <code>noopener</code></h4>
+        <span class="chip low">Low</span>
+      </header>
+      <p class="ref">src/app/admin/admin-layout-client.tsx:168-171 &middot; src/app/admin/donations/page.tsx:228-231</p>
+      <p>Both are same-origin links to <code>/</code> and <code>/donations</code>, so the realistic impact is nil. The external and user-influenced links in the codebase already carry <code>rel="noopener noreferrer"</code>.</p>
+      <dl><dt>Fix</dt><dd>Add <code>rel="noopener noreferrer"</code> for consistency.</dd>
+      <dt>Regression test</dt><dd>Covered by the lint pass; no behavioural test needed.</dd></dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F14</span>
+        <h4>The live admin password cannot be verified from here</h4>
+        <span class="chip low">Low</span>
+        <span class="chip tag">your input needed</span>
+      </header>
+      <p class="ref">src/lib/admin-auth.ts:144-180 &middot; SiteContent key <code>admin:password</code></p>
+      <p>
+        The stored bcrypt hash is the only authority, and the value in the repo's secrets file stopped working
+        on 2026-09-28, which means it was changed in the admin panel. bcrypt is one-way, so the current value
+        cannot be recovered and I could not test the live admin surface at all during this audit.
+      </p>
+      <p>
+        Combined with F01 this is the weakest link in the whole system: one password, no lockout, guarding every
+        money operation. I am not asking you to type it here. What I need is a decision: either you test the
+        admin surface yourself with it, or you authorise a reset, which I would do by writing a new bcrypt hash
+        directly into the live database's <code>SiteContent</code> row.
+      </p>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F15</span>
+        <h4>Dead function returns the stored password hash</h4>
+        <span class="chip info">Info</span>
+      </header>
+      <p class="ref">src/lib/admin-auth.ts:182-195</p>
+      <p>
+        <code>getAdminPassword()</code> returns the stored hash, or the raw environment value before seeding.
+        I grepped the whole source tree: it has no callers. It is a loaded gun sitting in an auth module.
+      </p>
+      <dl><dt>Fix</dt><dd>Delete it. A function that hands out the password should not exist next to the one that checks it.</dd></dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F16</span>
+        <h4>Pre-seed password comparison is not constant-time</h4>
+        <span class="chip info">Info</span>
+      </header>
+      <p class="ref">src/lib/admin-auth.ts:161-162</p>
+      <pre><code>const envPw = process.env.ADMIN_PASSWORD
+return !!(envPw &amp;&amp; password === envPw)</code></pre>
+      <p>
+        Reachable only before any hash exists in the database. bcrypt is used otherwise, and it is
+        constant-time. Worth tidying when the surrounding code is touched, not worth a change on its own.
+      </p>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F17</span>
+        <h4>Live credentials sit on the dev machine</h4>
+        <span class="chip info">Info</span>
+      </header>
+      <p class="ref">.env, .env.bak, .next/standalone/.env &middot; .gitignore lines covering <code>.env*</code></p>
+      <p>
+        I verified both directions of this, because it is the kind of claim that is usually wrong. The files
+        contain real-looking values for the database path, admin password, session secret, and the SMS gateway
+        credentials, including a Text.lk token. <strong>None of it has ever been committed:</strong> only
+        <code>.env.example</code> and <code>.env.production.example</code> are tracked, and the one historical
+        commit that contained a <code>.env</code> held only a local SQLite path, no credential. I checked the
+        commit history for token-shaped strings and found none.
+      </p>
+      <p>
+        So this is hygiene, not a leak. It becomes a leak the moment the machine, a backup or a zip of the
+        project folder is shared. Note also that <code>.next/standalone/.env</code> is a build output copy.
+      </p>
+      <dl><dt>Fix</dt><dd>Rotate the Text.lk token and the SMS webhook secret if this machine is ever handed on or backed up to shared storage. Keep the production secrets only in <code>/etc/basnayakavermigrow.env</code> on the server, which is already the case.</dd></dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F18</span>
+        <h4>Malformed JSON to login returns 500</h4>
+        <span class="chip info">Info</span>
+      </header>
+      <p class="ref">src/app/api/auth/login/route.ts:5</p>
+      <p><code>await request.json()</code> is not guarded by a try/catch, unlike every other route in the codebase. Cosmetic, but it is noise in the logs.</p>
+      <dl><dt>Fix</dt><dd>Wrap it and return 400, matching the house pattern.</dd></dl>
+    </article>
+
+    <article class="finding">
+      <header>
+        <span class="fid">F19</span>
+        <h4>Build-time transitive advisories</h4>
+        <span class="chip info">Info</span>
+      </header>
+      <p class="ref">package-lock.json via <code>npm audit</code></p>
+      <p>
+        postcss (arbitrary file read via source maps, and a stringify XSS), micromatch / braces / fast-glob,
+        js-yaml, nanoid, source-map-js, browserslist. All are build-time or developer-tooling paths, none is
+        reachable from a request at runtime, and none takes user input in this project. They will mostly clear
+        with <code>npm audit fix</code> alongside the F02 upgrade.
+      </p>
+    </article>
+
+    <h3>Verified safeguards</h3>
+    <p>
+      These are the controls I checked for and found correctly implemented. They are listed because an audit that
+      only lists problems invites a rewrite of things that were already right, and several of them are
+      load-bearing for the payment work.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Safeguard</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>Order prices, donation rates and totals are re-derived from the database; no price, donation, retailer or status is ever accepted from the client</td><td>src/app/api/orders/route.ts:218-241</td></tr>
+          <tr><td>Every admin API method calls <code>isAdminAuthenticated()</code> as its first statement, individually, before any parse or write. I checked all 31 route files method by method.</td><td>src/app/api/admin/**</td></tr>
+          <tr><td>The donation ledger cannot double-count: a unique index on <code>(channel, refId)</code> makes a retry or a double-click a no-op</td><td>src/lib/fund.ts:55-74, prisma/schema.prisma:286-295</td></tr>
+          <tr><td>Stored money is snapshotted (<code>Sale.unitPrice</code>, <code>Pack.donationAmount</code>), so later edits never restate history</td><td>prisma/schema.prisma:159-198</td></tr>
+          <tr><td>Service vouchers are minted inside the payment transaction with a zero donation, so a seat cannot be counted into the fund twice</td><td>settle/route.ts:68-90</td></tr>
+          <tr><td>Customer input is never rendered as HTML: no <code>eval</code>, no <code>innerHTML</code>, no unsafe <code>dangerouslySetInnerHTML</code> on any dynamic string</td><td>whole tree</td></tr>
+          <tr><td>JSON-LD escapes <code>&lt;</code> so CMS text cannot break out of the script tag</td><td>src/lib/structured-data.ts:137-139</td></tr>
+          <tr><td>The SMS webhook verifies an HS256 signature over the raw body before parsing, rejects <code>alg: none</code>, compares in constant time, and refuses everything when its secret is unset</td><td>src/lib/sms/webhook-verify.ts, api/sms/webhook/route.ts</td></tr>
+          <tr><td>Webhook replays are deduplicated by a unique index on the provider event id</td><td>prisma/schema.prisma:440</td></tr>
+          <tr><td>Money fields are bounded by zod on every entry point (price 0&ndash;10M, quantity 1&ndash;100000, donation positive, capacity 0&ndash;100000); <code>Number.isFinite</code> is checked before any ledger write</td><td>src/lib/product-schema.ts, src/lib/payments.ts, src/lib/fund.ts:59</td></tr>
+          <tr><td>No mass assignment: every Prisma write passes an explicit field set, never a spread request body</td><td>whole tree</td></tr>
+          <tr><td>Receipt tokens are 192-bit CSPRNG, looked up exactly, with unknown / expired / revoked all rendering the same 404; the voucher reveal needs the order reference as a second factor and re-checks that the link is live</td><td>src/app/r/[token]/page.tsx, src/lib/receipt-actions.ts</td></tr>
+          <tr><td>The order route rejects cross-origin posts, caps the body size, and carries a honeypot</td><td>src/app/api/orders/route.ts:116-164</td></tr>
+          <tr><td>Uploads are written under a server-generated filename, and the delete path runs <code>path.basename()</code>: no traversal either way</td><td>src/app/api/upload/route.ts:58, api/media/route.ts:45</td></tr>
+          <tr><td>No secret value is ever returned by an endpoint, and no log statement prints a token, key, password or phone number</td><td>whole tree</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ======================= PHASE 3 ======================= -->
+  <section id="phase3">
+    <span class="phase-num">Phase 3</span>
+    <h2>Payments.lk integration design</h2>
+
+    <h3>Documentation status</h3>
+    <p>
+      I read the provider's documentation directly, and then verified the parts the integration depends on
+      against the provider's own machine-readable specification at
+      <code>https://api.payments.lk/v1/openapi.json</code> (OpenAPI 3.1, about 1&nbsp;MB, 98 schemas, with a
+      webhooks section). Everything quoted below is from that specification or the developer pages, not from
+      memory or from an example found elsewhere.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Page</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><code>/developers</code></td><td>Read. Test cards, verification sample, event meanings.</td></tr>
+          <tr><td><code>/developers/guide</code></td><td>Read. Account setup, sandbox availability.</td></tr>
+          <tr><td><code>/developers/api</code></td><td>Read. The authoritative page for endpoints, webhooks and amount format.</td></tr>
+          <tr><td><code>/developers/sdks</code></td><td>Read. A Node SDK exists: <code>@payments-lk/node</code> 0.4.1, Node 18.17+.</td></tr>
+          <tr><td><code>/developers/samples</code></td><td>Read, but it contains only downloadable sample archives, no inline request or response bodies. No loss: the spec and the API page carry the contracts.</td></tr>
+          <tr><td><code>/developers/errors</code></td><td>Read. Error codes and retry guidance.</td></tr>
+          <tr><td>OpenAPI spec</td><td>Fetched and parsed directly. This is what I verified the endpoint, the signature scheme and the amount format against.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>No page was inaccessible, and nothing below is inferred from a source I could not read.</p>
+
+    <h3>The verified API contract</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Item</th><th>Verified value</th></tr></thead>
+        <tbody>
+          <tr><td>Base URL</td><td><code>https://api.payments.lk</code>. There is no separate sandbox host: the key decides the mode.</td></tr>
+          <tr><td>Auth</td><td><code>Authorization: Bearer sk_test_…</code> or <code>sk_live_…</code>, server-side only. Publishable keys may only create checkouts and cannot be called cross-origin, so the browser is not a viable path.</td></tr>
+          <tr><td>Create checkout</td><td><code>POST /v1/checkouts</code>. Requires an <code>Idempotency-Key</code> header.</td></tr>
+          <tr><td>Body</td><td>Exactly one of: <code>amountCents</code> + <code>description</code>, or <code>lineItems</code>. Plus optional <code>reference</code> (max 64), <code>customer</code>, <code>successUrl</code>, <code>cancelUrl</code>, <code>locale</code>, <code>saveCard</code>.</td></tr>
+          <tr><td>Amount format</td><td><strong>Integer cents of LKR.</strong> The spec's own words: "The amount in LKR cents, from Rs. 10 (1000) to Rs. 1,000,000 (100000000)… Take it from your own records, never from the browser." There is no currency field to send. A fractional number is refused, never rounded.</td></tr>
+          <tr><td>Response</td><td>201 with the checkout object: <code>id</code> (chk_…), <code>status</code>, <code>url</code>, <code>expiresAt</code>, and a nested <code>payment</code> object. The checkout expires 30 minutes after creation.</td></tr>
+          <tr><td>Redirect</td><td>Send the browser to the returned <code>url</code>. The spec on <code>successUrl</code>: "It proves nothing; confirm from the webhook."</td></tr>
+          <tr><td>Webhook delivery</td><td>POST of one JSON event to each active endpoint. Headers: <code>Payments-Signature</code> and <code>Payments-Event-Id</code>. Must answer 2xx within 10 seconds or it is retried on a 1m / 5m / 30m / 2h / 6h / 12h schedule. Deliveries can repeat and arrive out of order.</td></tr>
+          <tr><td>Signature</td><td><code>t=&lt;unix seconds&gt;,v1=&lt;hex HMAC-SHA256 of "&lt;t&gt;.&lt;raw body&gt;"&gt;</code> under the endpoint's <code>whsec_</code> secret. Refuse if <code>t</code> is more than 300 seconds from your clock. Verify <strong>before</strong> parsing the JSON. During a secret rotation the header carries one <code>v1</code> per secret, newest last; accept a delivery if any matches.</td></tr>
+          <tr><td>Payment statuses</td><td><code>requires_payment_method</code>, <code>processing</code>, <code>succeeded</code>, <code>failed</code>, <code>canceled</code>, <code>partially_refunded</code>, <code>refunded</code>, <code>disputed</code>.</td></tr>
+          <tr><td>Checkout statuses</td><td><code>open</code>, <code>processing</code>, <code>completed</code>, <code>expired</code>, <code>canceled</code>.</td></tr>
+          <tr><td>Events that matter</td><td><code>payment.succeeded</code> ("Fulfil the order from this event"), <code>payment.failed</code>, <code>checkout.expired</code>. 33 event types exist in total; the rest are cards, subscriptions, invoices and billing alerts, which this shop does not use.</td></tr>
+          <tr><td>Reconciliation</td><td><code>GET /v1/checkouts/{id}</code> and <code>GET /v1/payments/{id}</code> with the secret key, plus <code>GET /v1/events?since=</code> to catch up on anything missed.</td></tr>
+          <tr><td>Refunds</td><td><code>POST /v1/refunds</code> exists (needs an Idempotency-Key, live refunds leave from the next bank working day). Not dashboard-only.</td></tr>
+          <tr><td>Sandbox</td><td>Test cards with the outcome decided by the expiry date: <code>01/39</code> approved, <code>05/39</code> declined, <code>04/27</code> expired card. CVV 100. Sandbox checkouts only work once the account application has been submitted.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Two contract details that shape the design</h3>
+    <ul>
+      <li><strong>The browser return carries nothing we can trust.</strong> The documentation does not define query parameters appended to <code>successUrl</code>/<code>cancelUrl</code>, and it states plainly that the return proves nothing. So the server must store <code>checkout.id</code> against our order at creation time, and settle only from the webhook or from a server-side lookup.</li>
+      <li><strong>The minimum is Rs. 10.</strong> An order whose total is below that cannot be paid by card. The catalog currently holds three items and prices are set by the owner, so this needs an explicit rule rather than an assumption.</li>
+    </ul>
+
+    <h3>Required flow</h3>
+    <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant C as Customer
+    participant S as Our server
+    participant P as Payments.lk
+    C->>S: place order, items only
+    S->>S: derive prices, check seats, write pending order
+    S->>P: create checkout with server key
+    P-->>S: checkout id and hosted page url
+    S-->>C: redirect to the hosted page
+    C->>P: pays on the provider page
+    P-->>C: browser returns to our status page
+    P->>S: signed webhook to our endpoint
+    S->>S: verify signature over the raw body first
+    S->>S: check type, mode, amount, currency, order
+    S->>S: settle in one transaction
+    S-->>P: 200 OK
+    </pre>
+
+    <p>
+      The important property: the customer's browser and the webhook travel separately, and only the second one
+      can move money. The return page reads its own order status from our database and shows the truth, which at
+      that instant is usually still "pending, confirming". That is a slightly less satisfying page than a green
+      tick, and it is the correct one.
+    </p>
+
+    <h3>Control by control, against your requirements</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Requirement</th><th>How this design satisfies it</th></tr></thead>
+        <tbody>
+          <tr><td>Server validates the cart and loads trusted prices</td><td>Already true. <code>POST /api/orders</code> re-derives every figure from <code>Product</code>.</td></tr>
+          <tr><td>Server computes the final amount</td><td>Already true. The total is summed from snapshotted <code>unitPrice</code> and <code>quantity</code>, then converted once with <code>Math.round(total * 100)</code>.</td></tr>
+          <tr><td>Pending order with a unique reference</td><td>Already true. <code>VG-O-XXXXXX</code>, generated with <code>crypto.randomInt</code>. It becomes the checkout's <code>reference</code> and the idempotency key.</td></tr>
+          <tr><td>Hosted checkout from server credentials with a stable idempotency key</td><td><code>Idempotency-Key: orderRef</code> on <code>POST /v1/checkouts</code>. The same key on a retry returns the same checkout instead of creating a second one.</td></tr>
+          <tr><td>Card details never touch our application</td><td>Structural: the customer is redirected to <code>payments.lk</code>, and no field on any of our forms accepts a card number. <code>Permissions-Policy: payment=()</code> already blocks the Payment Request API.</td></tr>
+          <tr><td>Return page does not establish success</td><td>Enforced in code: the return page renders order state read from our own database and writes nothing.</td></tr>
+          <tr><td>Dedicated HTTPS webhook</td><td><code>POST /api/payments/webhook</code> on the existing public HTTPS host.</td></tr>
+          <tr><td>Signature verified with the right secret</td><td>HMAC-SHA256 over <code>t + "." + raw body</code>, compared with <code>timingSafeEqual</code>, 300-second tolerance, every <code>v1</code> tried during rotation. Same hand-rolled, no-JWT-library approach as the SMS webhook, which is already in the codebase and tested.</td></tr>
+          <tr><td>Exact raw body, no middleware rewriting it</td><td>The route calls <code>await request.text()</code> and verifies before <code>JSON.parse</code>. Verification lives in the route, not in <code>middleware.ts</code>, which also means the F02 middleware-bypass class of bug cannot reach it.</td></tr>
+          <tr><td>Validate type, status, mode, amount, currency, order association</td><td>Six checks in order: signature, <code>type === 'payment.succeeded'</code>, <code>mode</code> equals our configured mode, <code>amountCents</code> equals the stored expected amount, <code>currency === 'LKR'</code>, and <code>reference</code> resolves to a real order whose intent is still open. Any failure fails closed and writes nothing.</td></tr>
+          <tr><td>Idempotent processing, provider ids recorded</td><td>A new table with a unique index on the provider event id, following the existing <code>SmsEvent</code> pattern. The provider's payment and checkout ids are stored on the intent row.</td></tr>
+          <tr><td>Only verified payments transition an order to paid</td><td>Settlement happens in the webhook path only, and routes through the same transactional function the admin's "Mark paid" button uses, so the fund, vouchers, receipt and SMS stay consistent.</td></tr>
+          <tr><td>Consistency under concurrency and retries</td><td>One transaction per settlement, a unique index on the event id, and <code>Sale.status</code> re-read inside the transaction so a duplicate delivery finds nothing pending.</td></tr>
+          <tr><td>Inventory/order consistency</td><td>Untouched: the existing capacity check inside the order transaction still governs seats, and payment does not reserve stock differently.</td></tr>
+          <tr><td>Invalid signatures change nothing</td><td>The handler returns 401 before it reads the body, let alone the database.</td></tr>
+          <tr><td>Failed, cancelled, expired, pending do not fulfil</td><td><code>payment.failed</code> and <code>checkout.expired</code> are recorded and change no money. Nothing but a verified <code>payment.succeeded</code> reaches the settle path.</td></tr>
+          <tr><td>Reconciliation for missed deliveries</td><td>An admin action that calls <code>GET /v1/checkouts/{id}</code> for open intents and settles anything the provider reports as succeeded, plus a listing of intents stuck open. Also <code>GET /v1/events?since=</code> as a catch-up sweep.</td></tr>
+          <tr><td>Secrets server-side only, separate test and live</td><td>All keys in the systemd environment file on the VPS, never in the repo, never in a client bundle. <code>sk_test_</code> and <code>sk_live_</code> are separate values, and a mode check in the handler stops a test event settling a live order.</td></tr>
+          <tr><td>No logging of auth headers or payment data</td><td>The webhook logs the event id and the decision, never the signature, the key or the payload's customer block.</td></tr>
+          <tr><td>Fail closed</td><td>Every validation failure returns a non-2xx and writes nothing. A missing webhook secret refuses all deliveries, exactly as the SMS webhook does today.</td></tr>
+          <tr><td>No assumption that success means settlement</td><td>Stated: <code>payment.succeeded</code> means the card was authorised. The provider's own <code>netCents</code> and <code>feeCents</code> are stored so the bank reconciliation is a separate, honest step.</td></tr>
+          <tr><td>No raw card numbers or CVV</td><td>Nothing in this design receives, transmits or stores a card number. The only card data that ever arrives is <code>{scheme, last4}</code> in the webhook, which is safe to store and is what a receipt should show.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>SDK or hand-rolled?</h3>
+    <p>
+      The provider maintains <code>@payments-lk/node</code> at 0.4.1 and documents a Node server as the
+      supported path. There is no Next.js-specific SDK. My recommendation is to <strong>not</strong> install the
+      SDK for the webhook, and to use plain <code>fetch</code> plus <code>node:crypto</code> for the checkout
+      call, for three reasons specific to this project:
+    </p>
+    <ul>
+      <li>The webhook verification is about twenty lines and this codebase already contains a hand-rolled
+        verifier of exactly that shape, reviewed and tested. A second, subtly different verification path is a
+        worse outcome than one shared one.</li>
+      <li>The whole point of the existing design is that money-touching code has one writer. Wrapping the
+        settle function behind an SDK's event object does not improve that.</li>
+      <li>This project has deliberately pruned dependencies, and a payment SDK would add a transitive tree to a
+        farm website. That is a real trade, not a purity argument, and it becomes worth taking if the SDK's
+        typed events would replace hand-written parsing we would otherwise have to maintain.</li>
+    </ul>
+    <p>
+      If you would rather use the official SDK, that is a reasonable call and I will follow it; I would still
+      verify the signature ourselves and use the SDK only for typing. Your decision, flagged as D7 in the next
+      section.
+    </p>
+  </section>
+
+  <!-- ======================= PHASE 4 ======================= -->
+  <section id="phase4">
+    <span class="phase-num">Phase 4</span>
+    <h2>Implementation plan</h2>
+    <p>
+      Proposed order of work, with the reasoning for the sequence. Nothing here has been started.
+    </p>
+
+    <h3>1. Security remediation, in severity order</h3>
+    <ol>
+      <li><strong>F02</strong> Next.js and sharp upgrade, deployed and tested on its own.</li>
+      <li><strong>F03</strong> Token rotation (your action), then the remote URL cleanup.</li>
+      <li><strong>F01</strong> Login throttle, global bucket and password floor. This is the gate on everything else.</li>
+      <li><strong>F04, F05, F06</strong> The three "do first" hardening items.</li>
+      <li><strong>F07&ndash;F13</strong> The remaining Mediums and Lows, as one tidy-up commit.</li>
+    </ol>
+    <p>
+      Each fix gets a regression test in the existing E2E style. The suites already run against a copy of the
+      database and already have a signed-webhook simulator to model the pattern on.
+    </p>
+
+    <h3>2. Files to be added or changed</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Path</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td><code>src/lib/payments-lk.ts</code></td><td>New. The client: create a checkout, retrieve a checkout, verify a webhook signature. Server-only, no SDK dependency. Roughly the size of the existing <code>src/lib/sms/webhook-verify.ts</code>.</td></tr>
+          <tr><td><code>src/app/api/payments/webhook/route.ts</code></td><td>New. Signature first, then validate, then settle. Mirrors the structure of <code>api/sms/webhook/route.ts</code>.</td></tr>
+          <tr><td><code>src/app/api/payments/start/route.ts</code></td><td>New. Takes an <code>orderRef</code>, re-reads the order and its expected total from the database, and returns the hosted checkout URL. It must never accept an amount.</td></tr>
+          <tr><td><code>src/lib/order-actions.ts</code></td><td>Changed. Extract the settlement body of the admin settle route into one exported transactional function, so the webhook and the manual button call the identical code. This is the single most important structural change, and it is a refactor, not a rewrite.</td></tr>
+          <tr><td><code>src/app/api/admin/orders/[orderRef]/settle/route.ts</code></td><td>Changed. Becomes a thin caller of that shared function.</td></tr>
+          <tr><td><code>src/app/api/orders/route.ts</code></td><td>Changed. Optionally create the intent row and return a checkout URL. The existing manual flow stays as the default.</td></tr>
+          <tr><td><code>src/app/order/page.tsx</code>, <code>src/components/site/order-client.tsx</code></td><td>Changed. Add the "Pay by card" path and the return page. This is the only customer-visible change.</td></tr>
+          <tr><td><code>src/app/admin/orders/[orderRef]/page.tsx</code></td><td>Changed. Show the payment intent, its provider ids and a Reconcile action.</td></tr>
+          <tr><td><code>prisma/schema.prisma</code></td><td>Changed. Two new models, described below. No change to any existing model.</td></tr>
+          <tr><td><code>scripts/simulate-payment.mjs</code></td><td>New. Signs a realistic Payments.lk event and posts it to the webhook, exactly as <code>scripts/simulate-reply.mjs</code> already does for SMS. This is what makes the test matrix below cheap.</td></tr>
+          <tr><td><code>scripts/e2e-payments.mjs</code> + runner</td><td>New suite, following the established harness: a database copy, a mock provider, no real money.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>3. Schema: two new tables, and why not a third</h3>
+    <pre><code>model PaymentIntent {
+  id            String   @id @default(cuid())
+  orderRef      String   @unique   // one open intent per order
+  checkoutId    String?  @unique   // chk_… from the provider
+  paymentId     String?  @unique   // pay_… from the webhook
+  mode          String             // 'test' | 'live'
+  amountCents   Int                // the server-derived figure we asked for
+  status        String   @default("open")
+  //              'open' | 'succeeded' | 'failed' | 'expired' | 'cancelled'
+  checkoutUrl   String?
+  expiresAt     DateTime?
+  failureMessage String?
+  feeCents      Int?               // the provider's fee, for reconciliation
+  netCents      Int?
+  cardScheme    String?            // 'VISA' — never a card number
+  cardLast4     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PaymentWebhookEvent {
+  id          String   @id @default(cuid())
+  eventId     String   @unique   // the provider's evt_… id
+  eventType   String
+  mode        String
+  orderRef    String?
+  rawPayload  String
+  processedAt DateTime?
+  note        String?
+  createdAt   DateTime @default(now())
+  @@index([createdAt])
+}</code></pre>
+    <p>
+      Both are <strong>new</strong> tables, which matters concretely: a unique index on a new table is created
+      as part of <code>CREATE TABLE</code> and is free, while adding one to an existing table makes
+      <code>prisma db push</code> abort under the deploy script's data-loss gate. This is why the intent lives
+      in its own table rather than as columns plus a unique key on <code>Payment</code>. The alternative of
+      putting <code>providerRef</code> on <code>Sale</code> was rejected for the same reason, and also because
+      it would tempt the money column and the gateway state to drift into each other.
+    </p>
+
+    <h3>4. Migration and rollback</h3>
+    <ul>
+      <li><strong>Forward:</strong> <code>npx prisma db push</code> creates two tables. No existing table is
+        redefined, no column is added to an existing table, no data is touched. Dry-run on a copy of the live
+        database on the VPS first, exactly as the existing deploy discipline requires.</li>
+      <li><strong>Feature off by default:</strong> with no <code>PAYMENTS_LK_SECRET_KEY</code> set, the start
+        route returns "card payment unavailable" and the order flow behaves exactly as it does today. The
+        upgrade is inert until the keys are added.</li>
+      <li><strong>Rollback:</strong> unset the environment variables, redeploy the previous commit. The two
+        tables can stay; they are additive and nothing reads them. There is no data-loss step and no schema
+        reversal needed.</li>
+      <li><strong>Hard constraint to respect:</strong> never add a unique constraint or a foreign key to an
+        existing table in this schema. The repo's own comments record that this aborts the deploy.</li>
+    </ul>
+
+    <h3>5. Environment variables (names only)</h3>
+    <p>All of these go in <code>/etc/basnayakavermigrow.env</code> on the server, which is root-only and never committed. I am not asking you to paste any value into this chat.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Name</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>PAYMENTS_LK_SECRET_KEY</code></td><td>Server-side API key, <code>sk_test_…</code> then later <code>sk_live_…</code>. Absent means card payment is disabled.</td></tr>
+          <tr><td><code>PAYMENTS_LK_WEBHOOK_SECRET</code></td><td>The endpoint's <code>whsec_…</code> signing secret. Absent means the webhook refuses every delivery, matching the SMS webhook's behaviour.</td></tr>
+          <tr><td><code>PAYMENTS_LK_MODE</code></td><td><code>test</code> or <code>live</code>. Checked against the <code>mode</code> field of every webhook, so a sandbox event can never settle a live order.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>6. Dashboard configuration at Payments.lk</h3>
+    <ol>
+      <li>Apply for an account at <code>app.payments.lk</code>. Sandbox checkouts do not work until the
+        application has been submitted, so this is the first thing that has to happen, and it is yours to do.</li>
+      <li>Under Developers, mint the test key pair. Note that the account must be activated before live keys
+        will take payments; until then a live checkout answers <code>409 merchant_not_live</code>.</li>
+      <li>Add a webhook endpoint: <code>https://www.basnayakavermigrow.lk/api/payments/webhook</code>. Create
+        one for test mode and one for live mode; they are configured separately.</li>
+      <li>Subscribe those endpoints to <code>payment.succeeded</code>, <code>payment.failed</code> and
+        <code>checkout.expired</code>, and nothing else. The other thirty event types are subscriptions,
+        invoices, cards and billing alerts, which this shop does not use, and subscribing to them would mean
+        handling events whose payloads we have no reason to trust or store.</li>
+      <li>Copy each signing secret <code>whsec_…</code> and put it in the server environment file. It is shown
+        once. Do not send it to me.</li>
+      <li>Test the endpoint with the dashboard's test ping, and confirm our logs record a valid signature.</li>
+    </ol>
+
+    <h3>7. Test plan</h3>
+    <p>
+      Every case below runs against a copy of the database with a mock provider, following the existing harness
+      rules. No live payment, no live refund, no production data.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Case</th><th>Expected result</th></tr></thead>
+        <tbody>
+          <tr><td>Successful sandbox payment</td><td>Order becomes <code>paid</code>, one fund entry, receipt and SMS queued, voucher codes minted for a service order.</td></tr>
+          <tr><td>Declined card</td><td>Intent <code>failed</code>, order still <code>pending</code>, no fund entry, no vouchers, customer can retry.</td></tr>
+          <tr><td>Cancelled or expired checkout</td><td>Intent <code>expired</code>, nothing settled, seats released only if D4 is approved.</td></tr>
+          <tr><td>Missing or invalid signature</td><td>401, and the order, fund, inventory and fulfilment are provably unchanged.</td></tr>
+          <tr><td>Signature valid but amount tampered</td><td>Rejected on the amount check, nothing written.</td></tr>
+          <tr><td>Signature valid but reference unknown</td><td>Recorded as an unmatched event, nothing written, visible in the admin.</td></tr>
+          <tr><td>Duplicate delivery of the same event</td><td>Second delivery answered 200, no second settlement, exactly one receipt.</td></tr>
+          <tr><td>Out-of-order events (succeeded after expired)</td><td>Succeeded wins on a still-pending order; the expired record is kept for the audit trail.</td></tr>
+          <tr><td>Double-clicked checkout and concurrent starts</td><td>One intent per order, one checkout, thanks to the unique key and the idempotency key.</td></tr>
+          <tr><td>Test-mode event against a live order</td><td>Rejected by the mode check.</td></tr>
+          <tr><td>Another customer's order or receipt</td><td>Reference gate and token checks refuse, with the same message as a non-existent record.</td></tr>
+          <tr><td>Insufficient workshop seats</td><td>Refused at order time by the existing capacity check, before any checkout exists.</td></tr>
+          <tr><td>Provider timeout on checkout creation</td><td>Order stays pending with no intent, the customer sees a clear retry, no duplicate order is created.</td></tr>
+          <tr><td>Browser returns without any webhook</td><td>Order remains <code>pending</code>, and the page says so. Fulfilment is impossible from this path.</td></tr>
+          <tr><td>Webhook secret unset</td><td>Every delivery refused, nothing written, loudly logged.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>8. Deployment risks</h3>
+    <ul>
+      <li><strong>Production is behind the repository.</strong> The pre-SMS build was measured live on
+        2026-10-04. The payment work depends on that undeployed code. Deploy and verify current main first.</li>
+      <li><strong>The Next.js upgrade is the riskiest single change</strong> and is why it gets its own deploy
+        cycle. It is a major-adjacent version bump on a client-heavy App Router site.</li>
+      <li><strong>SQLite is a single writer.</strong> A webhook and an admin action arriving together is
+        exactly the concurrency the design has to absorb. The transaction plus unique index pattern handles it;
+        it must be tested, not assumed.</li>
+      <li><strong>The webhook must answer within 10 seconds.</strong> The settle path sends SMS after the
+        commit, never inside it, which is already the house rule and is now also a delivery requirement.</li>
+      <li><strong>Silent failure is the real danger.</strong> If the webhook is misconfigured, payments succeed
+        at the provider and orders stay pending here. The reconciliation action and the stuck-intent list exist
+        for that, and both need to be visible in the admin rather than buried.</li>
+      <li><strong>A tunnel is not an option for the webhook.</strong> It needs the real HTTPS domain, which
+        already exists. No new exposure is required for this, which is a genuine advantage of the current
+        setup.</li>
+    </ul>
+
+    <h3>9. Decisions still open</h3>
+    <div class="callout">
+      <div class="decision">
+        <div class="did">D7</div>
+        <div>
+          <div class="q">Official Node SDK, or plain <code>fetch</code> plus <code>node:crypto</code>?</div>
+          <div class="o">My recommendation is no SDK for the webhook, for the reasons in Phase 3. Either is workable.</div>
+        </div>
+      </div>
+      <div class="decision">
+        <div class="did">D8</div>
+        <div>
+          <div class="q">What should happen to an order whose total is under Rs. 10?</div>
+          <div class="o">The provider's minimum is Rs. 10. I propose the order still goes through, card payment is simply not offered for it, and the office settles it by hand as today. The alternative is refusing such orders online, which seems worse.</div>
+        </div>
+      </div>
+      <div class="decision">
+        <div class="did">D9</div>
+        <div>
+          <div class="q">Should the customer be texted the payment link?</div>
+          <div class="o">Possible and it fits the existing outbox, but it costs an SMS per order and the customer is already on the page. I lean toward showing the link on screen only, and letting the receipt link carry the state afterwards.</div>
+        </div>
+      </div>
+      <div class="decision">
+        <div class="did">D10</div>
+        <div>
+          <div class="q">Do you want the admin to see provider fees and net amounts?</div>
+          <div class="o">Both figures arrive in the webhook. Storing them makes the bank reconciliation honest. I have included them in the design; say if you would rather not see them.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= APPENDIX ======================= -->
+  <section id="appendix">
+    <span class="phase-num">Appendix</span>
+    <h2>Method, limitations and reassurance</h2>
+
+    <h3>How findings were established</h3>
+    <p>
+      Phase 1 and 2 are a static trace: reading the route handlers, the shared libraries, the Prisma schema,
+      the middleware, the deploy script and the Caddy configuration, and running <code>tsc</code>,
+      <code>lint</code>, <code>npm audit</code> and read-only database queries. The payment contract was
+      verified against the provider's published OpenAPI document rather than against documentation prose
+      alone. Two claims come from measurements recorded in this project's own history rather than from my
+      session: the forged-cookie result on <code>/admin/orders</code>, and the fact that production is running
+      the pre-SMS build. Both are cited as history, not re-tested.
+    </p>
+
+    <h3>What I deliberately did not do</h3>
+    <ul>
+      <li>No file in the repository was modified. The only thing written was this report, in a gitignored
+        scratch directory.</li>
+      <li>No production data was read, downloaded or copied. The local database was queried for table names and
+        row counts only.</li>
+      <li>No intrusive scan was run against the live site, and no third-party system was tested.</li>
+      <li>No secret value was printed. Where a secret exists, this report names the file and the variable.</li>
+      <li>No live payment, refund or credential change was made. No account was created at the provider.</li>
+      <li>The E2E suites were not executed, because they mutate a database copy and start a server. They are
+        the acceptance gate for the fix work, not for this read-only pass.</li>
+    </ul>
+
+    <h3>The honest summary</h3>
+    <p>
+      This is a small, unusually careful codebase. The parts that handle money were written with the specific
+      failure modes of an e-commerce site in mind, and several of them are better than what you would find in a
+      typical shop of this size: server-derived pricing, a constraint-protected donation ledger, vouchers
+      minted inside the payment transaction, and a webhook that verifies its signature before parsing anything.
+      I did not find a way for an unauthenticated stranger to change a price, mark an order paid, or read
+      another customer's order.
+    </p>
+    <p>
+      What it does not yet have is a hardened perimeter: the single shared admin password has no lockout, the
+      framework is a version behind its security patches, a token is sitting in plaintext on the dev machine,
+      and a few public endpoints are cheaper to abuse than they should be. None of those is exotic and all of
+      them have small, surgical fixes. They are worth doing before a card gateway, because a gateway makes the
+      admin account worth more to an attacker, and because it adds a new way for money to move that must be the
+      most carefully tested code in the project.
+    </p>
+    <p>
+      I have not started any of it. Approve D1 to D6 and I will begin with Phase 5.
+    </p>
+  </section>
+
+  <footer>
+    Prepared for the owner of Basnayaka Vermigrow. Read-only investigation, 2026-10-09. Phases 1 to 4 of the
+    agreed brief; no files changed, no gateway integrated, no credentials requested or printed. Payment API
+    facts verified against <span class="ref">api.payments.lk/v1/openapi.json</span>.
+  </footer>
+
+</div>
