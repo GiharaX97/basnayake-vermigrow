@@ -1,0 +1,1536 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Basnayaka Vermigrow — QR &amp; Apeksha Hospital Donation System</title>
+<style>
+  @page { size: 13.333in 7.5in; margin: 0; }
+  :root{
+    --paper:#f7f4ec;
+    --paper-2:#efeade;
+    --ink:#14231c;
+    --muted:#5f6b63;
+    --green:#0b6b4f;
+    --green-2:#0e8a63;
+    --green-soft:#e3efe8;
+    --gold:#b78a1f;
+    --gold-soft:#f6ecd2;
+    --line:#d9d4c5;
+    --white:#ffffff;
+    --red:#9a3d2f;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:#fff; }
+  body{
+    font-family:"Segoe UI","Nirmala UI",system-ui,-apple-system,sans-serif;
+    color:var(--ink);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+    font-synthesis:none;
+  }
+  .slide{
+    position:relative;
+    width:1280px;
+    height:720px;
+    overflow:hidden;
+    background:var(--paper);
+    page-break-after:always;
+    break-after:page;
+  }
+  .slide:last-child{ page-break-after:auto; break-after:auto; }
+  .content{
+    position:relative;
+    height:100%;
+    padding:40px 64px 54px;
+    display:flex;
+    flex-direction:column;
+  }
+  .kicker{
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.17em;
+    text-transform:uppercase;
+    color:var(--green);
+  }
+  .head{ display:flex; justify-content:space-between; align-items:flex-start; gap:18px; }
+  .head-left{ max-width:900px; }
+  h1.title{
+    margin:7px 0 7px;
+    font-size:33px;
+    line-height:1.08;
+    letter-spacing:-.022em;
+    font-weight:650;
+    color:var(--ink);
+  }
+  .lede{
+    margin:0;
+    font-size:14.5px;
+    line-height:1.5;
+    color:var(--muted);
+    max-width:860px;
+  }
+  .badges{ display:flex; align-items:center; gap:8px; flex-shrink:0; padding-top:4px; }
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:4px 9px;
+    border-radius:999px;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:.11em;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .badge.live{ background:var(--green); color:#fff; }
+  .badge.rollout{ background:var(--gold-soft); color:#6f530b; border:1px solid #dcc484; }
+  .badge.ghost{ background:#fff; color:var(--green); border:1px solid #bcd6c9; }
+
+  .body-grid{
+    flex:1;
+    min-height:0;
+    display:grid;
+    gap:34px;
+    margin-top:20px;
+  }
+  .two{ grid-template-columns: .95fr 1.05fr; align-items:center; }
+  .two-even{ grid-template-columns: 1fr 1fr; }
+  .two-wide{ grid-template-columns: .82fr 1.18fr; }
+
+  .copy{ display:flex; flex-direction:column; justify-content:center; gap:14px; }
+  .bullets{ margin:0; padding:0; list-style:none; display:grid; gap:11px; }
+  .bullets li{
+    position:relative;
+    padding-left:24px;
+    font-size:13.6px;
+    line-height:1.52;
+    color:#33443b;
+  }
+  .bullets li::before{
+    content:"";
+    position:absolute;
+    left:2px; top:7px;
+    width:8px; height:8px;
+    border-radius:50%;
+    background:var(--green-2);
+    box-shadow:0 0 0 3px var(--green-soft);
+  }
+  .bullets li strong{ color:var(--ink); font-weight:650; }
+  .note{
+    border-left:3px solid var(--gold);
+    background:var(--gold-soft);
+    padding:10px 13px;
+    font-size:12.2px;
+    line-height:1.48;
+    color:#5d4a16;
+    border-radius:0 7px 7px 0;
+  }
+  .note.plain{ border-left-color:var(--green); background:var(--green-soft); color:#27493a; }
+
+  .shot{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:11px;
+    padding:7px;
+    box-shadow:0 16px 34px rgba(20,35,28,.13);
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .shot img{
+    width:100%;
+    display:block;
+    border-radius:6px;
+    object-fit:cover;
+    object-position:top left;
+  }
+  .shot .cap{
+    padding:6px 6px 2px;
+    font-size:9.5px;
+    line-height:1.35;
+    color:#7b857e;
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .shot.tall img{ height:auto; }
+  .shot.med img{ height:auto; }
+  .shot.short img{ height:auto; }
+
+  /* cover */
+  .cover{ background:#08251b; }
+  .cover .bg{
+    position:absolute; inset:0;
+    background:url(assets/cover-about.jpg) 62% center/cover no-repeat;
+    opacity:.72;
+  }
+  .cover .veil{
+    position:absolute; inset:0;
+    background:
+      linear-gradient(90deg, rgba(5,25,18,.95) 0%, rgba(5,25,18,.74) 48%, rgba(5,25,18,.32) 100%),
+      linear-gradient(0deg, rgba(5,25,18,.88) 0%, rgba(5,25,18,0) 46%),
+      rgba(5,25,18,.28);
+  }
+  .cover .inner{
+    position:relative;
+    height:100%;
+    padding:46px 64px 40px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    color:#fff;
+  }
+  .logo-card{
+    display:inline-flex;
+    align-items:center;
+    background:#fff;
+    border-radius:13px;
+    padding:10px 16px;
+    width:220px;
+    box-shadow:0 10px 26px rgba(0,0,0,.18);
+  }
+  .logo-card img{ width:100%; display:block; }
+  .cover h1{
+    margin:0;
+    max-width:840px;
+    font-size:57px;
+    line-height:1.02;
+    letter-spacing:-.028em;
+    font-weight:650;
+    text-wrap:balance;
+  }
+  .cover .sub{
+    margin:18px 0 0;
+    max-width:650px;
+    font-size:17px;
+    line-height:1.52;
+    color:#d9e6df;
+  }
+  .cover .meta{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:24px;
+  }
+  .cover .meta-left{ font-size:12px; line-height:1.6; color:#b9ccc2; }
+  .cover .meta-left strong{ color:#fff; font-weight:600; }
+  .legend{
+    display:flex;
+    gap:14px;
+    align-items:center;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.18);
+    border-radius:10px;
+    padding:9px 12px;
+    font-size:10px;
+    color:#d9e6df;
+    backdrop-filter:blur(4px);
+  }
+  .legend .dot{
+    display:inline-block; width:7px; height:7px; border-radius:50%;
+    background:var(--green-2); margin-right:5px;
+  }
+  .legend .dot.gold{ background:#e0bb55; }
+
+  /* step overview */
+  .steps{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    grid-template-rows:1fr 1fr;
+    gap:20px 26px;
+    margin-top:6px;
+    flex:1;
+    min-height:0;
+  }
+  .step{
+    position:relative;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:17px 16px 15px;
+    box-shadow:0 7px 18px rgba(20,35,28,.05);
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .step .num{
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:.12em;
+    color:var(--green);
+  }
+  .step .top{ display:flex; align-items:center; justify-content:space-between; }
+  .step .ico-wrap{
+    width:30px; height:30px; border-radius:9px;
+    background:var(--green-soft);
+    color:var(--green);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .step .ico{ width:17px; height:17px; }
+  .step h3{ margin:0; font-size:15px; line-height:1.2; font-weight:650; letter-spacing:-.01em; }
+  .step p{ margin:0; font-size:11.4px; line-height:1.45; color:var(--muted); }
+  .step-out{
+    margin-top:auto;
+    border-top:1px solid var(--line);
+    padding-top:7px;
+    font-size:9.9px;
+    line-height:1.35;
+    color:var(--muted);
+  }
+  .step-out b{
+    display:block;
+    font-size:8.5px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--green);
+    margin-bottom:2px;
+  }
+  .step::after{
+    content:"→";
+    position:absolute;
+    right:-20px;
+    top:50%;
+    transform:translateY(-50%);
+    color:#b7c3bb;
+    font-size:15px;
+  }
+  .step:nth-child(4)::after,
+  .step:nth-child(8)::after{ content:""; }
+
+  /* code anatomy */
+  .code-card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:13px;
+    padding:18px 20px;
+    box-shadow:0 9px 22px rgba(20,35,28,.06);
+  }
+  .code-big{
+    font-family:ui-monospace,Consolas,"Courier New",monospace;
+    font-size:37px;
+    font-weight:750;
+    letter-spacing:.075em;
+    color:var(--ink);
+    margin:0 0 6px;
+  }
+  .code-big .vg{ color:var(--green); }
+  .code-anatomy{
+    display:flex;
+    gap:8px;
+    font-size:10.5px;
+    color:var(--muted);
+    margin-top:2px;
+  }
+  .code-anatomy span{
+    background:var(--paper-2);
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:3px 7px;
+  }
+  .facts{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .fact{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:9px;
+    padding:10px 12px;
+  }
+  .fact .n{ font-size:18px; font-weight:750; color:var(--green); line-height:1.1; }
+  .fact .l{ font-size:10.4px; line-height:1.35; color:var(--muted); margin-top:2px; }
+
+  /* sticker sheet */
+  .sheet{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px;
+    box-shadow:0 16px 34px rgba(20,35,28,.11);
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    align-content:start;
+    align-self:start;
+  }
+  .sticker{
+    border:1px dashed #c6d0c9;
+    border-radius:4px;
+    padding:7px 6px 6px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    background:#fff;
+  }
+  .sticker .brand{
+    font-size:7.5px;
+    font-weight:800;
+    color:#047857;
+    line-height:1.06;
+    text-align:center;
+    letter-spacing:.01em;
+  }
+  .sticker .qr{ width:84px; height:84px; display:block; }
+  .sticker .code{
+    font-family:ui-monospace,Consolas,monospace;
+    font-size:10px;
+    font-weight:750;
+    letter-spacing:.02em;
+    color:#111827;
+  }
+  .sticker .prod{
+    font-size:6.8px;
+    line-height:1.2;
+    color:#5b6962;
+    text-align:center;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:100%;
+  }
+  .sheet-cap{
+    grid-column:1 / -1;
+    font-size:9.3px;
+    color:#8a948d;
+    border-top:1px solid var(--line);
+    padding-top:7px;
+    display:flex;
+    justify-content:space-between;
+  }
+
+  /* two paths */
+  .paths{ display:grid; grid-template-columns:1fr 1fr; gap:24px; flex:1; min-height:0; align-items:start; }
+  .path{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:13px;
+    padding:20px 21px;
+    display:flex;
+    flex-direction:column;
+    gap:11px;
+    box-shadow:0 9px 22px rgba(20,35,28,.05);
+  }
+  .path .ph{ display:flex; align-items:center; gap:11px; }
+  .path .ph .ico-wrap{
+    width:38px; height:38px; border-radius:11px;
+    background:var(--green-soft); color:var(--green);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .path .ph h3{ margin:0; font-size:17px; line-height:1.15; font-weight:650; letter-spacing:-.012em; }
+  .path .ph .sub{ font-size:10.5px; color:var(--muted); margin-top:2px; }
+  .path ol{ margin:0; padding:0 0 0 4px; list-style:none; display:grid; gap:9px; }
+  .path ol li{ position:relative; padding-left:26px; font-size:12.4px; line-height:1.46; color:#33443b; }
+  .path ol li .n{
+    position:absolute; left:0; top:1px;
+    width:17px; height:17px; border-radius:50%;
+    background:var(--green); color:#fff;
+    font-size:9.4px; font-weight:800;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .path .tail{
+    margin-top:auto;
+    font-size:10.8px;
+    color:var(--muted);
+    border-top:1px solid var(--line);
+    padding-top:9px;
+  }
+  .bubble{
+    background:var(--paper-2);
+    border:1px solid var(--line);
+    border-radius:10px 10px 10px 3px;
+    padding:9px 12px;
+    font-size:10.7px;
+    line-height:1.45;
+    color:#33443b;
+  }
+  .bubble .from{
+    font-size:8.4px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--green);
+    font-weight:800;
+    margin-bottom:3px;
+  }
+  .mini-meta{
+    display:grid;
+    gap:5px;
+    border-top:1px solid var(--line);
+    padding-top:8px;
+  }
+  .mini-meta div{ display:flex; justify-content:space-between; gap:10px; font-size:10.2px; }
+  .mini-meta .k{ color:var(--muted); }
+  .mini-meta .v{ font-weight:650; color:#2c3d34; text-align:right; }
+
+  /* state machine */
+  .flow-block{ display:flex; flex-direction:column; gap:9px; }
+  .flow-label{
+    font-size:9.6px;
+    font-weight:800;
+    letter-spacing:.13em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .flowline{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+  .pill{
+    border-radius:999px;
+    padding:6px 11px;
+    font-size:10.6px;
+    font-weight:650;
+    border:1px solid var(--line);
+    background:#fff;
+    color:#34443b;
+  }
+  .pill.on{ background:var(--green); border-color:var(--green); color:#fff; }
+  .pill.final{ background:var(--green-soft); border-color:#b6d4c4; color:#14503a; }
+  .arrow{ color:#aab7ae; font-size:13px; }
+  .rule-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .rule{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:9px 11px;
+    font-size:10.8px;
+    line-height:1.42;
+    color:#3b4b42;
+  }
+  .rule strong{ display:block; color:var(--ink); font-size:11.2px; margin-bottom:1px; }
+
+  /* money lanes */
+  .lanes{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; flex:0 0 auto; }
+  .lane{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:17px 18px 15px;
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-start;
+    gap:10px;
+    position:relative;
+  }
+  .lane.gateway{ border-top:4px solid #c9a227; }
+  .lane.bank{ border-top:4px solid var(--green-2); }
+  .lane.cash{ border-top:4px solid var(--green); }
+  .lane .lh{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .lane h3{ margin:0; font-size:14px; line-height:1.18; font-weight:650; }
+  .lane .small{ font-size:9.6px; color:var(--muted); margin-top:2px; }
+  .lane ul{ margin:0; padding:0; list-style:none; display:grid; gap:7px; }
+  .lane li{ position:relative; padding-left:15px; font-size:11.2px; line-height:1.46; color:#3b4b42; }
+  .lane li::before{ content:"•"; position:absolute; left:2px; color:var(--green-2); font-weight:800; }
+  .lane .out{
+    margin-top:auto;
+    background:var(--paper-2);
+    border-radius:7px;
+    padding:7px 9px;
+    font-size:10.2px;
+    line-height:1.36;
+    color:#41524a;
+  }
+  .lane-meta{
+    display:grid;
+    gap:4px;
+    border-top:1px solid var(--line);
+    padding-top:8px;
+  }
+  .lane-meta div{ display:flex; justify-content:space-between; gap:8px; font-size:10.1px; line-height:1.35; }
+  .lane-meta .k{ color:var(--muted); }
+  .lane-meta .v{ font-weight:650; color:#2c3d34; text-align:right; }
+  .bottom-band{
+    margin-top:14px;
+    background:var(--green);
+    color:#fff;
+    border-radius:9px;
+    padding:11px 16px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:18px;
+  }
+  .bottom-band .bb-main{ font-size:12.6px; font-weight:650; letter-spacing:.005em; }
+  .bottom-band .bb-sub{ font-size:10.4px; color:#cfe3d9; text-align:right; max-width:560px; line-height:1.4; }
+  .ledger-band{
+    margin-top:15px;
+    background:var(--green);
+    color:#fff;
+    border-radius:10px;
+    padding:11px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+  }
+  .ledger-band .lb-title{ font-size:13px; font-weight:700; letter-spacing:.01em; }
+  .ledger-band .lb-sub{ font-size:10.6px; color:#cfe3d9; margin-top:1px; }
+  .ledger-band .lb-right{ font-size:10.2px; color:#eaf3ee; max-width:460px; text-align:right; line-height:1.4; }
+
+  /* ledger slide */
+  .ledger-map{
+    background:#fff; border:1px solid var(--line); border-radius:12px;
+    padding:16px; display:flex; flex-direction:column; gap:10px;
+    box-shadow:0 9px 22px rgba(20,35,28,.05);
+  }
+  .lm-row{ display:grid; grid-template-columns:1fr 26px 1fr; align-items:center; gap:8px; }
+  .lm-box{
+    border:1px solid var(--line); border-radius:8px; padding:8px 10px;
+    font-size:10.4px; line-height:1.35; background:var(--paper);
+  }
+  .lm-box b{ display:block; font-size:11px; color:var(--ink); }
+  .lm-arrow{ text-align:center; color:#a9b6ad; font-size:14px; }
+  .lm-total{
+    margin-top:2px; background:var(--green); color:#fff; border-radius:8px;
+    padding:10px 12px; text-align:center;
+  }
+  .lm-total .t{ font-size:19px; font-weight:750; letter-spacing:-.01em; }
+  .lm-total .s{ font-size:9.8px; color:#cfe3d9; margin-top:1px; }
+  .guard{
+    display:flex; gap:9px; align-items:flex-start;
+    border:1px solid var(--line); border-radius:8px; padding:8px 10px;
+    background:#fff;
+  }
+  .guard .g-ico{ color:var(--green); flex-shrink:0; margin-top:1px; }
+  .guard .g-ico svg{
+    width:14px; height:14px;
+    fill:none; stroke:currentColor; stroke-width:1.8;
+    stroke-linecap:round; stroke-linejoin:round;
+  }
+  .guard b{ font-size:10.8px; display:block; margin-bottom:1px; }
+  .guard span{ font-size:9.9px; line-height:1.38; color:var(--muted); }
+
+  /* donor slide */
+  .shots-two{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .donor-points{ display:grid; grid-template-columns:1fr 1fr; gap:9px 18px; margin-top:12px; }
+  .dp{ display:flex; gap:8px; font-size:10.9px; line-height:1.4; color:#3b4b42; }
+  .dp .dot{ width:6px; height:6px; border-radius:50%; background:var(--green-2); margin-top:5px; flex-shrink:0; }
+
+  /* status */
+  .status-cols{ display:grid; grid-template-columns:1.25fr .75fr; gap:26px; flex:1; min-height:0; }
+  .status-card{
+    background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .status-card.rollout{ background:#fffdf6; border-color:#e2d2a4; }
+  .status-card h3{ margin:0; font-size:14px; display:flex; align-items:center; gap:8px; }
+  .status-card h3 .tag{
+    font-size:8.6px; letter-spacing:.12em; font-weight:800; padding:3px 7px; border-radius:999px;
+  }
+  .status-card h3 .tag.live{ background:var(--green); color:#fff; }
+  .status-card h3 .tag.rollout{ background:var(--gold-soft); color:#6f530b; border:1px solid #dcc484; }
+  .status-list{ display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; }
+  .status-item{ display:flex; gap:7px; font-size:10.7px; line-height:1.35; color:#3b4b42; }
+  .status-item .tick{ color:var(--green-2); font-weight:800; flex-shrink:0; }
+  .status-item .clock{ color:#b78a1f; font-weight:800; flex-shrink:0; }
+  .status-card .foot-note{ font-size:10.2px; color:var(--muted); border-top:1px solid var(--line); padding-top:8px; margin-top:auto; }
+  .status-cols{ flex:0 0 auto; align-items:start; }
+  .rule-band{
+    margin-top:14px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:9px;
+    padding:10px 15px;
+    display:flex;
+    gap:14px;
+    align-items:baseline;
+    font-size:10.8px;
+    line-height:1.45;
+    color:#41524a;
+  }
+  .evidence{ display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:14px; }
+  .ev-card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 15px;
+  }
+  .ev-card.roll{ background:#fffdf6; border-color:#e2d2a4; }
+  .ev-card h4{
+    margin:0 0 7px;
+    font-size:9.4px;
+    font-weight:800;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--green);
+  }
+  .ev-card.roll h4{ color:#8a6a11; }
+  .ev-list{ margin:0; padding:0; list-style:none; display:grid; gap:5px; }
+  .ev-list li{ position:relative; padding-left:13px; font-size:10.6px; line-height:1.42; color:#41524a; }
+  .ev-list li::before{ content:"—"; position:absolute; left:0; color:#9fb0a5; }
+  .rule-band b{
+    font-size:9.4px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--green);
+    white-space:nowrap;
+  }
+  .wide-shot{ width:960px; margin:14px auto 0; }
+  .wide-shot img{ width:100%; height:auto; display:block; border-radius:6px; }
+  .points3{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px 24px; margin-top:12px; }
+  .point3{ font-size:10.7px; line-height:1.4; color:#3b4b42; padding-left:13px; position:relative; }
+  .point3::before{ content:""; position:absolute; left:0; top:5px; width:5px; height:5px; border-radius:50%; background:var(--green-2); }
+  .point3 b{ color:var(--ink); font-weight:650; }
+
+  /* phases */
+  .phases{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; flex:0 0 auto; }
+  .phase{
+    background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 17px;
+    display:flex; flex-direction:column; gap:9px; position:relative;
+  }
+  .phase .ptag{
+    font-size:9px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; color:var(--green);
+  }
+  .phase h3{ margin:0; font-size:15px; line-height:1.15; }
+  .phase p{ margin:0; font-size:10.9px; line-height:1.45; color:var(--muted); }
+  .phase ul{ margin:0; padding:0; list-style:none; display:grid; gap:6px; }
+  .phase li{ position:relative; padding-left:14px; font-size:10.6px; line-height:1.4; color:#3b4b42; }
+  .phase li::before{ content:"—"; position:absolute; left:0; color:#9fb0a5; }
+  .phase .phase-foot{
+    margin-top:auto; font-size:10px; color:#5d4a16; background:var(--gold-soft);
+    border-radius:6px; padding:7px 9px; line-height:1.35;
+  }
+  .phase .gate{
+    border-top:1px solid var(--line);
+    padding-top:7px;
+    font-size:9.9px;
+    line-height:1.38;
+    color:var(--muted);
+  }
+  .phase .gate b{
+    display:block;
+    font-size:8.8px;
+    letter-spacing:.11em;
+    text-transform:uppercase;
+    color:var(--green);
+    margin-bottom:2px;
+  }
+  .asks{
+    margin-top:16px; background:#fff; border:1px solid var(--line); border-radius:10px;
+    padding:10px 14px; display:flex; gap:18px; align-items:center;
+  }
+  .asks .al{ font-size:9.6px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--green); white-space:nowrap; }
+  .asks .ai{ display:flex; gap:16px; flex-wrap:wrap; font-size:10.4px; color:#41524a; }
+  .asks .ai span::before{ content:"•"; color:var(--green-2); margin-right:5px; }
+  .closing-note{
+    margin-top:16px;
+    border-top:1px solid var(--line);
+    padding-top:10px;
+    display:flex;
+    gap:14px;
+    align-items:baseline;
+    font-size:11.6px;
+    line-height:1.5;
+    color:var(--muted);
+  }
+  .closing-note b{
+    font-size:9.4px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--green);
+    white-space:nowrap;
+  }
+
+  /* sinhala */
+  .si{ font-family:"Nirmala UI","Iskoola Pota",sans-serif; }
+  .si h1{ font-size:32px; }
+  .si .lede{ font-size:14px; }
+  .si-body{ display:grid; gap:10px; margin-top:14px; }
+  .si-body p{ margin:0; font-size:13.8px; line-height:1.8; color:#2f4037; }
+  .si-body strong{ color:var(--ink); }
+  .si-cols{ display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:10px; }
+  .si-card{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+  .si-card h3{ margin:0 0 5px; font-size:11px; color:var(--green); letter-spacing:.02em; }
+  .si-card p{ margin:0; font-size:11.8px; line-height:1.7; color:#3b4b42; }
+  .si-close{
+    margin-top:auto;
+    background:var(--green);
+    color:#fff;
+    border-radius:9px;
+    padding:12px 16px;
+    font-size:13px;
+    line-height:1.5;
+    display:flex;
+    justify-content:space-between;
+    gap:18px;
+    align-items:center;
+  }
+  .si-close .sc-main{ font-weight:650; }
+  .si-close .sc-sub{ font-size:10.4px; color:#cfe3d9; text-align:right; }
+
+  .foot{
+    position:absolute; left:64px; right:64px; bottom:18px;
+    display:flex; justify-content:space-between; align-items:center;
+    border-top:1px solid rgba(20,35,28,.13);
+    padding-top:7px;
+    font-size:9.2px;
+    letter-spacing:.02em;
+    color:#8d978f;
+  }
+  .foot .pg{ font-weight:700; color:#6c786f; }
+  .foot.dark{ border-top-color:rgba(255,255,255,.2); color:#9fb6aa; }
+  .foot.dark .pg{ color:#d5e4db; }
+
+  .ico{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v1"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 17h12v4H6z"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 016 0v2"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 011-1h3M20 8V5a1 1 0 00-1-1h-3M4 16v3a1 1 0 001 1h3M20 16v3a1 1 0 01-1 1h-3"/><path d="M8 12h8"/></symbol>
+    <symbol id="i-bank" viewBox="0 0 24 24"><path d="M3 10l9-6 9 6"/><path d="M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/></symbol>
+    <symbol id="i-ledger" viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-9a4 4 0 017-2.6A4 4 0 0119 11c0 4.5-7 9-7 9z"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M8 16v-4M12 16V8M16 16v-7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 7.8-7 10-4-2.2-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></symbol>
+  </defs>
+</svg>
+
+<!-- 1 · COVER -->
+<section class="slide cover">
+  <div class="bg"></div>
+  <div class="veil"></div>
+  <div class="inner">
+    <div class="logo-card"><img src="assets/logo.png" alt="Basnayaka Vermigrow"></div>
+
+    <div>
+      <h1>Every pack carries<br>its own proof.</h1>
+      <p class="sub">How one QR code connects a product, a sale and a donation — and shows every rupee on its way to Apeksha Hospital.</p>
+    </div>
+
+    <div class="meta">
+      <div class="meta-left">
+        <strong>Basnayaka Vermigrow</strong> · Karandeniya, Sri Lanka<br>
+        QR traceability &amp; Apeksha Hospital donation system · October 2026
+      </div>
+      <div class="legend">
+        <span><span class="dot"></span>Live now</span>
+        <span><span class="dot gold"></span>Rollout</span>
+        <span>Screens use sample data</span>
+      </div>
+    </div>
+  </div>
+  <div class="foot dark"><span>Prepared for Basnayaka Vermigrow</span><span class="pg">01</span></div>
+</section>
+
+<!-- 2 · THE WHOLE JOURNEY -->
+<section class="slide">
+  <div class="content">
+    <div class="head">
+      <div class="head-left">
+        <div class="kicker">The whole process</div>
+        <h1 class="title">From a catalogue item to a donor’s name on the wall</h1>
+        <p class="lede">One continuous loop. The QR code is only the hinge — the system carries the unit’s identity, its sale, its donation and the hospital record through every step.</p>
+      </div>
+      <div class="badges"><span class="badge live">Live now</span></div>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="top"><span class="num">01</span><span class="ico-wrap"><svg class="ico"><use href="#i-box"/></svg></span></div>
+        <h3>Add the item</h3>
+        <p>A product or a service, with its price and donation per unit.</p>
+        <div class="step-out"><b>Output</b>A sellable item and its donation rate</div>
+      </div>
+      <div class="step">
+        <div class="top"><span class="num">02</span><span class="ico-wrap"><svg class="ico"><use href="#i-qr"/></svg></span></div>
+        <h3>Generate codes</h3>
+        <p>One unique QR code for every pack or workshop seat.</p>
+        <div class="step-out"><b>Output</b>A batch of unique pack codes</div>
+      </div>
+      <div class="step">
+        <div class="top"><span class="num">03</span><span class="ico-wrap"><svg class="ico"><use href="#i-print"/></svg></span></div>
+        <h3>Print &amp; label</h3>
+        <p>A sticker sheet PDF that fits any paper size.</p>
+        <div class="step-out"><b>Output</b>A printed, page-ready sticker sheet</div>
+      </div>
+      <div class="step">
+        <div class="top"><span class="num">04</span><span class="ico-wrap"><svg class="ico"><use href="#i-truck"/></svg></span></div>
+        <h3>Dispatch</h3>
+        <p>Record which retailer holds which codes.</p>
+        <div class="step-out"><b>Output</b>A dispatch record per retailer</div>
+      </div>
+      <div class="step">
+        <div class="top"><span class="num">05</span><span class="ico-wrap"><svg class="ico"><use href="#i-bag"/></svg></span></div>
+        <h3>Sell</h3>
+        <p>The buyer scans, or staff record the sale for them.</p>
+        <div class="step-out"><b>Output</b>A sale — scanned or recorded</div>
+      </div>
+      <div class="step">
+        <div class="top"><span class="num">06</span><span class="ico-wrap"><svg class="ico"><use href="#i-scan"/></svg></span></div>
+        <h3>Detect the sale</h3>
+        <p>First scan marks the unit sold; vouchers redeem.</p>
+        <div class="step-out"><b>Output</b>A sold pack; a redeemed seat</div>
+      </div>
+      <div class="step">
+        <div class="top"><span class="num">07</span><span class="ico-wrap"><svg class="ico"><use href="#i-ledger"/></svg></span></div>
+        <h3>Count it once</h3>
+        <p>The donation enters the ledger exactly one time.</p>
+        <div class="step-out"><b>Output</b>One ledger entry, one time</div>
+      </div>
+      <div class="step">
+        <div class="top"><span class="num">08</span><span class="ico-wrap"><svg class="ico"><use href="#i-heart"/></svg></span></div>
+        <h3>Show &amp; send</h3>
+        <p>The wall updates; the money is reconciled to Apeksha Hospital.</p>
+        <div class="step-out"><b>Output</b>A public total and a donor receipt</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Basnayaka Vermigrow · QR &amp; donation system</span><span class="pg">02</span></div>
+</section>
+
+<!-- 3 · CATALOGUE -->
+<section class="slide">
+  <div class="content">
+    <div class="head">
+      <div class="head-left">
+        <div class="kicker">Step 01 · Catalogue</div>
+        <h1 class="title">Add or customise any product — or any service</h1>
+        <p class="lede">Everything sellable is created in one place. A product is a physical pack; a service is a paid seat at a workshop. Both carry their own donation rate.</p>
+      </div>
+      <div class="badges"><span class="badge live">Live now</span></div>
+    </div>
+
+    <div class="body-grid two">
+      <div class="copy">
+        <ul class="bullets">
+          <li><strong>One catalogue, two kinds.</strong> Products and services share the same screen, but behave differently: a service can carry a date, a venue and a seat cap.</li>
+          <li><strong>Price and donation per unit</strong> are set per item. The donation is copied onto each sale at entry, so changing the rate tomorrow never rewrites yesterday’s history.</li>
+          <li><strong>Photography, description and availability</strong> are managed here too — the public order page reads this catalogue directly.</li>
+          <li><strong>Seat capacity is enforced</strong> for workshops: bookings cannot exceed the cap, and remaining seats are shown to the customer.</li>
+        </ul>
+        <div class="note plain"><strong>What the client controls:</strong> the product line, the donation rate and what appears online — without calling a developer.</div>
+      </div>
+      <div class="shot tall">
+        <img src="assets/admin-catalog.jpg" alt="Admin catalogue">
+        <div class="cap"><span>Admin → Catalogue: products and services, each with price and donation per unit.</span><span>Sample data</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Basnayaka Vermigrow · QR &amp; donation system</span><span class="pg">03</span></div>
+</section>
+
+<!-- 4 · CODES -->
+<section class="slide">
+  <div class="content">
+    <div class="head">
+      <div class="head-left">
+        <div class="kicker">Step 02 · Unique codes</div>
+        <h1 class="title">Every pack gets an identity, not just a sticker</h1>
+        <p class="lede">A batch of codes is generated for a chosen product. Each code belongs to exactly one physical pack — or one workshop seat — for its whole life.</p>
+      </div>
+      <div class="badges"><span class="badge live">Live now</span></div>
+    </div>
+
+    <div class="body-grid two">
+      <div class="copy">
+        <div class="code-card">
+          <div class="code-big"><span class="vg">VG-</span>7F3K9Q</div>
+          <div class="code-anatomy"><span>fixed prefix</span><span>6 characters</span><span>32-letter alphabet</span></div>
+        </div>
+        <div class="facts">
+          <div class="fact"><div class="n">32<sup>6</sup></div><div class="l">≈ 1.07 billion combinations — collisions are negligible and still blocked by a unique database constraint.</div></div>
+          <div class="fact"><div class="n">5,000</div><div class="l">codes per batch, enough for a full production run.</div></div>
+        </div>
+        <ul class="bullets">
+          <li><strong>No 0, O, 1 or I</strong> in a code — it stays readable when handwritten, dictated over the phone, or read from a damaged label.</li>
+          <li><strong>The code is the record key</strong> for the pack: its status, scan history, dispatch and donation all hang off it.</li>
+          <li><strong>Not guessable by design.</strong> A code is short because it is printed in public; the private receipt uses a separate, unguessable token.</li>
+        </ul>
+      </div>
+      <div class="shot tall">
+        <img src="assets/admin-warehouse.jpg" alt="Generate pack codes">
+        <div class="cap"><span>Admin → Warehouse: generate a batch, then print the sheet or dispatch the codes to a retailer.</span><span>Sample data</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Basnayaka Vermigrow · QR &amp; donation system</span><span class="pg">04</span></div>
+</section>
+
+<!-- 5 · PRINT -->
+<section class="slide">
+  <div class="content">
+    <div class="head">
+      <div class="head-left">
+        <div class="kicker">Step 03 · Print &amp; label</div>
+        <h1 class="title">A sticker sheet that fits the printer you already have</h1>
+        <p class="lede">The same layout engine drives the on-screen preview, the browser print and the downloadable PDF. What you see is what prints.</p>
+      </div>
+      <div class="badges"><span class="badge live">Live now</span></div>
+    </div>
+
+    <div class="body-grid two">
+      <div class="copy">
+        <ul class="bullets">
+          <li><strong>Any common paper:</strong> A4, A5, A6, Letter, Legal — or a custom width and height in millimetres.</li>
+          <li><strong>Adjustable to the label stock:</strong> orientation, page margin, QR size (42 mm default) and the gap between stickers.</li>
+          <li><strong>Each sticker carries</strong> the brand, the QR, the code and the product name — nothing a shopkeeper has to interpret.</li>
+          <li><strong>Scale:</strong> a server-side PDF handles up to 5,000 codes (500 pages). The browser preview is capped at 200 for speed.</li>
+          <li><strong>Dispatch is recorded:</strong> the system knows which codes went to which retailer, and removing a dispatch returns those packs to stock.</li>
+        </ul>
+        <div class="note"><strong>Label stock, not a special printer.</strong> A normal office printer and ordinary sticker sheets are enough.</div>
+      </div>
+      <div class="sheet">
+        <div class="sticker">
+          <div class="brand">Basnayaka<br>Vermigrow</div>
+          <img class="qr" src="assets/qr-demo.png" alt="QR code">
+          <div class="code">VG-7F3K9Q</div>
+          <div class="prod">Vermigrow Organic Fertilizer — 1 kg</div>
+        </div>
+        <div class="sticker">
+          <div class="brand">Basnayaka<br>Vermigrow</div>
+          <img class="qr" src="assets/qr-demo.png" alt="QR code">
+          <div class="code">VG-M4T8XP</div>
+          <div class="prod">Vermigrow Organic Fertilizer — 5 kg</div>
+        </div>
+        <div class="sticker">
+          <div class="brand">Basnayaka<br>Vermigrow</div>
+          <img class="qr" src="assets/qr-demo.png" alt="QR code">
+          <div class="code">VG-9QH2LR</div>
+          <div class="prod">Vermicompost — 10 kg bag</div>
+        </div>
+        <div class="sticker">
+          <div class="brand">Basnayaka<br>Vermigrow</div>
+          <img class="qr" src="assets/qr-demo.png" alt="QR code">
+          <div class="code">VG-K7W3ND</div>
+          <div class="prod">Vermiculture workshop seat</div>
+        </div>
+        <div class="sticker">
+          <div class="brand">Basnayaka<br>Vermigrow</div>
+          <img class="qr" src="assets/qr-demo.png" alt="QR code">
+          <div class="code">VG-D2N6YB</div>
+          <div class="prod">Home Composting Starter Kit</div>
+        </div>
+        <div class="sticker">
+          <div class="brand">Basnayaka<br>Vermigrow</div>
+          <img class="qr" src="assets/qr-demo.png" alt="QR code">
+          <div class="code">VG-P8R4WC</div>
+          <div class="prod">Vermigrow Organic Fertilizer — 5 kg</div>
+        </div>
+        <div class="sheet-cap"><span>Sticker anatomy — brand · QR · code · product</span><span>Actual sheet: 12–60 per page</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Basnayaka Vermigrow · QR &amp; donation system</span><span class="pg">05</span></div>
+</section>
+
+<!-- 6 · TWO SALE PATHS -->
+<section class="slide">
+  <div class="content">
+    <div class="head">
+      <div class="head-left">
+        <div class="kicker">Step 04 · The sale</div>
+        <h1 class="title">Two ways to sell — because most buyers will not scan</h1>
+        <p class="lede">The QR is the direct path, not the only path. A sale recorded by staff is still a tracked sale, with the same donation and a receipt sent to the buyer.</p>
+      </div>
+      <div class="badges"><span class="badge live">Live now</span></div>
+    </div>
+
+    <div class="paths">
+      <div class="path">
+        <div class="ph">
+          <span class="ico-wrap"><svg class="ico"><use href="#i-scan"/></svg></span>
+          <div><h3>The buyer scans the pack</h3><div class="sub">The direct, self-service path</div></div>
+        </div>
+        <ol>
+          <li><span class="n">1</span>The QR opens the donation page with the pack code already filled in.</li>
+          <li><span class="n">2</span>The first scan marks that pack <strong>sold</strong> and writes the donation to the ledger.</li>
+          <li><span class="n">3</span>The buyer can add their name to the public wall; the amount is taken from the pack, never typed by the buyer.</li>
+        </ol>
+        <div class="bubble">
+          <div class="from">What the buyer sees</div>
+          Pack verified — LKR 20 added to the Apeksha Hospital fund. Thank you!
+        </div>
+        <div class="mini-meta">
+          <div><span class="k">Recorded as</span><span class="v">A scan event</span></div>
+          <div><span class="k">Donation taken from</span><span class="v">The pack code</span></div>
+          <div><span class="k">Name on the wall</span><span class="v">Optional, self-entered</span></div>
+        </div>
+        <div class="tail">Best for: customers who want to see the record themselves, and for partner retailers where no staff member is involved.</div>
+      </div>
+
+      <div class="path">
+        <div class="ph">
+          <span class="ico-wrap"><svg class="ico"><use href="#i-bag"/></svg></span>
+          <div><h3>Staff record the sale</h3><div class="sub">The common shop-floor path</div></div>
+        </div>
+        <ol>
+          <li><span class="n">1</span>A member of staff enters the sale in the admin, with the buyer’s phone number.</li>
+          <li><span class="n">2</span>The system texts a private receipt link to the buyer — no app, no login.</li>
+          <li><span class="n">3</span>The sale carries its donation into the ledger; the QR on the pack stays optional.</li>
+        </ol>
+        <div class="bubble">
+          <div class="from">SMS to the buyer</div>
+          Basnayaka Vermigrow: your order added LKR 120 to Apeksha Hospital. Your receipt: …/r/••••••
+        </div>
+        <div class="mini-meta">
+          <div><span class="k">Recorded as</span><span class="v">A sale, by staff</span></div>
+          <div><span class="k">Receipt delivered</span><span class="v">Private SMS link</span></div>
+          <div><span class="k">QR scan needed</span><span class="v">No</span></div>
+        </div>
+        <div class="tail">Built around the real counter: a walk-in paying cash without a smartphone is still a tracked donation.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Basnayaka Vermigrow · QR &amp; donation system</span><span class="pg">06</span></div>
+</section>
+
+<!-- 7 · DETECT -->
+<section class="slide">
+  <div class="content">
+    <div class="head">
+      <div class="head-left">
+        <div class="kicker">Step 05 · The system detects the sale</div>
+        <h1 class="title">One scan changes the state — and only once</h1>
+        <p class="lede">A pack and a workshop seat move through different lifecycles, but the same rule protects both: the first event is the one that counts.</p>
+      </div>
+      <div class="badges"><span class="badge live">Live now</span></div>
+    </div>
+
+    <div class="body-grid two">
+      <div class="copy">
+        <div class="flow-block">
+          <div class="flow-label">A physical pack</div>
+          <div class="flowline">
+            <span class="pill">In warehouse</span><span class="arrow">→</span>
+            <span class="pill">Dispatched</span><span class="arrow">→</span>
+            <span class="pill final">Sold · first scan</span>
+          </div>
+        </div>
+        <div class="flow-block">
+          <div class="flow-label">A workshop seat (voucher)</div>
+          <div class="flowline">
+            <span class="pill">Issued when paid</span><span class="arrow">→</span>
+            <span class="pill final">Redeemed at the workshop</span>
+          </div>
+        </div>
+        <div class="rule-grid">
+          <div class="rule"><strong>Every scan is logged</strong>A ScanEvent is written even when it is a repeat.</div>
+          <div class="rule"><strong>Repeat scans are visible</strong>They are flagged for review and never add money.</div>
+          <div class="rule"><strong>Vouchers carry LKR 0</strong>The paid sale carries the donation; the voucher cannot count it twice.</div>
+          <div class="rule"><strong>Packing ≠ paying</strong>Fulfilment stages are separate from the money state.</div>
+        </div>
+      </div>
+
+      <div class="ledger-map" style="align-self:start">
+        <div class="flow-label">What a scan records</div>
+        <div class="lm-row">
+          <div class="lm-box"><b>Pack code</b>VG-7F3K9Q</div>
+          <div class="lm-arrow">→</div>
+          <div class="lm-box"><b>Status change</b>dispatched → sold</div>
+        </div>
+        <div class="lm-row">
+          <div class="lm-box"><b>Scan history</b>time, device, repeat count</div>
+          <div class="lm-arrow">→</div>
+          <div class="lm-box"><b>Donation</b>entered in the ledger once</div>
+        </div>
+        <div class="lm-row">
+          <div class="lm-box"><b>Anomaly signal</b>same code scanned again</div>
+          <div class="lm-arrow">→</div>
+          <div class="lm-box"><b>No second payment</b>the total does not move</div>
+        </div>
+        <div class="lm-total"><div class="t">First event wins</div><div class="s">Every later event is evidence, not income</div></div>
+      </div>
+    </div>
+
+    <div class="bottom-band">
+      <div class="bb-main">Every scan leaves evidence. Only the first one leaves a donation.</div>
+      <div class="bb-sub">Repeat scans are shown to staff for review — they never change the public total.</div>
+    </div>
+  </div>
+  <div class="foot"><span>Basnayaka Vermigrow · QR &amp; donation system</span><span class="pg">07</span></div>
+</section>
+
+<!-- 8 · MONEY -->
+<section class="slide">
+  <div class="content">
+    <div class="head">
+      <div class="head-left">
+        <div class="kicker">Step 06 · The money path</div>
+        <h1 class="title">Three ways money arrives. One ledger records the gift.</h1>
+        <p class="lede">Cash and bank transfer are live today. The online gateway is designed and next; it is labelled as rollout, not claimed as live.</p>
+      </div>
+      <div class="badges"><span class="badge live">Live</span><span class="badge rollout">Gateway rollout</span></div>
+    </div>
+
+    <div class="lanes">
+      <div class="lane gateway">
+        <div class="lh">
+          <div><h3>Online payment</h3><div class="small">Payments.lk hosted checkout</div></div>
+          <span class="badge rollout">Rollout</span>
+        </div>
+        <ul>
+          <li>Order total is built from our own database, never from the browser.</li>
+          <li>The customer pays on the provider’s page.</li>
+          <li>Only the signed webhook can confirm payment.</li>
+          <li>Confirmation settles the order and writes the ledger in one transaction.</li>
+        </ul>
+        <div class="lane-meta">
+          <div><span class="k">Buyer sees</span><span class="v">Hosted checkout</span></div>
+          <div><span class="k">System stores</span><span class="v">Provider reference</span></div>
+          <div><span class="k">Confirms payment</span><span class="v">Signed webhook</span></div>
+          <div><span class="k">Currency</span><span class="v">LKR, locked server-side</span></div>
+        </div>
+        <div class="out">When live: the donation appears on the wall as soon as payment is confirmed — no staff step.</div>
+      </div>
+
+      <div class="lane bank">
+        <div class="lh">
+          <div><h3>Bank transfer</h3><div class="small">Recorded by the farm office</div></div>
+          <span class="badge live">Live</span>
+        </div>
+        <ul>
+          <li>Customer transfers and sends the slip or reference.</li>
+          <li>Staff confirm receipt and record the bank reference.</li>
+          <li>The order becomes paid; the donation is written once.</li>
+          <li>The reference is the reconciliation key against the statement.</li>
+        </ul>
+        <div class="lane-meta">
+          <div><span class="k">Buyer sees</span><span class="v">Bank slip</span></div>
+          <div><span class="k">System stores</span><span class="v">Bank reference</span></div>
+          <div><span class="k">Confirms payment</span><span class="v">Farm office</span></div>
+          <div><span class="k">Statement match</span><span class="v">By bank reference</span></div>
+        </div>
+        <div class="out">Today: a human confirms the transfer. The system keeps the reference, the receiver and the amount.</div>
+      </div>
+
+      <div class="lane cash">
+        <div class="lh">
+          <div><h3>Cash in hand</h3><div class="small">Counter and field sales</div></div>
+          <span class="badge live">Live</span>
+        </div>
+        <ul>
+          <li>Staff record the cash sale, or the seller records it later.</li>
+          <li>Cash is deposited to the Apeksha Hospital donation account.</li>
+          <li>The deposit is reconciled against the ledger.</li>
+          <li>No buyer needs a phone or a bank account.</li>
+        </ul>
+        <div class="lane-meta">
+          <div><span class="k">Buyer sees</span><span class="v">SMS receipt</span></div>
+          <div><span class="k">System stores</span><span class="v">Seller + deposit ref</span></div>
+          <div><span class="k">Confirms payment</span><span class="v">Deposit reconciliation</span></div>
+          <div><span class="k">Collector</span><span class="v">Named staff member</span></div>
+        </div>
+        <div class="out">Today: the system records the promise; the physical deposit remains a finance step, checked against the ledger.</div>
+      </div>
+    </div>
+
+    <div class="ledger-band">
+      <div>
+        <div class="lb-title">One append-only donation ledger</div>
+        <div class="lb-sub">Every channel feeds the same total — the number on the public wall.</div>
+      </div>
+      <div class="lb-right">The ledger records what was raised. Moving the money into the hospital account is a separate, reconcilable step — manual today, automatable later.</div>
+    </div>
+  </div>
+  <div class="foot"><span>Basnayaka Vermigrow · QR &amp; donation system</span><span class="pg">08</span></div>
+</section>
+
+<!-- 9 · COUNT ONCE -->
+<section class="slide">
+  <div class="content">
+    <div class="head">
+      <div class="head-left">
+        <div class="kicker">Step 07 · Integrity</div>
+        <h1 class="title">Counted once, never twice — enforced by the database</h1>
+        <p class="lede">The donation total is the one number the client, the buyer and the hospital all see. It is protected structurally, not by remembering to be careful.</p>
+      </div>
+      <div class="badges"><span class="badge live">Live now</span></div>
+    </div>
+
+    <div class="body-grid two">
+      <div class="copy">
+        <div class="guard"><span class="g-ico"><svg><use href="#i-ledger"/></svg></span><div><b>Append-only ledger</b><span>One row per donation-bearing event. The public total is a single query over it, whatever the source.</span></div></div>
+        <div class="guard"><span class="g-ico"><svg><use href="#i-shield"/></svg></span><div><b>Unique source key</b><span>Channel + record id is unique. A retried scan, a double-clicked “mark paid” or a replayed event is a no-op.</span></div></div>
+        <div class="guard"><span class="g-ico"><svg><use href="#i-lock"/></svg></span><div><b>Snapshotted amounts</b><span>The donation is copied at sale time. Editing today’s rate cannot restate yesterday’s figure.</span></div></div>
+        <div class="guard"><span class="g-ico"><svg><use href="#i-check"/></svg></span><div><b>Cancelled, not deleted</b><span>A cancelled order reduces the total but the ledger row stays, so history remains auditable.</span></div></div>
+        <div class="guard"><span class="g-ico"><svg><use href="#i-clock"/></svg></span><div><b>Money state ≠ fulfilment</b><span>Packing or delivering an order is a separate field; it cannot move money as a side effect.</span></div></div>
+        <div class="guard"><span class="g-ico"><svg><use href="#i-qr"/></svg></span><div><b>Vouchers are excluded</b><span>A service voucher writes LKR 0; the paid sale carries the donation. Two independent guards.</span></div></div>
+      </div>
+
+      <div class="ledger-map" style="align-self:start">
+        <div class="flow-label">How every source reaches the wall</div>
+        <div class="lm-row">
+          <div class="lm-box"><b>Scanned pack</b>channel: pack</div>
+          <div class="lm-arrow">→</div>
+          <div class="lm-box"><b>Ledger entry</b>unique by pack id</div>
+        </div>
+        <div class="lm-row">
+          <div class="lm-box"><b>Recorded sale</b>channel: sale</div>
+          <div class="lm-arrow">→</div>
+          <div class="lm-box"><b>Ledger entry</b>unique by sale id</div>
+        </div>
+        <div class="lm-row">
+          <div class="lm-box"><b>Direct gift</b>channel: direct</div>
+          <div class="lm-arrow">→</div>
+          <div class="lm-box"><b>Ledger entry</b>unique by gift id</div>
+        </div>
+        <div class="lm-row">
+          <div class="lm-box"><b>Replayed webhook</b>same event id</div>
+          <div class="lm-arrow">→</div>
+          <div class="lm-box"><b>Rejected</b>the unique key is already used</div>
+        </div>
+        <div class="lm-total"><div class="t">One public total</div><div class="s">Only entries marked paid are summed</div></div>
+        <div class="note plain" style="font-size:10.4px;padding:8px 10px;margin-top:2px;">A duplicate is rejected by the database, not by a rule someone has to remember.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Basnayaka Vermigrow · QR &amp; donation system</span><span class="pg">09</span></div>
+</section>
+
+<!-- 10 · DONOR -->
+<section class="slide">
+  <div class="content">
+    <div class="head">
+      <div class="head-left">
+        <div class="kicker">Step 08 · What the donor sees</div>
+        <h1 class="title">The name, the amount, and a receipt they can keep</h1>
+        <p class="lede">The public wall shows the running total and the latest names. A private receipt shows one buyer exactly what their purchase sent to Apeksha Hospital.</p>
+      </div>
+      <div class="badges"><span class="badge live">Live now</span><span class="badge rollout">Personal totals</span></div>
+    </div>
+
+    <div class="shots-two">
+      <div class="shot short">
+        <img src="assets/donations-top.jpg" alt="Live donation wall">
+        <div class="cap"><span>The live wall: total, story and latest donor names.</span><span>Sample data</span></div>
+      </div>
+      <div class="shot short">
+        <img src="assets/receipt.jpg" alt="Private receipt">
+        <div class="cap"><span>The private receipt: order lines, total and “To Apeksha Hospital”.</span><span>Sample data</span></div>
+      </div>
+    </div>
+
+    <div class="donor-points">
+      <div class="dp"><span class="dot"></span><span><strong>Refreshes every 10 seconds</strong> — a sale at a retailer appears while the page is open.</span></div>
+      <div class="dp"><span class="dot"></span><span><strong>Amount is server-attributed</strong> from the scanned pack, never typed by the visitor.</span></div>
+      <div class="dp"><span class="dot"></span><span><strong>Phone numbers are never shown</strong> — not on the wall, not in the public feed.</span></div>
+      <div class="dp"><span class="dot"></span><span><strong>Receipt links are private</strong>: unguessable, not indexed, expirable and revocable.</span></div>
+      <div class="dp"><span class="dot"></span><span><strong>Every purchase has a record</strong> — order, pack, gift or recorded sale.</span></div>
+      <div class="dp"><span class="dot"></span><span><strong>Lifetime donor totals</strong> across purchases are designed but not live yet — marked rollout.</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>Basnayaka Vermigrow · QR &amp; donation system</span><span class="pg">10</span></div>
+</section>
+
+<!-- 11 · ADMIN -->
+<section class="slide">
+  <div class="content">
+    <div class="head">
+      <div class="head-left">
+        <div class="kicker">Step 09 · Oversight</div>
+        <h1 class="title">The back office sees every pack and every rupee</h1>
+        <p class="lede">The same system that sells also answers the operational questions: what is in stock, what is sitting at a retailer, what was scanned twice, and what has actually been paid.</p>
+      </div>
+      <div class="badges"><span class="badge live">Live now</span></div>
+    </div>
+
+    <div class="shot wide-shot">
+      <img src="assets/admin-warehouse-banner.jpg" alt="Warehouse oversight">
+      <div class="cap"><span>Warehouse: stock by state, dispatch, pack lookup and flags — all from the same console.</span><span>Sample data</span></div>
+    </div>
+
+    <div class="points3">
+      <div class="point3"><b>Warehouse.</b> In stock, at retailers and sold — with a per-retailer list of packs still unsold after 30 days.</div>
+      <div class="point3"><b>Anomalies.</b> Codes scanned more than once are surfaced for review; the money never changes.</div>
+      <div class="point3"><b>Pack lookup.</b> Enter a code and see its product, retailer, status and full scan history.</div>
+      <div class="point3"><b>Orders.</b> Placed → confirmed → packed → dispatched → delivered, separate from payment state.</div>
+      <div class="point3"><b>Payments.</b> Method, bank reference, receiver, and one receipt that can settle a multi-line order.</div>
+      <div class="point3"><b>Ledger &amp; access.</b> Channel totals, the exact wall total — and every admin route authenticated.</div>
+    </div>
+  </div>
+  <div class="foot"><span>Basnayaka Vermigrow · QR &amp; donation system</span><span class="pg">11</span></div>
+</section>
+
+<!-- 12 · STATUS -->
+<section class="slide">
+  <div class="content">
+    <div class="head">
+      <div class="head-left">
+        <div class="kicker">Status · October 2026</div>
+        <h1 class="title">What is live today — and what is deliberately next</h1>
+        <p class="lede">No stage is blurred. Everything below is either running in the system or clearly marked for rollout.</p>
+      </div>
+      <div class="badges"><span class="badge live">Live now</span><span class="badge rollout">Rollout</span></div>
+    </div>
+
+    <div class="status-cols">
+      <div class="status-card">
+        <h3><span class="tag live">Live now</span> Running end to end</h3>
+        <div class="status-list">
+          <div class="status-item"><span class="tick">✓</span>Product &amp; service catalogue</div>
+          <div class="status-item"><span class="tick">✓</span>Unique pack / seat codes</div>
+          <div class="status-item"><span class="tick">✓</span>Sticker PDF &amp; browser print</div>
+          <div class="status-item"><span class="tick">✓</span>Dispatch to retailers</div>
+          <div class="status-item"><span class="tick">✓</span>Scan-to-sold detection</div>
+          <div class="status-item"><span class="tick">✓</span>Staff-recorded sales</div>
+          <div class="status-item"><span class="tick">✓</span>SMS receipt links</div>
+          <div class="status-item"><span class="tick">✓</span>Donation ledger &amp; wall</div>
+          <div class="status-item"><span class="tick">✓</span>Private per-purchase receipts</div>
+          <div class="status-item"><span class="tick">✓</span>Service vouchers</div>
+          <div class="status-item"><span class="tick">✓</span>Cash &amp; bank-transfer recording</div>
+          <div class="status-item"><span class="tick">✓</span>Warehouse / order oversight</div>
+        </div>
+        <div class="foot-note">The full loop — item to sale to ledger to donor record — is working. Sample data is used only for the screens in this deck.</div>
+      </div>
+
+      <div class="status-card rollout">
+        <h3><span class="tag rollout">Rollout</span> Designed, not live</h3>
+        <div class="status-list" style="grid-template-columns:1fr;">
+          <div class="status-item"><span class="clock">◷</span>Payments.lk hosted checkout</div>
+          <div class="status-item"><span class="clock">◷</span>Automatic online payment confirmation</div>
+          <div class="status-item"><span class="clock">◷</span>Personal lifetime donor totals</div>
+          <div class="status-item"><span class="clock">◷</span>Automated hospital deposit reconciliation</div>
+        </div>
+        <div class="foot-note">The gateway work is planned in detail and awaiting approval. Until it ships, no online card payment is taken.</div>
+      </div>
+    </div>
+
+    <div class="evidence">
+      <div class="ev-card">
+        <h4>Evidence behind “live”</h4>
+        <ul class="ev-list">
+          <li>A generated code is printed, dispatched and scanned — the same pack moves from stock to sold.</li>
+          <li>A recorded sale produces an SMS receipt and exactly one ledger entry.</li>
+          <li>The public total is computed from the ledger, not typed in by hand.</li>
+        </ul>
+      </div>
+      <div class="ev-card roll">
+        <h4>What is still missing for rollout</h4>
+        <ul class="ev-list">
+          <li>A Payments.lk account and signed webhook for online confirmation.</li>
+          <li>Donor identity linking for lifetime totals across purchases.</li>
+          <li>A signed monthly deposit report from the bank to the hospital account.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="rule-band">
+      <b>The test we applied</b>
+      <span><strong>Live</strong> means the complete path works end to end in the current build — data, money and donor record. <strong>Rollout</strong> means any step still needs building, approval or a provider account. No feature is shown as live on the strength of a mock-up.</span>
+    </div>
+  </div>
+  <div class="foot"><span>Basnayaka Vermigrow · QR &amp; donation system</span><span class="pg">12</span></div>
+</section>
+
+<!-- 13 · PLAN -->
+<section class="slide">
+  <div class="content">
+    <div class="head">
+      <div class="head-left">
+        <div class="kicker">Proposed rollout</div>
+        <h1 class="title">A three-phase path, in the order that protects the money</h1>
+        <p class="lede">Phase 1 makes the current system operational in the shop. Phase 2 adds the gateway. Phase 3 closes the loop between the ledger and the hospital account.</p>
+      </div>
+      <div class="badges"><span class="badge ghost">For approval</span></div>
+    </div>
+
+    <div class="phases">
+      <div class="phase">
+        <div class="ptag">Phase 1 · Now</div>
+        <h3>Operate what is live</h3>
+        <p>Put the current build to work before adding new money paths.</p>
+        <ul>
+          <li>Deploy the current build and verify it in production.</li>
+          <li>Confirm Apeksha Hospital wording on every public page.</li>
+          <li>Print the first sticker batch; label and dispatch stock.</li>
+          <li>Train counter staff on seller-assisted sales and SMS receipts.</li>
+          <li>Agree the public donor-name policy.</li>
+        </ul>
+        <div class="gate"><b>Done when</b>The first labelled batch is on a shelf and its sales appear in the ledger.</div>
+        <div class="phase-foot">Outcome: every pack on the shelf is traceable today.</div>
+      </div>
+
+      <div class="phase">
+        <div class="ptag">Phase 2 · Gateway</div>
+        <h3>Add online payment</h3>
+        <p>One hosted checkout, one signed webhook, one money path.</p>
+        <ul>
+          <li>Approve the Payments.lk decisions and security prerequisites.</li>
+          <li>Open the provider account and sandbox keys.</li>
+          <li>Build checkout + signed webhook; test success, decline and expiry.</li>
+          <li>Settle the order and write the ledger in one transaction.</li>
+          <li>Decide failed-payment and refund handling.</li>
+        </ul>
+        <div class="gate"><b>Done when</b>One real LKR 1 test payment confirms, settles and lands in the ledger.</div>
+        <div class="phase-foot">Outcome: a card payment confirms the donation without staff.</div>
+      </div>
+
+      <div class="phase">
+        <div class="ptag">Phase 3 · Donor &amp; finance</div>
+        <h3>Close the loop</h3>
+        <p>Make the donor record complete and the hospital deposit auditable.</p>
+        <ul>
+          <li>Personal donation history for returning buyers.</li>
+          <li>Monthly hospital deposit report from the ledger.</li>
+          <li>Reconcile bank transfer, cash and gateway totals.</li>
+          <li>Agree who signs off each deposit.</li>
+          <li>Publish the monthly hospital total.</li>
+        </ul>
+        <div class="gate"><b>Done when</b>The first monthly hospital deposit is signed off against the ledger.</div>
+        <div class="phase-foot">Outcome: every rupee raised is traceable to a hospital deposit.</div>
+      </div>
+    </div>
+
+    <div class="asks">
+      <span class="al">What we need</span>
+      <span class="ai">
+        <span>Hospital donation account details</span>
+        <span>Payments.lk account &amp; keys</span>
+        <span>Who confirms bank transfers</span>
+        <span>Approval of the gateway scope</span>
+        <span>A launch date for Phase 1</span>
+      </span>
+    </div>
+
+    <div class="closing-note">
+      <b>The sequencing rule</b>
+      <span>No new money path goes live until the previous one reconciles cleanly — from the sale, to the ledger, to a signed hospital deposit.</span>
+    </div>
+  </div>
+  <div class="foot"><span>Basnayaka Vermigrow · QR &amp; donation system</span><span class="pg">13</span></div>
+</section>
+
+<!-- 14 · SINHALA SUMMARY -->
+<section class="slide si">
+  <div class="content">
+    <div class="head">
+      <div class="head-left">
+        <div class="kicker">සිංහල සාරාංශය</div>
+        <h1 class="title">එක් QR කේතයකින් එක් රෝහල් පරිත්‍යාගයක්</h1>
+        <p class="lede">Basnayaka Vermigrow නිෂ්පාදනයක් හෝ වැඩමුළු ආසනයක් විකිණීමේ සිට Apeksha රෝහලට ලැබෙන පරිත්‍යාගය දක්වා සම්පූර්ණ ක්‍රියාවලිය.</p>
+      </div>
+      <div class="badges"><span class="badge live">දැන් ක්‍රියාත්මකයි</span><span class="badge rollout">ඊළඟ අදියර</span></div>
+    </div>
+
+    <div class="si-body">
+      <p><strong>1. නිෂ්පාදනය සහ QR කේතය.</strong> සෑම විකුණුම් ඒකකයකටම — එක් පැකට්ටුවකට හෝ එක් වැඩමුළු ආසනයකට — අද්විතීය QR කේතයක් ලැබේ. කේතය පැකට්ටුවේ ඇති ස්ටිකරයේ මුද්‍රණය කර, අවශ්‍ය ප්‍රමාණයේ කඩදාසියකට PDF ලෙස බාගත හැක.</p>
+      <p><strong>2. විකුණුම හඳුනා ගැනීම.</strong> පාරිභෝගිකයා QR කේතය ස්කෑන් කළ විට එම ඒකකය විකුණුණු බව පද්ධතිය ස්වයංක්‍රීයව හඳුනා ගනී. QR ස්කෑන් නොකරන පාරිභෝගිකයින් සඳහා කාර්ය මණ්ඩලය විකුණුම ලියාපදිංචි කර, SMS මගින් පෞද්ගලික රිසිට්පතක් යවයි. QR නොමැතිව විකුණුමක් සිදුවුවත් පරිත්‍යාගය නැති නොවේ.</p>
+      <p><strong>3. පරිත්‍යාගය එක් වරක් පමණක්.</strong> සෑම විකුණුමකින්ම Apeksha රෝහලට ලැබෙන මුදල පරිත්‍යාග ලෙජරයේ එක් වරක් පමණක් ලියාපදිංචි වේ. එකම කේතය නැවත ස්කෑන් කළත් මුදල දෙවරක් එකතු නොවේ. අවලංගු කළ ඇණවුමක් මුළු එකතුවෙන් ඉවත් වන නමුත් එහි ඉතිහාසය ඉතිරි වේ.</p>
+    </div>
+
+    <div class="si-cols">
+      <div class="si-card">
+        <h3>4. පාරිභෝගිකයාට පෙනෙන දේ</h3>
+        <p>රෝහල් අරමුදල් පුවරුව සජීවීව යාවත්කාලීන වේ — මුළු පරිත්‍යාග මුදල සහ පරිත්‍යාගිකයන්ගේ නම්. තම මිලදී ගැනීමට අදාළ පෞද්ගලික රිසිට්පතේ, Apeksha රෝහලට ගිය නිශ්චිත මුදල දැකිය හැක. දුරකථන අංක කිසිවිටෙකත් ප්‍රසිද්ධියේ නොපෙන්වයි.</p>
+      </div>
+      <div class="si-card">
+        <h3>5. මුදල් ගෙවීම් සහ රෝහල</h3>
+        <p>දැනට මුදල් සහ බැංකු මාර්ගයෙන් ගෙවීම් ක්‍රියාත්මකයි; කාර්ය මණ්ඩලය ලැබීම තහවුරු කර ලෙජරයට එක් කරයි. අන්තර්ජාල ගෙවීම් ද්වාරය (Payments.lk) ඊළඟ අදියරේදී එකතු වේ. එවිට ගෙවීම තහවුරු වූ වහාම පරිත්‍යාගය ස්වයංක්‍රීයව ලියාපදිංචි වේ. සියලු පරිත්‍යාග Apeksha රෝහලේ පරිත්‍යාග ගිණුමට තැන්පත් කර මාසිකව ලෙජරය සමඟ සසඳා බැලේ.</p>
+      </div>
+    </div>
+
+    <div class="si-close">
+      <div class="sc-main">එක් පැකට්ටුවක් → එක් QR කේතයක් → එක් පරිත්‍යාගයක් → Apeksha රෝහල.</div>
+      <div class="sc-sub">සෑම විකුණුමක්ම රෝහලට ගිය මුදලක් — සහ පාරිභෝගිකයාට පෙනෙන වාර්තාවක්.</div>
+    </div>
+  </div>
+  <div class="foot"><span>Basnayaka Vermigrow · QR සහ පරිත්‍යාග පද්ධතිය</span><span class="pg">14</span></div>
+</section>
+
+</body>
+</html>

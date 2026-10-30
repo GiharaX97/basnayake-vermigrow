@@ -46,6 +46,15 @@ db/*.bak
 db/*.backup-*
 db/verify.db
 
+# No SQLite file is ever source. This covers deck-demo.db and any future copy;
+# the live DB holds customer phone numbers and orders. See the block at the end.
+db/*.db
+
+# Scratch files dumped while probing a gateway or a browser session. `.cookies.tmp`
+# has held a live admin session cookie before, so none of this belongs in history.
+*.tmp
+*.tmp.json
+
 # Scratch dirs and dumped agent transcripts. Both have turned up untracked in
 # the repo root before; nothing here is source.
 .tmp-*/
