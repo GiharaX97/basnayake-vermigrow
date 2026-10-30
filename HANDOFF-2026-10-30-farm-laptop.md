@@ -16,7 +16,7 @@ GitHub is the remaining step and needs your own credentials (§3).
 | Where | State |
 |---|---|
 | **Live site** | https://www.basnayakavermigrow.lk — HTTP 200, systemd `basnayaka` active |
-| **VPS app HEAD** | `3a6f397` (QR sticker sheets) — **prod is 2 commits behind local** |
+| **VPS app HEAD** | `036c092` — **DEPLOYED 2026-10-30**, verified: service active, home/donations 200, two new tables present, card payments correctly refuse (503) |
 | **Local repo** | `H:\My_Projects\basnayake-glm5.2`, branch `main`, **all work committed** (see below), working tree clean apart from gitignored files |
 | **GitHub** | **PUSHED 2026-10-30** to `GiharaX97/basnayake-vermigrow` (`personal`), `3a6f397..cb4dbe0`. The repo moved from `Giharax97` → **`GiharaX97`** (capital X) |
 | **Committed, not deployed** | Payments.lk card payments (Phase 5) + "Apeksha Hospital" copy changes |
@@ -31,8 +31,9 @@ still need to be copied by hand (§6).
 
 ## 1. What was done in the last session (payments Phase 5 — card payments)
 
-Payments.lk hosted checkout is **implemented, committed (`c0d5182`) and demo-tested locally**,
-but not pushed and not deployed. `PAYMENTS-PLAN.md` said "Phase 5 not started"; that is now stale — Phase 5 is ~80% done.
+Payments.lk hosted checkout is **implemented, committed (`c0d5182`), pushed and deployed to
+prod** (2026-10-30), and demo-tested locally. It is inert in prod until the `PAYMENTS_*` keys are
+added. `PAYMENTS-PLAN.md` said "Phase 5 not started"; that is now stale — Phase 5 is ~80% done.
 
 ### New files (committed in `c0d5182`)
 
@@ -71,7 +72,7 @@ but not pushed and not deployed. `PAYMENTS-PLAN.md` said "Phase 5 not started"; 
 1. **Admin reconciliation UI** — `src/app/admin/orders/[orderRef]/page.tsx` is untouched. Plan step 9: show intent (checkout/payment ids, fee/net, card scheme+last4), a **Reconcile** action (`GET /v1/checkouts/{id}`), and a **stuck-intent list** on `/admin/orders`. Silent failure is the real danger: a misconfigured webhook means money succeeds at the provider while orders stay pending here.
 2. **`scripts/e2e-payments.mjs`** — not created. The test plan is in `PAYMENTS-PLAN.md` §5 ("Test plan"). Mirror `scripts/e2e.mjs` + `scripts/simulate-payment.mjs`; run over a DB copy, never `custom.db`.
 3. **Real sandbox pass** — needs a Payments.lk account application submitted at `app.payments.lk` (owner action; sandbox checkouts do not work before that). No `PAYMENTS_*` keys exist anywhere yet.
-4. **Push + deploy** — the feature is committed (`c0d5182`) but not on GitHub and not deployed. Prod is at `3a6f397`, before any of it.
+4. ~~**Push + deploy**~~ — **done 2026-10-30**: pushed to `GiharaX97/basnayake-vermigrow` and deployed to prod at `036c092`. The schema diff against the live DB was `CREATE TABLE`/`CREATE INDEX` only; existing rows untouched.
 5. **Security fixes F01–F19** — status: F02 partially done (installed `next` is **16.4.2**, already ≥ 16.3.8; `sharp` is **0.34.5**, target 0.35.5). F03 remote URL cleaned, but the leaked PAT still needs rotation at GitHub. F01 (login throttle/lockout), F04, F05, F06 and the rest are **not done**. See `PAYMENTS-PLAN.md` §3.
 
 ---
@@ -84,7 +85,8 @@ but not pushed and not deployed. `PAYMENTS-PLAN.md` said "Phase 5 not started"; 
 - **App dir:** `/var/www/basnayakavermigrow/app` (git clone, HEAD `3a6f397`, tracked & clean).
 - **DB:** `/var/www/basnayakavermigrow/db/custom.db` (SQLite).
 - **Uploads:** `/var/www/basnayakavermigrow/uploads` (Caddy serves `/uploads/*`).
-- **Env file:** `/etc/basnayakavermigrow.env` (root-only). Vars present: `NODE_ENV HOSTNAME PORT DATABASE_URL UPLOADS_DIR NEXTAUTH_URL NEXTAUTH_SECRET SMS_PROVIDER TEXTLK_API_TOKEN TEXTLK_SENDER_ID SMS_COUNTRY_CODE SMS_DAILY_CAP SMS_AUTOSEND`. **No `PAYMENTS_*` keys — card payments are off in prod.**
+- **Env file:** `/etc/basnayakavermigrow.env` (root-only). Vars present: `NODE_ENV HOSTNAME PORT DATABASE_URL UPLOADS_DIR NEXTAUTH_URL NEXTAUTH_SECRET SMS_PROVIDER TEXTLK_API_TOKEN TEXTLK_SENDER_ID SMS_COUNTRY_CODE SMS_DAILY_CAP SMS_AUTOSEND`. **No `PAYMENTS_*` keys — card payments are off in prod** (`POST /api/payments/start` → 503 "Card payment is not available on this site yet.").
+- **Deployed 2026-10-30:** HEAD `036c092`; `PaymentIntent` + `PaymentWebhookEvent` created (0 rows each); existing data untouched (Sale=2, FundEntry=2, Payment=1); `/` and `/donations` return 200; "Apeksha Hospital" copy is live.
 - **Service:** `systemctl status basnayaka` (User=www-data, WorkingDirectory=`…/app/.next/standalone`, `ExecStart node server.js`, port 3001 behind Caddy).
 - **Prod data (counts only, 2026-10-30):** Sale=2, Pack=1, Payment=1, FundEntry=2, OrderEvent=1, SmsEvent=0, Donor=2, Product=1. **The client is now using the live system — the DB is no longer empty. Treat it as real customer data.**
 - **Deploy script:** `sudo /usr/local/bin/deploy-vermigrow` — pull → env → `npm ci --include=dev` → `prisma generate` → `prisma db push` → `npm run build` → restart → verify. It self-resyncs from the repo copy.
@@ -102,8 +104,8 @@ but not pushed and not deployed. `PAYMENTS-PLAN.md` said "Phase 5 not started"; 
 
 | Copy | Commit | Notes |
 |---|---|---|
-| Desktop working tree | `main` @ the docs commit | **The only copy of the new commits** |
-| VPS `/var/www/.../app` | `3a6f397` | Deployed, running |
+| Desktop working tree | `main` @ `036c092` | pushed |
+| VPS `/var/www/.../app` | `036c092` | **Deployed 2026-10-30**, running |
 | `origin` GitHub (`basnayakavermigrowdev-alt/basnayaka-vermigrow`) | behind `3a6f397` | Push needs credentials |
 | `personal` GitHub (`GiharaX97/basnayake-vermigrow`) | **`cb4dbe0`** | Pushed 2026-10-30 (repo moved: `Giharax97` → `GiharaX97`) |
 
