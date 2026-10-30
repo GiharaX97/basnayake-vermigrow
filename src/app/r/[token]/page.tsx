@@ -162,6 +162,7 @@ async function loadView(token: string): Promise<View | null> {
 const METHOD_LABELS: Record<string, string> = {
   cash: 'Cash',
   bank_transfer: 'Bank transfer',
+  card: 'Card',
   reload: 'Reload',
   other: 'Other',
 }
@@ -187,12 +188,12 @@ function Panel({ children }: { children: React.ReactNode }) {
   return <div className="rounded-xl border bg-card p-5 space-y-3">{children}</div>
 }
 
-/** The amount that reached the community fund, shown the same way everywhere. */
+/** The amount that reached Apeksha Hospital, shown the same way everywhere. */
 function FundLine({ amount }: { amount: number }) {
   if (amount <= 0) return null
   return (
     <Row
-      label="To the community fund"
+      label="To Apeksha Hospital"
       value={
         <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
           {formatLkr(amount)}
@@ -262,7 +263,7 @@ function Body({ view, token }: { view: View; token: string }) {
           </Panel>
           {view.status !== 'paid' && view.donation > 0 && (
             <p className="text-xs text-muted-foreground">
-              The fund total updates once we have received your payment — that keeps the
+              The donation total updates once we have received your payment — that keeps the
               public wall honest.
             </p>
           )}
@@ -287,12 +288,12 @@ function Body({ view, token }: { view: View; token: string }) {
       <>
         <h1 className="text-2xl font-semibold tracking-tight">Thank you for your pack</h1>
         <p className="mt-2 text-muted-foreground">
-          Your pack of {view.product} added to the community fund.
+          Your pack of {view.product} added to Apeksha Hospital.
         </p>
         <Panel>
           <Row label="Pack code" value={<span className="font-mono font-semibold">{view.code}</span>} />
           <Row label="Product" value={view.product} />
-          <Row label="Added to the fund" value={formatLkr(view.amount)} strong />
+          <Row label="Added to Apeksha Hospital" value={formatLkr(view.amount)} strong />
           <Row label="Status" value={PACK_STATUS_LABELS[view.status] ?? view.status} />
           <Row label="Date" value={view.at.toLocaleDateString('en-LK', { dateStyle: 'medium' })} />
         </Panel>
@@ -307,7 +308,7 @@ function Body({ view, token }: { view: View; token: string }) {
           {view.name ? `Thank you, ${view.name}` : 'Thank you for your gift'}
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Your gift went straight to the community fund. This is your record of it.
+          Your gift went straight to Apeksha Hospital. This is your record of it.
         </p>
         <Panel>
           <Row label="Amount" value={formatLkr(view.amount)} strong />
@@ -359,6 +360,9 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
   const { token } = await params
   const view = await loadView(token)
   if (!view) notFound()
+  // notFound() is typed as void in this Next version, so the null branch is
+  // narrowed explicitly rather than relying on the return type being `never`.
+  const receipt = view as View
 
   return (
     // A deliberately minimal shell rather than the site's <Navbar/>: that navbar
@@ -378,13 +382,13 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
       </header>
 
       <main className="mx-auto max-w-2xl px-4 sm:px-6 py-10">
-        <Body view={view} token={token} />
+        <Body view={receipt} token={token} />
 
         <p className="mt-10 border-t pt-6 text-xs text-muted-foreground">
           Keep this link private — it is your personal record. If you need help, call us and
           quote your reference. You can also{' '}
           <a href="/donations" className="text-emerald-700 dark:text-emerald-400 hover:underline">
-            see the community fund
+            see the donation wall
           </a>
           .
         </p>

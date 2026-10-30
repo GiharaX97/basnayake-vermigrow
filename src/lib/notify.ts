@@ -203,7 +203,7 @@ export interface MessageData {
   total?: number | null
   amount?: number | null
   /**
-   * What this purchase put into the community fund — the figure the customer
+   * What this purchase put into Apeksha Hospital — the figure the customer
    * actually asked about. Distinct from `amount`, which for a service sale is the
    * seat price and only coincides with the donation while nothing else is
    * configured.
@@ -265,7 +265,7 @@ function renderRawMessage(template: Template, data: MessageData): string {
         `${hi(name)}we received your payment` +
         (total ? ` of ${formatLkr(total)}` : '') +
         `. Thank you!` +
-        (statesDonation ? ` ${formatLkr(donation as number)} of it went to the community fund.` : '') +
+        (statesDonation ? ` ${formatLkr(donation as number)} of it went to Apeksha Hospital.` : '') +
         (passes
           ? ` Your ${passes === 1 ? 'workshop pass is' : `${passes} workshop passes are`} ready — open ${url} and enter the reference we sent when you booked.`
           : ` Your receipt: ${url}`) +
@@ -310,24 +310,24 @@ function renderRawMessage(template: Template, data: MessageData): string {
       // The total is its own sentence rather than a clause glued on with "and".
       // A product whose catalog price is 0 (nothing configured yet) yields
       // total 0, and the glued shape then read "…buying from us. and LKR 60 of
-      // it went to the community fund." — a dangling connective in a message a
+      // it went to Apeksha Hospital." — a dangling connective in a message a
       // real customer receives. Two sentences work whether or not there is a
       // total to state.
       return (
         `${hi(name)}thank you for buying from us.` +
         (total ? ` Your purchase was ${formatLkr(total)}.` : '') +
-        ` ${formatLkr(amount ?? 0)} of it went to the community fund. Receipt: ${url}`
+        ` ${formatLkr(amount ?? 0)} of it went to Apeksha Hospital. Receipt: ${url}`
       )
 
     case 'scan_thanks':
       return (
-        `${hi(name)}thank you! Your pack added ${formatLkr(amount ?? 0)} to the community fund. ` +
+        `${hi(name)}thank you! Your pack added ${formatLkr(amount ?? 0)} to Apeksha Hospital. ` +
         `See the wall: ${url}`
       )
 
     case 'gift_thanks':
       return (
-        `${hi(name)}thank you for your gift of ${formatLkr(amount ?? 0)} to the community fund. ` +
+        `${hi(name)}thank you for your gift of ${formatLkr(amount ?? 0)} to Apeksha Hospital. ` +
         `Your receipt: ${url}`
       )
 

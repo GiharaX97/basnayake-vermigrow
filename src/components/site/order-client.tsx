@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Copy,
+  CreditCard,
   HeartHandshake,
   MapPin,
   Minus,
@@ -47,6 +48,8 @@ interface PlacedOrder {
    * is nothing to show. See src/lib/notify.ts.
    */
   receiptToken: string | null
+  /** Whether the server is willing to start a card payment for this order. */
+  cardPayment: boolean
 }
 
 export function OrderClient({ initialItems }: { initialItems: CatalogItem[] }) {
@@ -168,6 +171,7 @@ export function OrderClient({ initialItems }: { initialItems: CatalogItem[] }) {
         total: body.total,
         donationTotal: body.donationTotal,
         receiptToken: body.receiptToken ?? null,
+        cardPayment: body.cardPayment === true,
       })
       setCart({})
       await refreshCatalog()
@@ -197,7 +201,7 @@ export function OrderClient({ initialItems }: { initialItems: CatalogItem[] }) {
             <p className="mt-4 text-base sm:text-lg text-emerald-100 max-w-2xl">
               Place your order here and we will call you to confirm. Pay in cash at
               the store or by bank transfer — and a share of every item and every
-              seat goes to our community fund.
+              seat goes to Apeksha Hospital.
             </p>
           </div>
         </section>
@@ -391,7 +395,7 @@ function ItemCard({
         {item.donationPerUnit > 0 && (
           <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
             <HeartHandshake className="size-3.5" />
-            {formatLkr(item.donationPerUnit)} per {item.kind === 'service' ? 'seat' : 'unit'} to the fund
+            {formatLkr(item.donationPerUnit)} per {item.kind === 'service' ? 'seat' : 'unit'} to Apeksha Hospital
           </p>
         )}
       </div>
@@ -523,7 +527,7 @@ function OrderForm({
             <div className="flex items-center justify-between text-sm text-emerald-700 dark:text-emerald-400">
               <span className="inline-flex items-center gap-1.5">
                 <HeartHandshake className="size-4" />
-                To the community fund
+                To Apeksha Hospital
               </span>
               <span className="font-semibold tabular-nums">{formatLkr(donationTotal)}</span>
             </div>
@@ -682,8 +686,10 @@ function PlacedPanel({ placed, onAnother }: { placed: PlacedOrder; onAnother: ()
         Thank you — your order is with us
       </h2>
       <p className="mt-3 text-muted-foreground">
-        We will call you shortly to confirm and arrange payment. Please keep your
-        reference handy.
+        {placed.cardPayment
+          ? 'Pay securely by card now, or pay in cash at the store — either way we will call you to confirm.'
+          : 'We will call you shortly to confirm and arrange payment.'}{' '}
+        Please keep your reference handy.
       </p>
 
       <div className="mt-8 rounded-xl border bg-card p-6 text-left space-y-3">
@@ -699,7 +705,7 @@ function PlacedPanel({ placed, onAnother }: { placed: PlacedOrder; onAnother: ()
           <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400">
             <span className="text-sm inline-flex items-center gap-1.5">
               <HeartHandshake className="size-4" />
-              Going to the community fund
+              Going to Apeksha Hospital
             </span>
             <span className="font-semibold tabular-nums">{formatLkr(placed.donationTotal)}</span>
           </div>
@@ -708,8 +714,10 @@ function PlacedPanel({ placed, onAnother }: { placed: PlacedOrder; onAnother: ()
 
       {placed.receiptToken && <ReceiptLink token={placed.receiptToken} />}
 
+      {placed.cardPayment && <CardPayButton orderRef={placed.orderRef} />}
+
       <p className="mt-6 text-xs text-muted-foreground">
-        The fund total only updates once we have received your payment — that keeps
+        The donation total only updates once we have received your payment — that keeps
         the public wall honest.
       </p>
 
@@ -725,5 +733,59 @@ function PlacedPanel({ placed, onAnother }: { placed: PlacedOrder; onAnother: ()
         </Button>
       </div>
     </section>
+  )
+}
+
+/**
+ * "Pay by card" — sends the order REFERENCE only.
+ *
+ * The server re-reads the total from the database and opens the hosted
+ * Payments.lk checkout. No price, amount or status travels from this component,
+ * so a tampered page can change nothing. The customer's card details never touch
+ * this site: the provider's page takes them, and only a signed webhook can mark
+ * the order paid.
+ */
+function CardPayButton({ orderRef }: { orderRef: string }) {
+  const [busy, setBusy] = React.useState(false)
+
+  const pay = async () => {
+    setBusy(true)
+    try {
+      const res = await fetch('/api/payments/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderRef }),
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok || typeof body?.url !== 'string') {
+        toast.error(body?.error ?? 'Could not start the card payment.')
+        return
+      }
+      // Hosted checkout: the customer leaves this site entirely. The return URL
+      // only DISPLAYS state; it never settles anything.
+      window.location.href = body.url
+    } catch {
+      toast.error('Network error. Please check your connection and try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-8 rounded-xl border border-emerald-500/30 bg-emerald-50/50 p-5 dark:bg-emerald-950/20">
+      <Button
+        onClick={pay}
+        disabled={busy}
+        className="w-full rounded-full bg-emerald-600 hover:bg-emerald-500"
+      >
+        <CreditCard className="size-4" />
+        {busy ? 'Opening secure checkout…' : 'Pay by card now'}
+      </Button>
+      <p className="mt-3 text-xs text-muted-foreground">
+        You will be taken to Payments.lk&apos;s secure checkout. Your card details are never
+        entered on, or stored by, this site. Your order is marked paid only after the
+        payment is confirmed.
+      </p>
+    </div>
   )
 }

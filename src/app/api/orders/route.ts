@@ -11,6 +11,7 @@ import {
   generateOrderRef,
 } from '@/lib/orders'
 import { queueMessage, linkExpiry, autoDeliver } from '@/lib/notify'
+import { PAYMENTS_MIN_CENTS, cardPaymentEnabled } from '@/lib/payments-lk'
 import { z } from 'zod'
 
 /**
@@ -265,6 +266,11 @@ export async function POST(request: Request) {
         // is already on screen — showing the link is what makes "keep your
         // reference handy" a promise with a mechanism behind it.
         receiptToken: queued.status === 'no_phone' ? null : queued.token,
+        // Whether to offer "Pay by card". True only when the gateway is
+        // configured (or demo mode is on) AND the server-derived total can
+        // actually go through the provider's minimum. The start route re-checks
+        // both — this is a UI hint, never an authority.
+        cardPayment: cardPaymentEnabled() && Math.round(total * 100) >= PAYMENTS_MIN_CENTS,
       }
     })
   }

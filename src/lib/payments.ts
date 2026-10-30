@@ -3,10 +3,10 @@ import { z } from 'zod'
 /**
  * Shared vocabulary for money-receiving events.
  *
- * Every figure here is offline money — cash in hand or a bank transfer. Nothing
- * in this codebase talks to a payment gateway, and `next.config.ts` sends
- * `Permissions-Policy: payment=()` site-wide. The site *requests*; an admin
- * confirms receipt and records how it arrived.
+ * Cash in hand and bank transfers are recorded by an admin. `card` is written by
+ * the Payments.lk webhook (src/lib/payments-lk.ts) after the provider confirms
+ * the money — a card payment never bypasses the same settle path, so the ledger
+ * cannot tell the two apart by accident.
  */
 
 /**
@@ -19,7 +19,7 @@ import { z } from 'zod'
  * Statuses and methods are plain strings validated here rather than Prisma
  * enums: the SQLite connector does not support enums.
  */
-export const paymentMethodSchema = z.enum(['cash', 'bank_transfer', 'reload', 'other'])
+export const paymentMethodSchema = z.enum(['cash', 'bank_transfer', 'card', 'reload', 'other'])
 export type PaymentMethod = z.infer<typeof paymentMethodSchema>
 
 export const PAYMENT_METHODS = paymentMethodSchema.options
@@ -27,6 +27,7 @@ export const PAYMENT_METHODS = paymentMethodSchema.options
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: 'Cash in hand',
   bank_transfer: 'Bank transfer',
+  card: 'Card (Payments.lk)',
   reload: 'Phone reload',
   other: 'Other',
 }

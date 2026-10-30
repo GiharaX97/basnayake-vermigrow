@@ -170,7 +170,7 @@ export function DonationsClient() {
         }
         if (body.status === 'sold') {
           toast.success(
-            `Pack verified — ${formatLkr(body.donation ?? 0)} added to the fund. Thank you!`
+            `Pack verified — ${formatLkr(body.donation ?? 0)} added to the Apeksha Hospital fund. Thank you!`
           )
         } else if (body.status === 'redeemed') {
           // A workshop seat: scanning confirms attendance, it does not add money.
@@ -253,8 +253,8 @@ export function DonationsClient() {
             )}
             <p className="mt-4 text-base sm:text-lg text-emerald-100 max-w-xl mx-auto">
               Every pack of Basnayaka Vermigrow sold at our store and partner
-              retailers contributes to this fund. Grown in the soil, given back
-              to the community.
+              retailers contributes to Apeksha Hospital. Grown in the soil,
+              given back to the community.
             </p>
             {data && data.donorCount > 0 && (
               <p className="mt-6 inline-flex items-center gap-2 text-sm text-emerald-100/90">
@@ -335,7 +335,7 @@ export function DonationsClient() {
                 </li>
                 <li className="flex gap-3">
                   <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">3</span>
-                  <span>LKR 20 from your pack goes into the fund, and your name joins the wall.</span>
+                  <span>LKR 20 from your pack goes to Apeksha Hospital, and your name joins the wall.</span>
                 </li>
               </ol>
               <p className="flex items-start gap-2 text-xs text-muted-foreground pt-1 border-t">

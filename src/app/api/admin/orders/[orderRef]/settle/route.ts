@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
-import { recordFundEntry } from '@/lib/fund'
 import { settleSchema, OrderStateError } from '@/lib/payments'
-import { generatePackCodes } from '@/lib/pack-codes'
 import { queueMessage, autoDeliver } from '@/lib/notify'
-import { cancelOrderTx } from '@/lib/order-actions'
+import { cancelOrderTx, settleOrderTx } from '@/lib/order-actions'
 
 /**
  * Settle a customer order: either take the money ('pay') or call it off
@@ -41,123 +39,18 @@ export async function POST(
       const { method, reference, receivedBy, note } = parsed.data
 
       const result = await prisma.$transaction(async (tx) => {
-        const lines = await tx.sale.findMany({
-          where: { orderRef, status: 'pending' },
-          include: { product: { select: { kind: true } } },
+        // The status flip, vouchers, ledger row, receipt, timeline entry and the
+        // customer's message all live in settleOrderTx — shared with the
+        // Payments.lk webhook, so a card payment and a manual one cannot drift
+        // apart. See src/lib/order-actions.ts.
+        return settleOrderTx(tx, {
+          orderRef,
+          method,
+          reference,
+          receivedBy,
+          note,
+          actor: 'admin',
         })
-        if (lines.length === 0) {
-          throw new OrderStateError(
-            'This order has no unpaid lines left — it was already settled or cancelled.'
-          )
-        }
-
-        const now = new Date()
-        let orderTotal = 0
-        let donationTotal = 0
-        let vouchers = 0
-
-        for (const line of lines) {
-          await tx.sale.update({
-            where: { id: line.id },
-            data: { status: 'paid', paidAt: now, paymentMethod: method },
-          })
-
-          // One voucher per seat, issued at payment — this is the QR the
-          // customer shows at the workshop. Minted here rather than at booking
-          // so an unpaid order never produces scannable codes.
-          if (line.product.kind === 'service') {
-            for (const code of generatePackCodes(line.quantity)) {
-              await tx.pack.create({
-                data: {
-                  code,
-                  productId: line.productId,
-                  // ZERO ON PURPOSE. The donation for a booked seat is carried
-                  // by the Sale line above; a non-zero amount here would count
-                  // the same seat twice into the public fund. Vouchers also
-                  // never reach status='sold' (they go issued -> redeemed), so
-                  // there are two independent reasons they cannot double-count.
-                  // See the Pack model comment — do not "fix" this.
-                  donationAmount: 0,
-                  status: 'issued',
-                  saleId: line.id,
-                  orderRef,
-                  holderName: line.customerName,
-                  holderPhone: line.customerPhone,
-                },
-              })
-              vouchers++
-            }
-          }
-          // The ledger write rides in the same transaction as the status flip,
-          // so an order can never read as paid without its donation counted —
-          // and never the reverse. recordFundEntry also upserts on
-          // (channel, refId), so a double-clicked "Mark paid" cannot count twice
-          // even if both requests got past the status check above.
-          await recordFundEntry(tx, {
-            channel: 'sale',
-            refId: line.id,
-            amount: line.donationAmount,
-          })
-          orderTotal += line.unitPrice * line.quantity
-          donationTotal += line.donationAmount
-        }
-
-        // ONE receipt for the whole order. A 3-line order paid by a single bank
-        // transfer is one money-receiving event; recording three rows would not
-        // reconcile against the statement. saleId is set only when the order
-        // happens to have a single line.
-        const payment = await tx.payment.create({
-          data: {
-            amount: orderTotal,
-            method,
-            reference,
-            receivedBy,
-            note,
-            orderRef,
-            saleId: lines.length === 1 ? lines[0].id : null,
-          },
-        })
-
-        // The order's own timeline entry. Written in the same transaction as the
-        // money, so the history can never claim a settlement that did not happen
-        // — nor miss one that did. Fulfilment stays where it is (null = New):
-        // taking the money is not the same as confirming the order, and the two
-        // are deliberately separate moves.
-        await tx.orderEvent.create({
-          data: { orderRef, type: 'settled', actor: 'admin', note },
-        })
-
-        // Tell the customer the money landed — and, for a service order, that
-        // their passes are ready. Queued inside the same transaction as the
-        // status flip and the ledger write, so a message can never contradict the
-        // money.
-        //
-        // No expiresAt and no new link: `refType`/`refId` are the same pair the
-        // order-placed message used, so ensureLink returns THAT link and the
-        // customer is given the one URL they already hold rather than a second
-        // working one. A double-clicked "Mark paid" cannot queue a duplicate —
-        // the status check above rejects it first, and @@unique([linkId,
-        // template]) rejects it even if both requests got through.
-        await queueMessage(tx, {
-          refType: 'order',
-          refId: orderRef,
-          template: 'order_paid',
-          // `donation` is the whole order's contribution, not one line's — the
-          // same figure recordFundEntry just wrote to the ledger, and the answer
-          // to the question the customer actually asked. `total` goes with it:
-          // "we received your payment" names no amount otherwise, and the
-          // customer has no way to check the figure against what they handed over.
-          data: {
-            name: lines[0].customerName,
-            passes: vouchers,
-            donation: donationTotal,
-            total: orderTotal,
-          },
-          toName: lines[0].customerName,
-          toPhone: lines[0].customerPhone,
-        })
-
-        return { lines: lines.length, orderTotal, donationTotal, vouchers, paymentId: payment.id }
       })
 
       // After the commit — the gateway must not hold the order's write lock, and

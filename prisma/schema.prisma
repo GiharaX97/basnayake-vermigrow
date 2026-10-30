@@ -440,3 +440,63 @@ model SmsEvent {
   @@unique([eventType, providerMessageId])
   @@index([createdAt])
 }
+
+// One card checkout attempt for one online order (Payments.lk).
+//
+// A NEW table on purpose: the unique indexes below are created inside
+// CREATE TABLE, which `prisma db push` applies without the data-loss gate that
+// would abort if a unique were added to an existing table. Nothing on Sale or
+// Payment changed shape — the gateway's state lives here, next to the order it
+// belongs to, never inside the money columns.
+//
+// `orderRef` is UNIQUE: one order has at most one card attempt at a time. Every
+// field the provider returns is stored (checkoutId, paymentId, fee/net, card
+// scheme + last4 only) so an admin can reconcile without leaving the page.
+// `mode` is the provider's mode for THIS checkout ('test' | 'live'); a webhook
+// whose mode disagrees with it is refused, so a sandbox event can never settle a
+// live order.
+model PaymentIntent {
+  id             String    @id @default(cuid())
+  orderRef       String    @unique
+  checkoutId     String?   @unique
+  paymentId      String?   @unique
+  mode           String // 'test' | 'live'
+  amountCents    Int // integer LKR cents, derived server-side from the Sale rows
+  status         String    @default("open") // 'open' | 'succeeded' | 'failed' | 'expired'
+  //                 | 'cancelled' (customer backed out) | 'error' (provider never answered)
+  checkoutUrl    String?
+  expiresAt      DateTime?
+  failureMessage String?
+  feeCents       Int?
+  netCents       Int?
+  cardScheme     String?
+  cardLast4      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, createdAt])
+}
+
+// Every webhook delivery, verbatim, deduplicated by the provider's event id.
+//
+// @@unique([eventId]) is the idempotency guard — a retried delivery (Payments.lk
+// retries 1m/5m/30m/2h/6h/12h) trips it and is answered 200 without the
+// settlement running twice. The row and the effect it describes are written in
+// ONE transaction, so a failure leaves no row behind to block the retry.
+//
+// `rawPayload` keeps the whole body: when a payment is mishandled the question is
+// always "what exactly did they send?", and re-deriving that from parsed columns
+// never answers it. `note` records what we chose to do, including "nothing".
+model PaymentWebhookEvent {
+  id          String    @id @default(cuid())
+  eventId     String    @unique
+  eventType   String // 'payment.succeeded' | 'payment.failed' | 'checkout.expired'
+  mode        String // 'test' | 'live'
+  orderRef    String?
+  rawPayload  String
+  note        String?
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([createdAt])
+}

@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client'
-import { cancelFundEntry } from '@/lib/fund'
-import { OrderStateError } from '@/lib/payments'
+import { cancelFundEntry, recordFundEntry } from '@/lib/fund'
+import { OrderStateError, type PaymentMethod } from '@/lib/payments'
+import { generatePackCodes } from '@/lib/pack-codes'
 import { queueMessage, type QueueOutcome } from '@/lib/notify'
 import {
   FULFILMENT_ORDER,
@@ -134,6 +135,153 @@ export async function setStageTx(
 /** Position in the pipeline. Shared by the revert test and the transition list. */
 function rank(status: FulfilmentStatus): number {
   return FULFILMENT_ORDER.indexOf(status)
+}
+
+/**
+ * Record that an order's money arrived, and everything that must move with it.
+ *
+ * Extracted from the admin settle route so the Payments.lk webhook settles an
+ * order through the EXACT same transactional path as the "Mark paid" button.
+ * That is the point: a card payment must never be able to write a state the
+ * manual path cannot, and a second, subtly different settle is how an order ends
+ * up paid without a ledger row.
+ *
+ * Rules preserved verbatim:
+ *
+ *  - Every pending line flips to paid, with `paymentMethod` recording HOW the
+ *    money arrived ('card' for a gateway payment).
+ *  - A service line mints one voucher per seat, at `donationAmount: 0` — the
+ *    seat's donation is carried by the Sale line, and a non-zero voucher would
+ *    count the same seat twice into the public fund. See the Pack model comment.
+ *  - The ledger write rides in the same transaction as the status flip, so an
+ *    order can never read as paid without its donation counted, nor the reverse.
+ *    `recordFundEntry` upserts on (channel, refId), so a replay cannot double-count.
+ *  - ONE receipt row per order, because a 3-line order is still one money event.
+ *  - The customer's message is queued inside the transaction; the caller sends
+ *    it after the commit via autoDeliver.
+ *  - Fulfilment is NOT touched. Taking money is not confirming the order.
+ *
+ * This runs INSIDE the caller's transaction. It returns what the customer was
+ * told so the caller can log or display the same figures.
+ */
+export async function settleOrderTx(
+  tx: Client,
+  {
+    orderRef,
+    method,
+    reference,
+    receivedBy,
+    note,
+    actor = 'admin',
+  }: {
+    orderRef: string
+    method: PaymentMethod
+    reference?: string | null
+    receivedBy?: string | null
+    note?: string | null
+    actor?: Actor
+  }
+): Promise<{
+  lines: number
+  orderTotal: number
+  donationTotal: number
+  vouchers: number
+  paymentId: string
+}> {
+  const lines = await tx.sale.findMany({
+    where: { orderRef, status: 'pending' },
+    include: { product: { select: { kind: true } } },
+  })
+  if (lines.length === 0) {
+    throw new OrderStateError(
+      'This order has no unpaid lines left — it was already settled or cancelled.'
+    )
+  }
+
+  const now = new Date()
+  let orderTotal = 0
+  let donationTotal = 0
+  let vouchers = 0
+
+  for (const line of lines) {
+    await tx.sale.update({
+      where: { id: line.id },
+      data: { status: 'paid', paidAt: now, paymentMethod: method },
+    })
+
+    // One voucher per seat, issued at payment — this is the QR the customer
+    // shows at the workshop. Minted here rather than at booking so an unpaid
+    // order never produces scannable codes.
+    if (line.product.kind === 'service') {
+      for (const code of generatePackCodes(line.quantity)) {
+        await tx.pack.create({
+          data: {
+            code,
+            productId: line.productId,
+            // ZERO ON PURPOSE — see the Pack model comment and this file's header.
+            donationAmount: 0,
+            status: 'issued',
+            saleId: line.id,
+            orderRef,
+            holderName: line.customerName,
+            holderPhone: line.customerPhone,
+          },
+        })
+        vouchers++
+      }
+    }
+    // The ledger write rides in the same transaction as the status flip, so an
+    // order can never read as paid without its donation counted — and never the
+    // reverse. recordFundEntry also upserts on (channel, refId), so a double-
+    // clicked "Mark paid" or a replayed webhook cannot count twice.
+    await recordFundEntry(tx, {
+      channel: 'sale',
+      refId: line.id,
+      amount: line.donationAmount,
+    })
+    orderTotal += line.unitPrice * line.quantity
+    donationTotal += line.donationAmount
+  }
+
+  // ONE receipt for the whole order. `saleId` is set only when the order happens
+  // to have a single line; a multi-line order settled by one card charge must
+  // reconcile against the processor's statement as one row.
+  const payment = await tx.payment.create({
+    data: {
+      amount: orderTotal,
+      method,
+      reference: reference ?? null,
+      receivedBy: receivedBy ?? null,
+      note: note ?? null,
+      orderRef,
+      saleId: lines.length === 1 ? lines[0].id : null,
+    },
+  })
+
+  // The order's own timeline entry, in the same transaction as the money.
+  await tx.orderEvent.create({
+    data: { orderRef, type: 'settled', actor, note: note ?? null },
+  })
+
+  // Tell the customer the money landed — and, for a service order, that their
+  // passes are ready. Queued inside the same transaction, so a message can never
+  // contradict the money. The same link and refType as order_placed, so the
+  // customer is given the URL they already hold rather than a second one.
+  await queueMessage(tx, {
+    refType: 'order',
+    refId: orderRef,
+    template: 'order_paid',
+    data: {
+      name: lines[0].customerName,
+      passes: vouchers,
+      donation: donationTotal,
+      total: orderTotal,
+    },
+    toName: lines[0].customerName,
+    toPhone: lines[0].customerPhone,
+  })
+
+  return { lines: lines.length, orderTotal, donationTotal, vouchers, paymentId: payment.id }
 }
 
 /**
