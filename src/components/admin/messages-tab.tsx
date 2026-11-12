@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 // The labels live in message-meta.ts because the order detail page renders the
 // same messages and must not name or colour them differently.
 import { STATUS_LABELS, STATUS_STYLES, TEMPLATE_LABELS } from '@/components/admin/message-meta'
+import { SmsSettings } from '@/components/admin/sms-settings'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import {
@@ -265,8 +266,9 @@ export function MessagesTab() {
         </CardContent>
       </Card>
 
-      {/* What the customers said back. Replies that moved an order also appear on
-          that order's own timeline; this panel exists for the ones that went
+      <SmsSettings />
+
+      {/* What the customers said back. Replies that moved an order also appear on          that order's own timeline; this panel exists for the ones that went
           nowhere — an unknown number, a number on two orders, or a text that was
           not a command — which have no order page to be seen on. A webhook that
           silently swallowed those would be worse than having none. Hidden when

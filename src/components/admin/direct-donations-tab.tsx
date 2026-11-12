@@ -38,7 +38,7 @@ import {
 } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
-import { HeartHandshake, Loader2, Plus, Trash2 } from 'lucide-react'
+import { HeartHandshake, Loader2, Plus, Trash2, Check } from 'lucide-react'
 
 interface Donation {
   id: string
@@ -69,6 +69,9 @@ export function DirectDonationsTab({ onSettled }: { onSettled?: () => void }) {
   const [reloadKey, setReloadKey] = useState(0)
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Donation | null>(null)
+  const [receiveTarget, setReceiveTarget] = useState<Donation | null>(null)
+  const [receiveMethod, setReceiveMethod] = useState<PaymentMethod>('bank_transfer')
+  const [receiving, setReceiving] = useState(false)
 
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState<PaymentMethod>('cash')
@@ -142,6 +145,39 @@ export function DirectDonationsTab({ onSettled }: { onSettled?: () => void }) {
     setDeleteTarget(null)
   }
 
+  /**
+   * Turn a public pledge into money. Nothing is counted until this runs: the
+   * public form writes a 'pending' row, and only an admin who has the cash or
+   * has seen the transfer may confirm it.
+   */
+  const receive = async () => {
+    if (!receiveTarget) return
+    setReceiving(true)
+    try {
+      const res = await fetch(`/api/admin/donations/${receiveTarget.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'receive', method: receiveMethod }),
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) {
+        toast.error(body?.error ?? 'Could not confirm this gift')
+        return
+      }
+      toast.success(
+        `${formatLkr(receiveTarget.amount)} added to the fund` +
+          (receiveTarget.donorName ? ' and the Direct gifts wall' : '')
+      )
+      setReceiveTarget(null)
+      refresh()
+      onSettled?.()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setReceiving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground">
@@ -151,6 +187,7 @@ export function DirectDonationsTab({ onSettled }: { onSettled?: () => void }) {
   }
 
   const donations = data?.donations ?? []
+  const pendingDonations = donations.filter((d) => d.status === 'pending')
 
   return (
     <div className="space-y-6">
@@ -255,7 +292,15 @@ export function DirectDonationsTab({ onSettled }: { onSettled?: () => void }) {
           {donations.length === 0 ? (
             <p className="text-sm text-muted-foreground">No gifts recorded yet.</p>
           ) : (
-            <Table>
+            <>
+              {pendingDonations.length > 0 && (
+                <p className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                  {pendingDonations.length} web pledge
+                  {pendingDonations.length === 1 ? '' : 's'} waiting. Nothing is counted for them
+                  until you confirm the money arrived.
+                </p>
+              )}
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
@@ -282,11 +327,28 @@ export function DirectDonationsTab({ onSettled }: { onSettled?: () => void }) {
                     <TableCell>
                       {d.status === 'paid' ? (
                         'Counted'
+                      ) : d.status === 'pending' ? (
+                        <span className="font-medium text-amber-700 dark:text-amber-400">
+                          Awaiting money
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">Removed</span>
                       )}
                     </TableCell>
                     <TableCell>
+                      {d.status === 'pending' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReceiveTarget(d)
+                            setReceiveMethod('bank_transfer')
+                          }}
+                          className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-emerald-500"
+                          aria-label="Confirm this gift was received"
+                        >
+                          <Check className="size-3.5" /> Confirm
+                        </button>
+                      )}
                       {d.status === 'paid' && (
                         <button
                           type="button"
@@ -302,6 +364,7 @@ export function DirectDonationsTab({ onSettled }: { onSettled?: () => void }) {
                 ))}
               </TableBody>
             </Table>
+            </>
           )}
         </CardContent>
       </Card>
@@ -323,6 +386,52 @@ export function DirectDonationsTab({ onSettled }: { onSettled?: () => void }) {
               onClick={() => deleteTarget && remove(deleteTarget)}
             >
               Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={receiveTarget !== null} onOpenChange={(o) => !o && setReceiveTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm this gift?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Confirm that {receiveTarget?.donorName ?? 'the donor'}&rsquo;s gift of{' '}
+              <strong>{formatLkr(receiveTarget?.amount ?? 0)}</strong> has been received. It will be
+              added to the public total and, if a name was given, to the Direct gifts wall.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-1.5 py-2">
+            <Label htmlFor="receive-method">How did the money arrive?</Label>
+            <Select
+              value={receiveMethod}
+              onValueChange={(v) => setReceiveMethod(v as PaymentMethod)}
+            >
+              <SelectTrigger id="receive-method" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAYMENT_METHODS.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {PAYMENT_METHOD_LABELS[m]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Not yet</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-emerald-600 hover:bg-emerald-500"
+              disabled={receiving}
+              onClick={(e) => {
+                // Keep the dialog open while the request runs; `receive` closes
+                // it only after the server has committed the money.
+                e.preventDefault()
+                receive()
+              }}
+            >
+              {receiving ? 'Confirming…' : 'Confirm received'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

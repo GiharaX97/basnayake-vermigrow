@@ -304,6 +304,15 @@ model Donor {
   amount    Float    @default(0)
   packId    String?  @unique
   pack      Pack?    @relation("PackDonor")
+  // Where this wall entry came from. Nullable so `db push` emits a plain
+  // ALTER TABLE ADD COLUMN (a NOT NULL DEFAULT would rewrite the live table).
+  // 'pack' = QR claim, 'sale' = paid order, 'direct' = gift with no purchase.
+  // NULL is the legacy/manual name-only entry and is treated as 'pack'.
+  source    String?
+  // The source row: orderRef for a sale, Donation id for a direct gift, Pack id
+  // for a scan. NOT unique — a unique index on an existing table aborts the
+  // deploy's `db push`; idempotency is enforced by the writer instead.
+  sourceRef String?
   createdAt DateTime @default(now())
 }
 

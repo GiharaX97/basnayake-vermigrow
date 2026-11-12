@@ -977,6 +977,7 @@ function describeDelivery(result: Record<string, unknown>): string {
   const delivery = result.delivery as { sent?: number; held?: number; reason?: string } | undefined
 
   if (message?.status === 'reverted') return 'Moved back — no message sent.'
+  if (message?.status === 'disabled') return 'This message is switched off in SMS settings.'
   if (message?.status === 'no_phone') return 'No mobile on file — nothing was queued.'
   if (message?.status === 'duplicate') return 'The customer already had this message.'
   if (delivery?.sent) return 'Customer texted.'

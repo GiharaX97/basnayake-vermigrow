@@ -258,6 +258,29 @@ export async function settleOrderTx(
     },
   })
 
+  // The buyer's name goes on the public wall, once per order, carrying the
+  // donation this payment actually booked. `Donor.amount` is DISPLAY attribution
+  // only — the FundEntry rows above are what the public total sums, so this can
+  // never double-count. The find-first keeps a retried writer idempotent without
+  // needing a unique index on an existing table.
+  const customerName = lines[0].customerName?.trim()
+  if (donationTotal > 0 && customerName) {
+    const existing = await tx.donor.findFirst({
+      where: { source: 'sale', sourceRef: orderRef },
+      select: { id: true },
+    })
+    if (existing) {
+      await tx.donor.update({
+        where: { id: existing.id },
+        data: { name: customerName, amount: donationTotal },
+      })
+    } else {
+      await tx.donor.create({
+        data: { name: customerName, amount: donationTotal, source: 'sale', sourceRef: orderRef },
+      })
+    }
+  }
+
   // The order's own timeline entry, in the same transaction as the money.
   await tx.orderEvent.create({
     data: { orderRef, type: 'settled', actor, note: note ?? null },
@@ -325,6 +348,11 @@ export async function cancelOrderTx(
   // Whatever the customer asked for is answered by the cancellation itself, so
   // the flag must not outlive it.
   await tx.sale.updateMany({ where: { orderRef }, data: { cancelRequestedAt: null } })
+
+  // The wall entry exists only while the donation does. Delete it rather than
+  // zeroing it: a cancelled order's name must not linger beside a total it no
+  // longer contributes to.
+  await tx.donor.deleteMany({ where: { source: 'sale', sourceRef: orderRef } })
 
   await tx.orderEvent.create({
     data: { orderRef, type: 'cancelled', actor, note: note ?? null },

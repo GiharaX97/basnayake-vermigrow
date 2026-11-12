@@ -40,7 +40,10 @@ export async function GET() {
     prisma.donor.findMany({
       orderBy: { createdAt: 'desc' },
       take: DONOR_LIMIT,
-      select: { id: true, name: true, amount: true, createdAt: true },
+      // `source` is what the wall uses to show direct gifts in their own
+      // section. `sourceRef` is deliberately NOT exposed: for a sale it is the
+      // order reference, which is half of the receipt gate.
+      select: { id: true, name: true, amount: true, createdAt: true, source: true },
     }),
   ])
 

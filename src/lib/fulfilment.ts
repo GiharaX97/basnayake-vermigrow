@@ -69,20 +69,25 @@ export function deriveFulfilment(
 }
 
 /**
- * Where an order may move next, from where it is now.
+ * Where an order may move: anywhere except where it already is.
  *
- * Forward jumps are allowed (a local pickup often goes straight to delivered,
- * and forcing three clicks would only produce dishonest timestamps), but a step
- * BACK is always offered so a mis-click is fixable rather than permanent. Every
- * move writes an `OrderEvent`, so the timeline stays an honest record either way.
+ * A local pickup often goes straight to delivered, and a mis-click may need to
+ * be corrected several steps back. Forcing one click at a time produced nothing
+ * but dishonest intermediate timestamps. Every move writes an `OrderEvent`, so
+ * the timeline stays an honest record either way.
  *
  * Cancelling is not here: it is a money question, handled by the settle route.
  */
 export function allowedStages(current: FulfilmentStatus): FulfilmentStatus[] {
-  const i = stageIndex(current)
-  const out = FULFILMENT_ORDER.slice(i + 1)
-  if (i > 0) out.unshift(FULFILMENT_ORDER[i - 1]!)
-  return out
+  // Every storable stage except the one it is already at — in either direction.
+  // A farm that packs before confirming, or needs to correct a mis-click three
+  // steps back, should not have to walk the pipeline one click at a time. Each
+  // move still writes an OrderEvent, and a step BACK stays silent (setStageTx).
+  // 'new' is not offered: it is the implicit start (`fulfillment IS NULL`), not a
+  // stage anything can be moved to.
+  return FULFILMENT_ORDER.filter(
+    (stage): stage is FulfilmentStage => stage !== 'new' && stage !== current
+  )
 }
 
 /** The one message each forward stage sends. A revert sends nothing. */

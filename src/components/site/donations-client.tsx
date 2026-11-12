@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { HeartHandshake, QrCode, ScanLine, Sprout, Users } from 'lucide-react'
+import { Heart, HeartHandshake, QrCode, ScanLine, Sprout, Users } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,8 @@ interface DonorEntry {
   name: string
   amount: number
   createdAt: string
+  /** 'direct' gifts are shown in their own eye-catching section. */
+  source: string | null
 }
 
 interface DonationsData {
@@ -114,11 +116,70 @@ function DonorWall({ donors }: { donors: DonorEntry[] }) {
   )
 }
 
+/**
+ * Gifts that came with no purchase, kept visually apart from the pack/order
+ * wall. These are the people who went to the donation form and gave directly —
+ * mixing them into the same list would hide the distinction the user asked for.
+ */
+function DirectGiverWall({ donors }: { donors: DonorEntry[] }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 p-[1.5px] shadow-xl shadow-amber-500/20">
+      <div className="rounded-2xl bg-card px-5 py-6 sm:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+            <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-rose-500 text-white shadow">
+              <Heart className="size-5" />
+            </span>
+            Direct gifts
+          </h2>
+          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+            No purchase needed
+          </span>
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          People who gave straight to Apeksha Hospital — no pack, no order.
+        </p>
+        <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+          {donors.map((d) => (
+            <li
+              key={d.id}
+              className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/70 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 dark:border-amber-900/60 dark:from-amber-950/40 dark:to-orange-950/30"
+            >
+              <span className="flex min-w-0 items-center gap-2.5">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-rose-500 text-white">
+                  <Heart className="size-4" />
+                </span>
+                <span className="truncate text-sm font-semibold">{d.name}</span>
+              </span>
+              <span className="flex shrink-0 flex-col items-end">
+                <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-bold text-amber-800 shadow-sm dark:bg-amber-900/60 dark:text-amber-100">
+                  {d.amount > 0 ? formatLkr(d.amount) : 'Gift'}
+                </span>
+                <span className="mt-0.5 text-[11px] text-muted-foreground">
+                  {formatDistanceToNow(new Date(d.createdAt), { addSuffix: true })}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
+}
+
 export function DonationsClient() {
   const [data, setData] = React.useState<DonationsData | null>(null)
   const [name, setName] = React.useState('')
   const [phone, setPhone] = React.useState('')
   const [submitting, setSubmitting] = React.useState(false)
+
+  // Donate-only pledge form. Nothing is charged here — the admin confirms it
+  // once the money is actually in hand (see /api/donations/give).
+  const [donateAmount, setDonateAmount] = React.useState('')
+  const [donorName, setDonorName] = React.useState('')
+  const [donorPhone, setDonorPhone] = React.useState('')
+  const [donorNote, setDonorNote] = React.useState('')
+  const [pledging, setPledging] = React.useState(false)
 
   const load = React.useCallback(async () => {
     try {
@@ -191,6 +252,55 @@ export function DonationsClient() {
 
   const animatedTotal = useAnimatedNumber(data?.total ?? 0)
 
+  // Direct gifts get their own section; everything else (pack claims, paid
+  // orders, legacy name-only entries) stays on the main wall.
+  const directDonors = (data?.donors ?? []).filter((d) => d.source === 'direct')
+  const wallDonors = (data?.donors ?? []).filter((d) => d.source !== 'direct')
+
+  const pledge = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const amount = Number(donateAmount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Please enter a donation amount.')
+      return
+    }
+    if (donorName.trim().length < 2) {
+      toast.error('Please enter your name (at least 2 characters).')
+      return
+    }
+    setPledging(true)
+    try {
+      const res = await fetch('/api/donations/give', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          name: donorName.trim(),
+          phone: donorPhone.trim(),
+          note: donorNote.trim(),
+        }),
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) {
+        const firstField = body?.details ? Object.values(body.details)[0] : null
+        const detail = Array.isArray(firstField) ? String(firstField[0]) : null
+        toast.error(detail ?? body?.error ?? 'Could not submit your donation.')
+        return
+      }
+      toast.success(body?.message ?? 'Thank you! Your pledge is with us.', {
+        duration: 8000,
+      })
+      setDonateAmount('')
+      setDonorName('')
+      setDonorPhone('')
+      setDonorNote('')
+    } catch {
+      toast.error('Network error. Please try again.')
+    } finally {
+      setPledging(false)
+    }
+  }
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     const trimmed = name.trim()
@@ -262,6 +372,15 @@ export function DonationsClient() {
                 {data.donorCount} {data.donorCount === 1 ? 'person has' : 'people have'} added their name to the wall
               </p>
             )}
+            <div className="mt-8">
+              <a
+                href="#donate-only"
+                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-emerald-800 shadow-lg transition-colors hover:bg-emerald-50"
+              >
+                <Heart className="size-4" />
+                Donate without buying a pack
+              </a>
+            </div>
           </div>
         </section>
 
@@ -311,6 +430,10 @@ export function DonationsClient() {
               <p className="text-xs text-muted-foreground">
                 Only so we can send you a thank-you. We never show it on this page.
               </p>
+              <p className="text-xs text-muted-foreground">
+                Your name and the amount will appear <strong>publicly</strong> on
+                the wall.
+              </p>
               <Button
                 type="submit"
                 disabled={submitting}
@@ -319,6 +442,106 @@ export function DonationsClient() {
                 {submitting ? 'Adding…' : 'Add my name to the wall'}
               </Button>
             </form>
+
+            {/* Donate-only channel. Deliberately a PLEDGE: no card money is
+                taken here, so the copy says "we will call you" rather than
+                implying a completed payment. The admin confirms it later. */}
+            <div
+              id="donate-only"
+              className="scroll-mt-24 rounded-xl border-2 border-amber-300/80 bg-gradient-to-br from-amber-50 to-orange-50 p-5 dark:border-amber-900 dark:from-amber-950/30 dark:to-orange-950/20"
+            >
+              <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
+                <span className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-rose-500 text-white">
+                  <Heart className="size-4" />
+                </span>
+                Donate without buying a pack
+              </h2>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Give straight to Apeksha Hospital. We will call you to arrange
+                payment — nothing is charged online.
+              </p>
+              <form onSubmit={pledge} className="mt-4 space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {[500, 1000, 2500].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setDonateAmount(String(value))}
+                      className={cn(
+                        'rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
+                        donateAmount === String(value)
+                          ? 'border-amber-500 bg-amber-500 text-white'
+                          : 'border-amber-300 bg-white/70 text-amber-800 hover:bg-white dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
+                      )}
+                    >
+                      LKR {value.toLocaleString('en-LK')}
+                    </button>
+                  ))}
+                </div>
+                <label htmlFor="donate-amount" className="text-sm font-medium block">
+                  Amount (LKR)
+                </label>
+                <Input
+                  id="donate-amount"
+                  type="number"
+                  min={1}
+                  step="0.01"
+                  value={donateAmount}
+                  onChange={(e) => setDonateAmount(e.target.value)}
+                  placeholder="e.g. 1000"
+                  className="h-12 text-base"
+                  required
+                />
+                <label htmlFor="donate-name" className="text-sm font-medium block pt-1">
+                  Your name
+                </label>
+                <Input
+                  id="donate-name"
+                  value={donorName}
+                  onChange={(e) => setDonorName(e.target.value)}
+                  placeholder="e.g. Nimal Perera"
+                  maxLength={60}
+                  className="h-12 text-base"
+                  autoComplete="name"
+                  required
+                />
+                <label htmlFor="donate-phone" className="text-sm font-medium block pt-1">
+                  Mobile <span className="font-normal text-muted-foreground">(optional)</span>
+                </label>
+                <Input
+                  id="donate-phone"
+                  type="tel"
+                  value={donorPhone}
+                  onChange={(e) => setDonorPhone(e.target.value)}
+                  placeholder="07X XXX XXXX"
+                  maxLength={20}
+                  className="h-12 text-base"
+                  autoComplete="tel"
+                />
+                <label htmlFor="donate-note" className="text-sm font-medium block pt-1">
+                  Note <span className="font-normal text-muted-foreground">(optional)</span>
+                </label>
+                <Input
+                  id="donate-note"
+                  value={donorNote}
+                  onChange={(e) => setDonorNote(e.target.value)}
+                  placeholder="Anything you would like us to know"
+                  maxLength={300}
+                  className="h-12 text-base"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Your name and amount join the <strong>Direct gifts</strong> wall
+                  once we confirm the donation.
+                </p>
+                <Button
+                  type="submit"
+                  disabled={pledging}
+                  className="w-full h-12 text-base bg-gradient-to-r from-amber-500 to-rose-500 text-white hover:from-amber-400 hover:to-rose-400"
+                >
+                  {pledging ? 'Sending…' : 'Pledge my donation'}
+                </Button>
+              </form>
+            </div>
 
             <div className="rounded-xl border bg-card p-5 space-y-4">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -352,7 +575,7 @@ export function DonationsClient() {
             </div>
             <div className={cn('rounded-xl border bg-card p-4', !data && 'min-h-64')}>
               {data ? (
-                <DonorWall donors={data.donors} />
+                <DonorWall donors={wallDonors} />
               ) : (
                 <div className="space-y-2">
                   {Array.from({ length: 6 }).map((_, i) => (
@@ -363,6 +586,12 @@ export function DonationsClient() {
             </div>
           </div>
         </section>
+
+        {directDonors.length > 0 && (
+          <section className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pb-16">
+            <DirectGiverWall donors={directDonors} />
+          </section>
+        )}
       </main>
       <Footer />
     </div>

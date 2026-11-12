@@ -89,6 +89,15 @@ export async function POST(request: Request) {
     await tx.payment.create({
       data: { amount, method, receivedBy, note, donationId: created.id },
     })
+    // A named giver joins the wall in the same transaction. source='direct' is
+    // what the public page uses to show these gifts in their own section, apart
+    // from pack and order donors. The amount is attribution only — the ledger
+    // row above is what the total sums.
+    if (donorName) {
+      await tx.donor.create({
+        data: { name: donorName, amount, source: 'direct', sourceRef: created.id },
+      })
+    }
     // And the thank-you, queued in the same transaction for the same reason. A
     // giver with no number on file simply gets no row — see the queue rule in
     // src/lib/notify.ts.

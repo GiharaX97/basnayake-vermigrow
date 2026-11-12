@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type { Prisma } from '@prisma/client'
 import { formatLkr } from '@/lib/currency'
 import { toGsm7 } from '@/lib/sms/gsm7'
+import { isTemplateEnabled, readSmsSettings, templateBody } from '@/lib/sms/templates'
 
 /**
  * Telling customers what they did.
@@ -268,13 +269,7 @@ function renderRawMessage(template: Template, data: MessageData): string {
         (statesDonation ? ` ${formatLkr(donation as number)} of it went to Apeksha Hospital.` : '') +
         (passes
           ? ` Your ${passes === 1 ? 'workshop pass is' : `${passes} workshop passes are`} ready — open ${url} and enter the reference we sent when you booked.`
-          : ` Your receipt: ${url}`) +
-        // The one message that invites a reply, because it is the one a customer
-        // has a reason to answer: "we have your money" is exactly the moment to
-        // confirm the order or say something is wrong. The words are the whole
-        // interface — there is no app, and a reply that says "yeah ok" is handled
-        // as unrecognised rather than guessed at.
-        ` Reply CONFIRM to confirm your order, or CANCEL if you need to change it.`
+          : ` Your receipt: ${url}`)
       )
 
     case 'order_cancelled':
@@ -286,10 +281,10 @@ function renderRawMessage(template: Template, data: MessageData): string {
     // text must never hand out both, and it has nothing to do with money, so it
     // states none.
     case 'order_confirmed':
-      // The CANCEL offer is repeated here, and nowhere else: this is the last
-      // stage before anything is packed, so it is the last moment a change costs
-      // the farm nothing. After this the customer is told to call instead.
-      return `${hi(name)}${refText} is confirmed. We will let you know when it is on the way. Reply CANCEL if anything changes.`
+      // No CANCEL offer: inbound replies are not a channel this system promises
+      // (Text.lk's reply webhook is not wired), so telling a customer to reply
+      // would point them at a mailbox nobody reads. Changes are handled by phone.
+      return `${hi(name)}${refText} is confirmed. We will let you know when it is on the way.`
 
     case 'order_packed':
       return `${hi(name)}${refText} is packed and getting ready to go.`
@@ -351,8 +346,35 @@ function renderRawMessage(template: Template, data: MessageData): string {
  * This does not make a long message cheap: it halves the cost of a message that
  * was already being billed at double. The length advice above still stands.
  */
-export function renderMessage(template: Template, data: MessageData): string {
-  return toGsm7(renderRawMessage(template, data))
+export function renderMessage(
+  template: Template,
+  data: MessageData,
+  customBody?: string
+): string {
+  return toGsm7(
+    customBody?.trim() ? renderCustomMessage(customBody, data) : renderRawMessage(template, data)
+  )
+}
+
+/**
+ * Render an admin-edited body. Deliberately simple: unknown placeholders are
+ * left untouched so a typo is visible in the stored message rather than
+ * silently becoming an empty string, and every value comes from the same
+ * server-side snapshot the built-in templates use.
+ */
+function renderCustomMessage(body: string, data: MessageData): string {
+  const money = (value: number | null | undefined) =>
+    typeof value === 'number' && Number.isFinite(value) ? formatLkr(value) : ''
+
+  return body
+    .replace(/\{greeting\}/g, hi(data.name))
+    .replace(/\{name\}/g, data.name?.trim() ?? '')
+    .replace(/\{orderRef\}/g, data.orderRef ?? '')
+    .replace(/\{total\}/g, money(data.total))
+    .replace(/\{donation\}/g, money(data.donation))
+    .replace(/\{amount\}/g, money(data.amount))
+    .replace(/\{passes\}/g, typeof data.passes === 'number' ? String(data.passes) : '')
+    .replace(/\{url\}/g, data.url)
 }
 
 export interface QueueMessageInput {
@@ -376,11 +398,15 @@ export interface QueueMessageInput {
  *               it was. Distinct from 'queued' so a caller can log it: a
  *               swallowed genuine second event looks exactly like a working
  *               system until a customer complains.
+ *   disabled  — an admin switched this event off in SMS settings. The receipt
+ *               LINK is still returned (the customer may need it), but no
+ *               message row exists, so nothing can be transmitted.
  *   no_phone  — nobody to send to, so NO row and NO link were created.
  */
 export type QueueOutcome =
   | { status: 'queued'; messageId: string; token: string }
   | { status: 'duplicate'; token: string }
+  | { status: 'disabled'; token: string }
   | { status: 'no_phone' }
 
 /**
@@ -409,7 +435,21 @@ export async function queueMessage(
     expiresAt: input.expiresAt,
   })
 
-  const body = renderMessage(input.template, { ...input.data, url: receiptUrl(link.token) })
+  // The admin can switch an event off, or replace its wording, from Admin →
+  // Messages. Reading inside the transaction is free and means the queue row and
+  // the decision to create it are always consistent.
+  const settings = await readSmsSettings(client)
+  if (!isTemplateEnabled(settings, input.template)) {
+    // The LINK still exists: the customer may already hold its URL, and a later
+    // re-enable must reuse it rather than mint a second receipt.
+    return { status: 'disabled', token: link.token }
+  }
+
+  const body = renderMessage(
+    input.template,
+    { ...input.data, url: receiptUrl(link.token) },
+    templateBody(settings, input.template)
+  )
 
   try {
     const created = await client.customerMessage.create({

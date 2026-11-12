@@ -48,6 +48,10 @@ export function Footer() {
           <div>
             © {year} {content.brand}. Crafted with care.
           </div>
+          {/* A direct route to giving, for visitors who do not want a pack. */}
+          <nav aria-label="Donate" className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <a href="/donations#donate-only" className="font-medium text-amber-700 hover:text-amber-600 dark:text-amber-400 transition-colors">Donate</a>
+          </nav>
           <div>
             Developed by{' '}
             <span className="font-medium text-foreground">Gihara Wijesinghe</span>

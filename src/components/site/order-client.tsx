@@ -622,8 +622,8 @@ function OrderForm({
 
         <p className="flex items-start gap-2 text-xs text-muted-foreground">
           <Phone className="size-3.5 shrink-0 mt-0.5" />
-          We will call you to confirm and arrange payment — cash at the store or
-          bank transfer. Nothing is charged online.
+          We will call you to confirm and arrange payment — cash at the store, bank
+          transfer, or by card on the secure checkout where it is offered.
         </p>
       </div>
     </form>
