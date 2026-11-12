@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { NotificationBell } from '@/components/admin/notification-bell'
 import {
   LayoutDashboard,
   FileText,
@@ -165,6 +166,10 @@ export default function AdminLayoutClient({
             <span className="text-foreground font-medium">{currentLabel}</span>
           </div>
           <div className="flex items-center gap-3">
+            {/* First in the right-hand cluster and present at every width: a
+                new pledge or failed text is exactly what an admin on a phone
+                must not have to go looking for. */}
+            <NotificationBell />
             <a
               href="/"
               target="_blank"

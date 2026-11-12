@@ -64,6 +64,16 @@ export default function AdminDonationsPage() {
   // the sales in the table below (which excludes scanned packs and gifts).
   const [wallTotal, setWallTotal] = useState(0)
   const [loading, setLoading] = useState(true)
+  /**
+   * Which tab is open, with `?tab=direct` / `?tab=messages` honoured on arrival.
+   *
+   * The header bell links straight at the thing it is reporting — a pending
+   * pledge must land on Direct gifts, a failed text on Messages — and without
+   * this an admin would arrive on "Record & view sales" and have to find it.
+   * Read from `window.location` in an effect rather than `useSearchParams()` so
+   * the page does not need a Suspense boundary at build time.
+   */
+  const [tab, setTab] = useState('sales')
 
   // Record-sale form
   const [productId, setProductId] = useState('')
@@ -106,6 +116,13 @@ export default function AdminDonationsPage() {
   }
 
   useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('tab')
+    if (requested && ['sales', 'direct', 'payments', 'messages', 'qr'].includes(requested)) {
+      setTab(requested)
+    }
+  }, [])
 
   useEffect(() => {
     // QR is rendered client-side from the origin the admin is browsing.
@@ -241,7 +258,7 @@ export default function AdminDonationsPage() {
           that waits on someone. They now have their own page (Admin → Orders),
           with the fulfilment pipeline and messaging — so this page opens on the
           sales it actually records. */}
-      <Tabs defaultValue="sales">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="sales">Record & view sales</TabsTrigger>
           <TabsTrigger value="direct">Direct gifts</TabsTrigger>

@@ -1,89 +1,104 @@
-'use client'
-
-import { useEffect, useState } from 'react'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import Link from 'next/link'
+import { isAdminAuthenticated } from '@/lib/admin-auth'
+import { getAdminOverview } from '@/lib/admin-overview'
 import {
-  FileText,
-  Settings,
+  AlertTriangle,
+  ArrowUpRight,
+  BarChart3,
+  ClipboardList,
+  Clock,
   Eye,
+  FileText,
+  HeartHandshake,
   Image,
+  Inbox,
   MessageSquare,
   ShoppingBag,
   TrendingUp,
-  Clock,
-  ArrowUpRight,
-  Inbox,
   Users,
-  Sprout,
-  BarChart3,
-  DollarSign,
-  Package,
 } from 'lucide-react'
 
-interface DashboardStats {
-  unreadInquiries: number
-  totalInquiries: number
-  productsCount: number
-  featuredCount: number
-  mediaCount: number
-  projectsCount: number
-  photosCount: number
-  videosCount: number
-  recentInquiries: Array<{ id: string; name: string; email: string; createdAt: string }>
-}
+/**
+ * Admin → Dashboard (server-rendered).
+ *
+ * This was a client component that fetched three endpoints after hydration and
+ * showed skeletons in the meantime. It is now a server component reading
+ * `getAdminOverview()` directly, so the numbers are in the first render — no
+ * client round-trip, no skeleton, and `/api/content` no longer ships the whole
+ * CMS blob just to count products.
+ *
+ * Auth is checked HERE as well as in middleware: the page queries the database
+ * itself, and middleware's cookie check is not an authorisation check. A
+ * forged cookie must reach a redirect, not a rendered admin dashboard.
+ *
+ * The "Needs your attention" row and the header bell read the same
+ * `getAdminNotifications()` aggregation, so the two can never disagree.
+ */
+export const dynamic = 'force-dynamic'
 
-export default function AdminDashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [loading, setLoading] = useState(true)
+export default async function AdminDashboard() {
+  if (!(await isAdminAuthenticated())) {
+    redirect('/admin/login')
+  }
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [contentRes, inquiriesRes, mediaRes] = await Promise.all([
-          fetch('/api/content'),
-          fetch('/api/inquiries'),
-          fetch('/api/media'),
-        ])
-        const content = await contentRes.json()
-        const inquiries = await inquiriesRes.json()
-        const media = await mediaRes.json()
+  const { stats, recentInquiries, notifications } = await getAdminOverview()
+  const counts = notifications.counts
 
-        setStats({
-          unreadInquiries: inquiries.filter((i: any) => i.status === 'unread').length,
-          totalInquiries: inquiries.length,
-          productsCount: content?.products?.length ?? 0,
-          featuredCount: content?.products?.filter((p: any) => p.featured).length ?? 0,
-          mediaCount: media?.length ?? 0,
-          projectsCount: content?.projects?.length ?? 0,
-          photosCount: content?.photos?.length ?? 0,
-          videosCount: content?.videos?.length ?? 0,
-          recentInquiries: inquiries.slice(0, 5),
-        })
-      } catch {
-        setStats({
-          unreadInquiries: 0,
-          totalInquiries: 0,
-          productsCount: 0,
-          featuredCount: 0,
-          mediaCount: 0,
-          projectsCount: 0,
-          photosCount: 0,
-          videosCount: 0,
-          recentInquiries: [],
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-  }, [])
+  const attention = [
+    {
+      key: 'donations' as const,
+      label: 'Donation requests',
+      hint: 'Pledges to confirm',
+      href: '/admin/donations?tab=direct',
+      icon: HeartHandshake,
+      countClass: 'text-rose-600 dark:text-rose-400',
+      bg: 'bg-rose-100 dark:bg-rose-950/60',
+    },
+    {
+      key: 'orders' as const,
+      label: 'Orders awaiting payment',
+      hint: 'Confirm money received',
+      href: '/admin/orders',
+      icon: ClipboardList,
+      countClass: 'text-blue-600 dark:text-blue-400',
+      bg: 'bg-blue-100 dark:bg-blue-950/60',
+    },
+    {
+      key: 'cancellations' as const,
+      label: 'Cancellation requests',
+      hint: 'Paid orders to review',
+      href: '/admin/orders',
+      icon: AlertTriangle,
+      countClass: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-100 dark:bg-amber-950/60',
+    },
+    {
+      key: 'failedMessages' as const,
+      label: 'Failed texts',
+      hint: 'Retry from Messages',
+      href: '/admin/donations?tab=messages',
+      icon: MessageSquare,
+      countClass: 'text-red-600 dark:text-red-400',
+      bg: 'bg-red-100 dark:bg-red-950/60',
+    },
+    {
+      key: 'inquiries' as const,
+      label: 'Unread inquiries',
+      hint: 'Open the inbox',
+      href: '/admin/inquiries',
+      icon: Inbox,
+      countClass: 'text-sky-600 dark:text-sky-400',
+      bg: 'bg-sky-100 dark:bg-sky-950/60',
+    },
+  ]
 
   const quickActions = [
     {
       title: 'Edit Products',
-      description: `Manage ${stats?.productsCount || 0} products, pricing and featured items`,
+      description: `Manage ${stats.productsCount} products, pricing and featured items`,
       icon: ShoppingBag,
       href: '/admin/content',
       color: 'text-emerald-600',
@@ -99,7 +114,7 @@ export default function AdminDashboard() {
     },
     {
       title: 'Inquiries',
-      description: `View customer inquiries${stats?.unreadInquiries ? ` (${stats.unreadInquiries} unread)` : ''}`,
+      description: `View customer inquiries${counts.inquiries ? ` (${counts.inquiries} unread)` : ''}`,
       icon: MessageSquare,
       href: '/admin/inquiries',
       color: 'text-blue-600',
@@ -118,8 +133,8 @@ export default function AdminDashboard() {
   const statCards = [
     {
       label: 'Products for Sale',
-      value: stats?.productsCount ?? 0,
-      sub: `${stats?.featuredCount ?? 0} featured`,
+      value: stats.productsCount,
+      sub: `${stats.featuredCount} featured`,
       icon: ShoppingBag,
       color: 'text-emerald-600',
       bg: 'bg-emerald-100 dark:bg-emerald-900/50',
@@ -127,8 +142,8 @@ export default function AdminDashboard() {
     },
     {
       label: 'Unread Inquiries',
-      value: stats?.unreadInquiries ?? 0,
-      sub: `${stats?.totalInquiries ?? 0} total`,
+      value: stats.unreadInquiries,
+      sub: `${stats.totalInquiries} total`,
       icon: Inbox,
       color: 'text-blue-600',
       bg: 'bg-blue-100 dark:bg-blue-900/50',
@@ -136,8 +151,8 @@ export default function AdminDashboard() {
     },
     {
       label: 'Media Files',
-      value: stats?.mediaCount ?? 0,
-      sub: `for products & site`,
+      value: stats.mediaCount,
+      sub: 'for products & site',
       icon: Image,
       color: 'text-purple-600',
       bg: 'bg-purple-100 dark:bg-purple-900/50',
@@ -145,8 +160,8 @@ export default function AdminDashboard() {
     },
     {
       label: 'Projects',
-      value: stats?.projectsCount ?? 0,
-      sub: `${stats?.photosCount ?? 0} photos, ${stats?.videosCount ?? 0} videos`,
+      value: stats.projectsCount,
+      sub: `${stats.photosCount} photos, ${stats.videosCount} videos`,
       icon: TrendingUp,
       color: 'text-amber-600',
       bg: 'bg-amber-100 dark:bg-amber-900/50',
@@ -168,7 +183,7 @@ export default function AdminDashboard() {
           <Link href="/admin/inquiries">
             <Button variant="outline" className="gap-2">
               <Inbox className="h-4 w-4" />
-              Inbox {stats?.unreadInquiries ? `(${stats.unreadInquiries})` : ''}
+              Inbox {stats.unreadInquiries ? `(${stats.unreadInquiries})` : ''}
             </Button>
           </Link>
           <Link href="/admin/content">
@@ -179,6 +194,53 @@ export default function AdminDashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Needs your attention — the actionable half */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          Needs your attention
+          {counts.total === 0 && (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
+              All clear
+            </span>
+          )}
+        </h2>
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+          {attention.map((tile) => {
+            const Icon = tile.icon
+            const value = counts[tile.key]
+            return (
+              <Link key={tile.key} href={tile.href}>
+                <Card
+                  className={`h-full transition-all hover:shadow-md ${
+                    value > 0
+                      ? 'border-emerald-500/30 hover:border-emerald-500/60'
+                      : 'hover:border-border'
+                  }`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className={`h-9 w-9 rounded-lg ${tile.bg} flex items-center justify-center`}>
+                        <Icon className={`h-5 w-5 ${tile.countClass}`} />
+                      </div>
+                      <span
+                        className={`text-2xl font-bold tabular-nums ${
+                          value > 0 ? tile.countClass : 'text-muted-foreground'
+                        }`}
+                      >
+                        {value}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm font-medium leading-tight">{tile.label}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{tile.hint}</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            )
+          })}
+        </div>
+      </section>
 
       {/* Stat cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -194,13 +256,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <div className="mt-4">
-                    <div className="text-3xl font-bold tracking-tight">
-                      {loading ? (
-                        <span className="inline-block h-8 w-12 rounded bg-muted animate-pulse" />
-                      ) : (
-                        stat.value
-                      )}
-                    </div>
+                    <div className="text-3xl font-bold tracking-tight">{stat.value}</div>
                     <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
                     {stat.sub && (
                       <p className="text-xs text-muted-foreground/70">{stat.sub}</p>
@@ -261,21 +317,9 @@ export default function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
-                    <div className="flex-1 space-y-1.5">
-                      <div className="h-3 w-32 rounded bg-muted animate-pulse" />
-                      <div className="h-2.5 w-48 rounded bg-muted animate-pulse" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : stats?.recentInquiries && stats.recentInquiries.length > 0 ? (
+            {recentInquiries.length > 0 ? (
               <div className="space-y-1">
-                {stats.recentInquiries.map((inq) => (
+                {recentInquiries.map((inq) => (
                   <Link
                     key={inq.id}
                     href="/admin/inquiries"
@@ -313,10 +357,10 @@ export default function AdminDashboard() {
           <CardContent>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { name: 'Products', count: stats?.productsCount ?? 0, icon: ShoppingBag, desc: `${stats?.featuredCount ?? 0} featured` },
-                { name: 'Projects', count: stats?.projectsCount ?? 0, icon: TrendingUp, desc: 'sub-brands' },
-                { name: 'Inquiries', count: stats?.totalInquiries ?? 0, icon: MessageSquare, desc: `${stats?.unreadInquiries ?? 0} unread` },
-                { name: 'Media', count: stats?.mediaCount ?? 0, icon: Image, desc: 'files uploaded' },
+                { name: 'Products', count: stats.productsCount, icon: ShoppingBag, desc: `${stats.featuredCount} featured` },
+                { name: 'Projects', count: stats.projectsCount, icon: TrendingUp, desc: 'sub-brands' },
+                { name: 'Inquiries', count: stats.totalInquiries, icon: MessageSquare, desc: `${stats.unreadInquiries} unread` },
+                { name: 'Media', count: stats.mediaCount, icon: Image, desc: 'files uploaded' },
               ].map((item) => {
                 const Icon = item.icon
                 return (
@@ -328,7 +372,7 @@ export default function AdminDashboard() {
                     <div className="min-w-0">
                       <p className="font-medium text-sm truncate">{item.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {loading ? '...' : `${item.count} ${item.desc}`}
+                        {item.count} {item.desc}
                       </p>
                     </div>
                   </div>
