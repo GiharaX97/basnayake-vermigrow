@@ -373,11 +373,15 @@ export function DonationsClient() {
               </p>
             )}
             <div className="mt-8">
+              {/* The one call to action in the hero, so it is a real button with
+                  a warm amber→rose gradient against the emerald hero — a plain
+                  link disappears into the green. Dark text keeps AA contrast on
+                  the lighter stops. */}
               <a
                 href="#donate-only"
-                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-emerald-800 shadow-lg transition-colors hover:bg-emerald-50"
+                className="group inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-amber-300 via-orange-300 to-rose-300 px-7 py-3.5 text-base font-bold text-emerald-950 shadow-xl shadow-rose-950/30 ring-2 ring-white/50 transition-all hover:scale-105 hover:shadow-2xl hover:ring-white/80 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-200 motion-reduce:transform-none"
               >
-                <Heart className="size-4" />
+                <Heart className="size-5 fill-current text-rose-600 transition-transform group-hover:scale-110 motion-reduce:transform-none" />
                 Donate without buying a pack
               </a>
             </div>

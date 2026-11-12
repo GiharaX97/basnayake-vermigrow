@@ -1,5 +1,6 @@
 'use client'
 
+import { Heart } from 'lucide-react'
 import { useContentStore } from '@/store/content-store'
 
 export function Footer() {
@@ -48,9 +49,18 @@ export function Footer() {
           <div>
             © {year} {content.brand}. Crafted with care.
           </div>
-          {/* A direct route to giving, for visitors who do not want a pack. */}
+          {/* A direct route to giving, for visitors who do not want a pack.
+              Styled as a button, not a text link: it is the one action on this
+              row that is not legal small print. Colour is amber→rose so it
+              reads as "give", never as a navigation link. */}
           <nav aria-label="Donate" className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <a href="/donations#donate-only" className="font-medium text-amber-700 hover:text-amber-600 dark:text-amber-400 transition-colors">Donate</a>
+            <a
+              href="/donations#donate-only"
+              className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-amber-500/30 transition-all hover:scale-105 hover:shadow-lg hover:shadow-rose-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 motion-reduce:transform-none"
+            >
+              <Heart className="size-4 fill-current transition-transform group-hover:scale-110 motion-reduce:transform-none" />
+              Donate
+            </a>
           </nav>
           <div>
             Developed by{' '}
