@@ -193,6 +193,14 @@ export function EditPanel() {
                   />
                 </div>
                 <div>
+                  <Label className="text-xs">Second phone (optional)</Label>
+                  <Input
+                    value={content.contactPhoneAlt ?? ''}
+                    onChange={(e) => updateField('contactPhoneAlt', e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
                   <Label className="text-xs">Contact address</Label>
                   <Input
                     value={content.contactAddress}

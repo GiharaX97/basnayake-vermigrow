@@ -111,6 +111,8 @@ export interface SiteContent {
   founder: FounderInfo
   contactEmail: string
   contactPhone: string
+  /** A second number (office landline), shown beside the mobile. */
+  contactPhoneAlt?: string
   contactAddress: string
   socials: SocialItem[]
   mapLocations: MapLocation[]
@@ -254,13 +256,12 @@ export const defaultContent: SiteContent = {
       { id: 'fa5', text: 'Supplies vermicompost to 200+ home gardens and 15 commercial farms across Galle, Matara and Hambantota', year: '2023' },
     ],
   },
-  contactEmail: 'hello@basnayakavermigrow.lk',
-  contactPhone: '+94 77 123 4567',
-  contactAddress: 'Karandeniya, Galle District, Southern Province, Sri Lanka',
+  contactEmail: 'basnayakavermigrow@gmail.com',
+  contactPhone: '+94 77 252 8685',
+  contactPhoneAlt: '0117 250 250',
+  contactAddress: 'No 06, Basnayaka Vermigrow, Kekiriskanda, Karandeniya 80360, Sri Lanka',
   socials: [
-    { id: 'so1', label: 'Facebook', url: 'https://facebook.com' },
-    { id: 'so2', label: 'WhatsApp', url: 'https://whatsapp.com' },
-    { id: 'so3', label: 'YouTube', url: 'https://youtube.com' },
+    { id: 'so1', label: 'Facebook', url: 'https://www.facebook.com/Basnayakavermigrow/' },
   ],
   mapLocations: [
     {

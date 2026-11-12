@@ -93,6 +93,19 @@ export function Contact() {
                   {content.contactPhone}
                 </span>
               </a>
+              {content.contactPhoneAlt && (
+                <a
+                  href={`tel:${content.contactPhoneAlt.replace(/[\s\-()]/g, '')}`}
+                  className="flex items-center gap-3 group"
+                >
+                  <span className="h-10 w-10 rounded-full bg-background/10 group-hover:bg-emerald-500 flex items-center justify-center transition-colors">
+                    <Phone className="h-4 w-4" />
+                  </span>
+                  <span className="text-background/90 group-hover:text-emerald-300 transition-colors">
+                    {content.contactPhoneAlt}
+                  </span>
+                </a>
+              )}
               <div className="flex items-center gap-3">
                 <span className="h-10 w-10 rounded-full bg-background/10 flex items-center justify-center">
                   <MapPin className="h-4 w-4" />
@@ -158,6 +171,26 @@ export function Contact() {
                 className="bg-background/5 border-background/20 text-background placeholder:text-background/40 focus-visible:ring-emerald-400 resize-none"
               />
             </div>
+            {/* Gazette No. 2332/15 requires a privacy statement at the point
+                personal data is collected — not only a policy link in the
+                footer. */}
+            <p className="text-xs text-background/60">
+              We use your name, email and message only to reply to you. See our{' '}
+              <a href="/privacy" className="underline underline-offset-4 hover:text-background">
+                Privacy Policy
+              </a>
+              .
+            </p>
+            {/* Gazette No. 2332/15 requires a privacy statement at the point
+                personal data is collected — not only a policy link in the
+                footer. */}
+            <p className="text-xs text-background/60">
+              We use your name, email and message only to reply to you. See our{' '}
+              <a href="/privacy" className="underline underline-offset-4 hover:text-background">
+                Privacy Policy
+              </a>
+              .
+            </p>
             <Button
               type="submit"
               size="lg"

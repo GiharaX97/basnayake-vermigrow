@@ -45,6 +45,8 @@ type View =
       customerPhone: string | null
       total: number
       donation: number
+      /** Set when the order was settled. Empty while it is still pending. */
+      paymentMethod: string
       lines: { id: string; name: string; quantity: number; unitPrice: number; unit: string }[]
       hasVouchers: boolean
     }
@@ -99,6 +101,7 @@ async function loadView(token: string): Promise<View | null> {
       customerPhone: lines[0].customerPhone,
       total: lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0),
       donation: lines.reduce((sum, l) => sum + l.donationAmount, 0),
+      paymentMethod: lines[0].paymentMethod,
       lines: lines.map((l) => ({
         id: l.id,
         name: l.product.name,
@@ -232,6 +235,17 @@ function Body({ view, token }: { view: View; token: string }) {
             }
           />
           {view.customerName && <Row label="Name" value={view.customerName} />}
+          {/* The e-commerce directions require a receipt to state the method of
+              payment. A pending order has not chosen one yet, so say so rather
+              than print an empty field. */}
+          <Row
+            label="Payment"
+            value={
+              view.paymentMethod
+                ? METHOD_LABELS[view.paymentMethod] ?? view.paymentMethod
+                : 'To be arranged'
+            }
+          />
           {/* Masked deliberately: this page travels over SMS and gets forwarded.
               The customer knows their own number, so the full value buys them
               nothing and costs plenty if the link leaks. */}
@@ -392,6 +406,27 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
           </a>
           .
         </p>
+
+        {/* Gazette No. 2332/15 requires the receipt to carry the delivery terms,
+            the terms and conditions and the privacy policy. The payment method
+            and price are in the panel above; these are the other three. */}
+        <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+          <p>
+            Delivery or collection is arranged with you when we confirm the order.
+            Any delivery charge is quoted before payment.
+          </p>
+          <p className="flex flex-wrap gap-x-3 gap-y-1">
+            <a href="/terms" className="underline underline-offset-4 hover:text-foreground transition-colors">
+              Terms &amp; Conditions
+            </a>
+            <a href="/privacy" className="underline underline-offset-4 hover:text-foreground transition-colors">
+              Privacy Policy
+            </a>
+            <a href="/refunds" className="underline underline-offset-4 hover:text-foreground transition-colors">
+              Refunds, Cancellations &amp; Delivery
+            </a>
+          </p>
+        </div>
       </main>
     </div>
   )

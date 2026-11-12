@@ -21,6 +21,36 @@ export function Footer() {
             <div>
               <div className="text-base font-semibold">{content.brand}</div>
               <div className="text-xs text-muted-foreground">{content.tagline}</div>
+              {/* Seller identity and contact on every page: the e-commerce
+                  directions (Gazette No. 2332/15) and the payment gateway's
+                  merchant terms both expect a customer to be able to see who
+                  they are buying from before they pay. */}
+              <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
+                <div>{content.contactAddress}</div>
+                <div>
+                  <a href={`mailto:${content.contactEmail}`} className="hover:text-foreground transition-colors">
+                    {content.contactEmail}
+                  </a>
+                  <span className="mx-1.5 text-border">·</span>
+                  <a
+                    href={`tel:${content.contactPhone.replace(/[\s\-()]/g, '')}`}
+                    className="hover:text-foreground transition-colors"
+                  >
+                    {content.contactPhone}
+                  </a>
+                  {content.contactPhoneAlt && (
+                    <>
+                      <span className="mx-1.5 text-border">·</span>
+                      <a
+                        href={`tel:${content.contactPhoneAlt.replace(/[\s\-()]/g, '')}`}
+                        className="hover:text-foreground transition-colors"
+                      >
+                        {content.contactPhoneAlt}
+                      </a>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -49,18 +79,17 @@ export function Footer() {
           <div>
             © {year} {content.brand}. Crafted with care.
           </div>
-          {/* A direct route to giving, for visitors who do not want a pack.
-              Styled as a button, not a text link: it is the one action on this
-              row that is not legal small print. Colour is amber→rose so it
-              reads as "give", never as a navigation link. */}
-          <nav aria-label="Donate" className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <a
-              href="/donations#donate-only"
-              className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-amber-500/30 transition-all hover:scale-105 hover:shadow-lg hover:shadow-rose-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 motion-reduce:transform-none"
-            >
+          {/* Required by the payment gateway's site review, and genuinely useful:
+              a visitor must be able to reach the terms before paying. Kept out of
+              the main nav so it does not crowd the product links. */}
+          <nav aria-label="Legal" className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <a href="/donations#donate-only" className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-amber-500/30 transition-all hover:scale-105 hover:shadow-lg hover:shadow-rose-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 motion-reduce:transform-none">
               <Heart className="size-4 fill-current transition-transform group-hover:scale-110 motion-reduce:transform-none" />
               Donate
             </a>
+            <a href="/terms" className="hover:text-foreground transition-colors">Terms &amp; Conditions</a>
+            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
+            <a href="/refunds" className="hover:text-foreground transition-colors">Refunds &amp; Delivery</a>
           </nav>
           <div>
             Developed by{' '}

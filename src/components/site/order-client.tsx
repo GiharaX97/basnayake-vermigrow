@@ -625,6 +625,25 @@ function OrderForm({
           We will call you to confirm and arrange payment — cash at the store, bank
           transfer, or by card on the secure checkout where it is offered.
         </p>
+
+        {/* The gateway's site review looks for this next to the buy button, not
+            only in the footer. Plain text, no pre-ticked box: placing the order
+            is the act of agreement. */}
+        <p className="text-xs text-muted-foreground">
+          By placing this order you agree to our{' '}
+          <Link href="/terms" className="underline underline-offset-4 hover:text-foreground transition-colors">
+            Terms &amp; Conditions
+          </Link>
+          ,{' '}
+          <Link href="/privacy" className="underline underline-offset-4 hover:text-foreground transition-colors">
+            Privacy Policy
+          </Link>{' '}
+          and{' '}
+          <Link href="/refunds" className="underline underline-offset-4 hover:text-foreground transition-colors">
+            Refunds &amp; Delivery policy
+          </Link>
+          .
+        </p>
       </div>
     </form>
   )

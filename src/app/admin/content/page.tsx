@@ -126,6 +126,7 @@ interface SiteContent {
   founder: FounderInfo
   contactEmail: string
   contactPhone: string
+  contactPhoneAlt?: string
   contactAddress: string
   socials: SocialItem[]
   mapLocations: MapLocation[]
@@ -907,7 +908,7 @@ export default function ContentEditor() {
           <Card>
             <CardHeader><CardTitle>Contact Info</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label>Email</Label>
                   <Input value={content.contactEmail} onChange={(e) => update('contactEmail', e.target.value)} />
@@ -915,6 +916,14 @@ export default function ContentEditor() {
                 <div className="space-y-2">
                   <Label>Phone</Label>
                   <Input value={content.contactPhone} onChange={(e) => update('contactPhone', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Second phone (optional)</Label>
+                  <Input
+                    value={content.contactPhoneAlt ?? ''}
+                    onChange={(e) => update('contactPhoneAlt', e.target.value)}
+                    placeholder="e.g. 0117 250 250"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Address</Label>

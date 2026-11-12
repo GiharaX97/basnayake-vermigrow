@@ -38,6 +38,7 @@ yarn-error.log*
 # local-only secrets, DB backups, and agent tooling noise
 SECRETS*.local.md
 db/*.bak
+db/*.bak-*
 .mimocode/
 
 # DB snapshots taken before a migration or a test run, and the throwaway copy
