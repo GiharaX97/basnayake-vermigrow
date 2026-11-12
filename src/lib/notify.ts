@@ -482,10 +482,16 @@ export async function deliverMessage(
   if (message.status === 'sent') return { ok: false, already: true, error: 'Already sent' }
   if (!message.toPhone) return { ok: false, error: 'No phone number on this message' }
 
+  // A FAILED row is retryable, and only by hand. The gateway refused it (the
+  // reason is in `error`), so no one received it and retrying cannot duplicate a
+  // delivery. It is deliberately NOT swept up by autoDeliver: an automatic retry
+  // loop against a broken sender ID would spend credit all day on refusals.
+  const retryable = { in: ['queued', 'failed'] }
+
   if (activeTransport() === 'manual') {
     // Nothing to transmit: the admin has sent it from their own phone. Record it.
     const claimed = await client.customerMessage.updateMany({
-      where: { id, status: 'queued' },
+      where: { id, status: retryable },
       data: { status: 'sent', sentAt: new Date(), sentBy, error: null },
     })
     return claimed.count === 0
@@ -494,7 +500,7 @@ export async function deliverMessage(
   }
 
   const claimed = await client.customerMessage.updateMany({
-    where: { id, status: 'queued' },
+    where: { id, status: retryable },
     data: { status: 'sent', sentAt: new Date(), sentBy },
   })
   if (claimed.count === 0) return { ok: false, already: true, error: 'Already sent' }

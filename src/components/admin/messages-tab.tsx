@@ -421,7 +421,7 @@ export function MessagesTab() {
                       <ExternalLink className="size-4" /> Preview receipt
                     </a>
                   </Button>
-                  {m.status === 'queued' && (
+                  {(m.status === 'queued' || m.status === 'failed') && (
                     <>
                       <Button
                         size="sm"
@@ -434,16 +434,24 @@ export function MessagesTab() {
                         ) : (
                           <Check className="size-4" />
                         )}
-                        {transport === 'http' ? 'Send' : 'Mark sent'}
+                        {m.status === 'failed'
+                          ? 'Retry'
+                          : transport === 'http'
+                            ? 'Send'
+                            : 'Mark sent'}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        disabled={busyId === m.id}
-                        onClick={() => act(m.id, 'skip')}
-                      >
-                        <SkipForward className="size-4" /> Skip
-                      </Button>
+                      {/* Skip is only for a queued row: the API claims queued-only,
+                          and a failed row is better retried than silently dropped. */}
+                      {m.status === 'queued' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={busyId === m.id}
+                          onClick={() => act(m.id, 'skip')}
+                        >
+                          <SkipForward className="size-4" /> Skip
+                        </Button>
+                      )}
                     </>
                   )}
                   {!m.link.revokedAt && (
