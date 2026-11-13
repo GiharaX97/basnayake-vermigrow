@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(6, 'Password must be at least 6 characters').max(128),
+  newPassword: z.string().min(10, 'Password must be at least 10 characters').max(128),
 })
 
 export async function POST(request: Request) {

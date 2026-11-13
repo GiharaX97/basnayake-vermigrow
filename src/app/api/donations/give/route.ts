@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     {
       ...donation,
       message:
-        'Thank you! Your pledge is with us. We will call you to arrange payment — nothing has been charged online.',
+        'Thank you! Your pledge is with us. We will call you to arrange payment. Nothing has been charged online.',
     },
     { status: 201 }
   )

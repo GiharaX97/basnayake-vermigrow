@@ -30,7 +30,7 @@ const SITE_URL = process.env.NEXTAUTH_URL || "https://basnayakavermigrow.lk";
 
 /** Used when the CMS fields are blank, so the site never ships an empty title. */
 const FALLBACK_TITLE =
-  "Basnayaka Vermigrow — Organic Fertilizer & Vegetables, Karandeniya, Sri Lanka";
+  "Basnayaka Vermigrow | Organic Fertilizer & Vegetables, Karandeniya, Sri Lanka";
 const FALLBACK_DESCRIPTION =
   "Basnayaka Vermigrow is a family-run organic farm in Karandeniya, Sri Lanka, producing vermicompost from cow dung, chicken dung and fish waste, and growing organic vegetables for the local community.";
 

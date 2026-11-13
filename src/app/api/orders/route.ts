@@ -198,7 +198,7 @@ export async function POST(request: Request) {
           throw new OrderError('One of the items is no longer available. Please refresh and try again.', 409)
         }
         if (product.price <= 0) {
-          throw new OrderError(`${product.name} cannot be ordered online yet — please contact us for pricing.`, 409)
+          throw new OrderError(`${product.name} cannot be ordered online yet. Please contact us for pricing.`, 409)
         }
         const cap = product.kind === 'service' ? MAX_SERVICE_QTY : MAX_PRODUCT_QTY
         if (quantity > cap) {

@@ -11,6 +11,27 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 
+/**
+ * Leaflet builds popups from an HTML string, which is not escaped for us. Every
+ * value below comes from the CMS, so a pasted `<img onerror=...>` in a location
+ * title would otherwise run as script on our own origin, next to the admin
+ * cookie. Escape first, and only accept image sources we would serve ourselves.
+ */
+const HTML_ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}
+const esc = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (c) => HTML_ESCAPES[c])
+
+/** A photo path or an https URL; anything else (javascript:, data:, file:) is dropped. */
+const safePhotoSrc = (value: unknown) => {
+  const src = String(value ?? '').trim()
+  return src.startsWith('/') || src.startsWith('https://') ? src : ''
+}
+
 export function MapSection() {
   const { content } = useContentStore()
   const [selected, setSelected] = React.useState<MapLocation | null>(null)
@@ -74,15 +95,17 @@ export function MapSection() {
 
         let popupHtml = `
           <div style="min-width:220px;font-family:system-ui,sans-serif;">
-            <h3 style="margin:0 0 6px;font-size:16px;font-weight:700;color:#059669;">${loc.title}</h3>
-            <p style="margin:0 0 4px;font-size:13px;color:#555;"><strong>Contact:</strong> ${loc.contactNo}</p>
-            <p style="margin:0 0 8px;font-size:13px;color:#555;line-height:1.4;">${loc.description}</p>
+            <h3 style="margin:0 0 6px;font-size:16px;font-weight:700;color:#059669;">${esc(loc.title)}</h3>
+            <p style="margin:0 0 4px;font-size:13px;color:#555;"><strong>Contact:</strong> ${esc(loc.contactNo)}</p>
+            <p style="margin:0 0 8px;font-size:13px;color:#555;line-height:1.4;">${esc(loc.description)}</p>
         `
 
         if (loc.photos && loc.photos.length > 0) {
           popupHtml += `<div style="display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;">`
           loc.photos.forEach((photo) => {
-            popupHtml += `<img src="${photo}" style="width:80px;height:60px;object-fit:cover;border-radius:4px;flex-shrink:0;" />`
+            const src = safePhotoSrc(photo)
+            if (!src) return
+            popupHtml += `<img src="${esc(src)}" alt="" style="width:80px;height:60px;object-fit:cover;border-radius:4px;flex-shrink:0;" />`
           })
           popupHtml += `</div>`
         }

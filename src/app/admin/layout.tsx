@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import AdminLayoutClient from './admin-layout-client'
 
 export const metadata: Metadata = {
-  title: 'Admin Panel — Basnayaka Vermigrow CMS',
+  title: 'Admin Panel | Basnayaka Vermigrow CMS',
   description: 'Content management system for Basnayaka Vermigrow organic farm website',
   robots: 'noindex, nofollow',
 }

@@ -18,7 +18,7 @@ export function Projects() {
               The Basnayaka family of brands
             </h2>
             <p className="mt-4 text-base text-muted-foreground">
-              Three connected projects under one roof — vermicompost, organic vegetables, and fish-based liquid nutrients.
+              Three connected projects under one roof: vermicompost, organic vegetables, and fish-based liquid nutrients.
             </p>
           </div>
         </div>

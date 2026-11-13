@@ -156,7 +156,7 @@ export function OrderClient({ initialItems }: { initialItems: CatalogItem[] }) {
         return
       }
       if (res.status === 503) {
-        toast.error('We are busy right now — please try again in a moment.')
+        toast.error('We are busy right now. Please try again in a moment.')
         return
       }
 
@@ -200,7 +200,7 @@ export function OrderClient({ initialItems }: { initialItems: CatalogItem[] }) {
             </h1>
             <p className="mt-4 text-base sm:text-lg text-emerald-100 max-w-2xl">
               Place your order here and we will call you to confirm. Pay in cash at
-              the store or by bank transfer — and a share of every item and every
+              the store or by bank transfer, and a share of every item and every
               seat goes to Apeksha Hospital.
             </p>
           </div>
@@ -386,7 +386,7 @@ function ItemCard({
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Ask for price —{' '}
+            Ask for price.{' '}
             <Link href="/#contact" className="text-emerald-600 hover:underline">
               contact us
             </Link>
@@ -622,7 +622,7 @@ function OrderForm({
 
         <p className="flex items-start gap-2 text-xs text-muted-foreground">
           <Phone className="size-3.5 shrink-0 mt-0.5" />
-          We will call you to confirm and arrange payment — cash at the store, bank
+          We will call you to confirm and arrange payment: cash at the store, bank
           transfer, or by card on the secure checkout where it is offered.
         </p>
 
@@ -670,7 +670,7 @@ function ReceiptLink({ token }: { token: string }) {
       await navigator.clipboard.writeText(`${window.location.origin}${href}`)
       toast.success('Receipt link copied')
     } catch {
-      toast.error('Could not copy automatically — please open it and bookmark the page')
+      toast.error('Could not copy automatically. Please open it and bookmark the page')
     }
   }
 
@@ -702,11 +702,11 @@ function PlacedPanel({ placed, onAnother }: { placed: PlacedOrder; onAnother: ()
     <section className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 py-16 text-center">
       <CheckCircle2 className="mx-auto size-14 text-emerald-600" />
       <h2 className="mt-5 text-2xl sm:text-3xl font-semibold tracking-tight">
-        Thank you — your order is with us
+        Thank you. Your order is with us
       </h2>
       <p className="mt-3 text-muted-foreground">
         {placed.cardPayment
-          ? 'Pay securely by card now, or pay in cash at the store — either way we will call you to confirm.'
+          ? 'Pay securely by card now, or pay in cash at the store. Either way we will call you to confirm.'
           : 'We will call you shortly to confirm and arrange payment.'}{' '}
         Please keep your reference handy.
       </p>
@@ -736,7 +736,7 @@ function PlacedPanel({ placed, onAnother }: { placed: PlacedOrder; onAnother: ()
       {placed.cardPayment && <CardPayButton orderRef={placed.orderRef} />}
 
       <p className="mt-6 text-xs text-muted-foreground">
-        The donation total only updates once we have received your payment — that keeps
+        The donation total only updates once we have received your payment. That keeps
         the public wall honest.
       </p>
 

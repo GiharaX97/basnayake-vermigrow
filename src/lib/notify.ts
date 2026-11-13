@@ -268,7 +268,7 @@ function renderRawMessage(template: Template, data: MessageData): string {
         `. Thank you!` +
         (statesDonation ? ` ${formatLkr(donation as number)} of it went to Apeksha Hospital.` : '') +
         (passes
-          ? ` Your ${passes === 1 ? 'workshop pass is' : `${passes} workshop passes are`} ready — open ${url} and enter the reference we sent when you booked.`
+          ? ` Your ${passes === 1 ? 'workshop pass is' : `${passes} workshop passes are`} ready. Open ${url} and enter the reference we sent when you booked.`
           : ` Your receipt: ${url}`)
       )
 

@@ -213,7 +213,7 @@ function Body({ view, token }: { view: View; token: string }) {
         <h1 className="text-2xl font-semibold tracking-tight">Your order</h1>
         <p className="mt-2 text-muted-foreground">
           {view.status === 'paid'
-            ? 'Paid — thank you. Everything below is yours to keep.'
+            ? 'Paid, thank you. Everything below is yours to keep.'
             : view.status === 'cancelled'
               ? 'This order was cancelled. Nothing is owed.'
               : 'We have your order and will call you to arrange payment.'}
@@ -277,7 +277,7 @@ function Body({ view, token }: { view: View; token: string }) {
           </Panel>
           {view.status !== 'paid' && view.donation > 0 && (
             <p className="text-xs text-muted-foreground">
-              The donation total updates once we have received your payment — that keeps the
+              The donation total updates once we have received your payment. That keeps the
               public wall honest.
             </p>
           )}
@@ -399,7 +399,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
         <Body view={receipt} token={token} />
 
         <p className="mt-10 border-t pt-6 text-xs text-muted-foreground">
-          Keep this link private — it is your personal record. If you need help, call us and
+          Keep this link private. It is your personal record. If you need help, call us and
           quote your reference. You can also{' '}
           <a href="/donations" className="text-emerald-700 dark:text-emerald-400 hover:underline">
             see the donation wall

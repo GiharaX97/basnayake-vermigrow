@@ -128,7 +128,7 @@ export interface SiteContent {
 
 export const defaultContent: SiteContent = {
   brand: 'Basnayaka Vermigrow',
-  tagline: 'Organic fertility, from soil to harvest',
+  tagline: 'Organic fertilizer and vegetables, grown in Karandeniya',
   // One slide, because there is one real photograph of the farm. This array
   // previously held three Unsplash images, which the hero rotated through.
   heroSlides: [
@@ -136,18 +136,18 @@ export const defaultContent: SiteContent = {
       id: 'h1',
       type: 'image',
       src: '/images/farm-hero.jpg',
-      title: 'Growing soil, growing life',
-      subtitle: 'Organic fertilizer & vegetables from Karandeniya, Sri Lanka',
+      title: 'Healthy soil grows healthy food',
+      subtitle: 'Organic compost and vegetables from our family farm in Karandeniya, Sri Lanka',
     },
   ],
   aboutTitle: 'We are Basnayaka Vermigrow',
   aboutBody:
-    'Basnayaka Vermigrow is a family-run organic farm in Karandeniya, in Sri Lanka’s southern lowlands, where traditional farming knowledge meets modern composting science. We produce premium organic fertilizer by carefully composting cow dung, chicken dung and fish waste, then enriching it through vermicomposting with earthworms. The result is a living soil amendment that restores micro-biology, improves water retention, and feeds plants slowly and naturally. Alongside our fertilizer line, we cultivate a rotating selection of organic vegetables using fish-based nutrients and zero synthetic chemicals, supplying our local community and wholesale buyers with produce that tastes the way vegetables used to taste. Every batch is hand-turned, every bed is hand-graded, and every harvest is a small act of stewardship for the land we have farmed for three generations.',
+    'We are a family farm in Karandeniya, in the low country of southern Sri Lanka. Our family has worked this land for three generations. We make our living by composting cow dung, chicken dung and fish waste, then feeding that compost to red earthworms. The worms turn it into vermicompost, which we sell to home gardeners, farmers and nurseries. We also grow vegetables in our own beds using fish-based nutrients and no synthetic chemicals. Most of what we grow is sold locally, and the rest goes to wholesale buyers. Every batch is turned by hand and every bed is graded by hand. We keep one simple standard: if we would not use it on our own crops, we do not sell it.',
   aboutImage: '/images/farm-about.jpg',
   mission:
-    'To restore soil health across Sri Lanka by making living, chemical-free fertilizer accessible to every farmer, home gardener, and grower.',
+    'To make good, chemical-free compost affordable and easy to find for every farmer and home gardener in Sri Lanka.',
   vision:
-    'A future where Sri Lankan farms feed the nation with produce grown in soil that gets richer every season — not poorer.',
+    'A country where the soil gets richer every season instead of poorer, and where good food can be grown without synthetic chemicals.',
   stats: [
     { id: 's1', value: '3', label: 'Generations farming' },
     { id: 's2', value: '100%', label: 'Organic inputs' },
@@ -163,7 +163,7 @@ export const defaultContent: SiteContent = {
       unit: 'per kg',
       featured: true,
       description:
-        'Aged cow dung and chicken dung composted with red earthworms into dark, microbe-rich castings. Slow-release nutrition that builds soil structure and water-holding capacity.',
+        'Cow dung and chicken dung broken down by red earthworms into dark, crumbly castings. It feeds plants slowly and helps the soil hold water.',
     },
     {
       id: 'sv2',
@@ -173,7 +173,7 @@ export const defaultContent: SiteContent = {
       unit: 'per kg',
       featured: false,
       description:
-        'Custom blends using cow dung, chicken dung, fish waste and green matter, turned and cured for 60–90 days to stabilise nutrients and kill weed seeds.',
+        'Blends of cow dung, chicken dung, fish waste and green matter, turned and left to cure for 60 to 90 days so the nutrients settle and weed seeds die off.',
     },
     {
       id: 'sv3',
@@ -183,7 +183,7 @@ export const defaultContent: SiteContent = {
       unit: 'per 100g',
       featured: true,
       description:
-        'Seasonal vegetables grown in our own beds using fish-based nutrients and vermicompost. Available wholesale and direct to local buyers in Karandeniya.',
+        'Seasonal vegetables grown in our own beds with fish-based nutrients and vermicompost. Sold wholesale and direct to local buyers in Karandeniya.',
     },
     {
       id: 'sv4',
@@ -193,7 +193,7 @@ export const defaultContent: SiteContent = {
       unit: 'per litre',
       featured: false,
       description:
-        'Fish-based liquid nutrient blends that feed foliar and soil biology, boosting vegetable flavour, shelf life and resistance without any synthetic additives.',
+        'A liquid nutrient made from fish waste. It feeds the soil and the leaves, and helps vegetables taste better and keep longer. No synthetic additives.',
     },
   ],
   // Only the photographs this farm actually has. The nine frames here were
@@ -221,7 +221,7 @@ export const defaultContent: SiteContent = {
       title: 'Gedavila',
       category: 'Fertilizer',
       year: '2018',
-      description: 'Our core vermicompost line, made from cow dung, chicken dung and aged fish waste, cured and graded for home gardens and commercial farms.',
+      description: 'Our main vermicompost line. Cow dung, chicken dung and aged fish waste, cured and graded for home gardens and commercial farms.',
     },
     {
       id: 'pr2',
@@ -230,7 +230,7 @@ export const defaultContent: SiteContent = {
       title: 'Pananala',
       category: 'Integrated farming',
       year: '2020',
-      description: 'A rotating plot of seasonal vegetables grown on fish-based nutrients and vermicompost, supplied to local buyers and wholesale markets.',
+      description: 'Our vegetable plots. We grow seasonal vegetables with fish-based nutrients and vermicompost, and sell to local buyers and wholesale markets.',
     },
     {
       id: 'pr3',
@@ -239,21 +239,21 @@ export const defaultContent: SiteContent = {
       title: 'Pinwantha',
       category: 'Project',
       year: '2022',
-      description: 'A concentrated fish-based liquid nutrient that feeds soil biology and boosts vegetable flavour, shelf life and disease resistance.',
+      description: 'A concentrated liquid nutrient made from fish. It feeds soil life and helps with flavour, shelf life and disease resistance.',
     },
   ],
   founder: {
     name: 'Lolitha Basnayaka',
-    title: 'Founder & Master Composter — Basnayaka Vermigrow',
+    title: 'Founder and Master Composter, Basnayaka Vermigrow',
     image: '/images/founder.jpg',
-    bio: 'Lolitha Basnayaka is a third-generation farmer from Karandeniya, Galle District, who turned his family\'s traditional farming knowledge into a science-driven organic fertilizer enterprise. After witnessing the steady degradation of paddy soils in Southern Province from synthetic fertiliser overuse, Lolitha spent five years studying vermicomposting techniques — travelling to composting facilities in Colombo, Kandy and as far as Kerala, India — before establishing Basnayaka Vermigrow in 2018. His method combines cow dung, chicken dung and fish waste with locally-sourced red earthworms (Eudrilus eugeniae), producing a living soil amendment that restores microbial ecology while feeding crops. He is a frequent speaker at the Department of Agrarian Development\'s farmer-training programmes and has been featured in Divaina and Lankadeepa for his work on chemical-free farming in the low-country wet zone.',
-    quote: 'The earthworm is the farmer\'s truest partner. Feed the soil biology, and the soil will feed you.',
+    bio: 'Lolitha Basnayaka is a third-generation farmer from Karandeniya in Galle District. He learned farming from his family, then spent five years studying vermicomposting before starting Basnayaka Vermigrow in 2018. He had watched paddy soils in the Southern Province get weaker year after year from too much synthetic fertiliser, and wanted to do something practical about it. He studied composting in Colombo, Kandy and Kerala, India, and brought the methods home. His compost mixes cow dung, chicken dung and fish waste with red earthworms (Eudrilus eugeniae). He speaks at farmer training programmes run by the Department of Agrarian Development, and Divaina and Lankadeepa have written about his work on chemical-free farming in the low-country wet zone.',
+    quote: 'The earthworm is the farmer\'s best partner. Look after the soil and the soil will look after you.',
     achievements: [
-      { id: 'fa1', text: 'Certified organic compost producer — Sri Lanka National Organic Control Unit', year: '2019' },
+      { id: 'fa1', text: 'Certified organic compost producer, Sri Lanka National Organic Control Unit', year: '2019' },
       { id: 'fa2', text: 'Trainer for Department of Agrarian Development farmer programmes, Southern Province', year: '2020' },
-      { id: 'fa3', text: 'Developed region-specific vermicompost formula for low-country wet-zone soils', year: '2021' },
-      { id: 'fa4', text: 'Featured in Divaina and Lankadeepa for chemical-free farming advocacy', year: '2022' },
-      { id: 'fa5', text: 'Supplies vermicompost to 200+ home gardens and 15 commercial farms across Galle, Matara and Hambantota', year: '2023' },
+      { id: 'fa3', text: 'Developed a vermicompost formula for low-country wet-zone soils', year: '2021' },
+      { id: 'fa4', text: 'Featured in Divaina and Lankadeepa for chemical-free farming', year: '2022' },
+      { id: 'fa5', text: 'Supplies vermicompost to more than 200 home gardens and 15 commercial farms in Galle, Matara and Hambantota', year: '2023' },
     ],
   },
   contactEmail: 'basnayakavermigrow@gmail.com',
@@ -270,7 +270,7 @@ export const defaultContent: SiteContent = {
       lng: 80.0667,
       title: 'Karandeniya Main Farm',
       contactNo: '+94 77 123 4567',
-      description: 'Main vermicompost production facility and training centre. Family-run farm with three generations of farming knowledge.',
+      description: 'Our main compost yard and training centre, run by the family. Three generations of farming experience.',
       photos: ['/images/farm-hero.jpg'],
     },
     {
@@ -279,7 +279,7 @@ export const defaultContent: SiteContent = {
       lng: 80.2216,
       title: 'Galle Distribution Centre',
       contactNo: '+94 77 234 5678',
-      description: 'Distribution hub serving Galle district farmers and home gardens with vermicompost and organic vegetables.',
+      description: 'Distribution point for farmers and home gardens in Galle district.',
       photos: ['/images/farm-about.jpg'],
     },
     {
@@ -288,7 +288,7 @@ export const defaultContent: SiteContent = {
       lng: 80.55,
       title: 'Matara Partner Farm',
       contactNo: '+94 77 345 6789',
-      description: 'Partner farm using Basnayaka vermicompost for commercial vegetable cultivation in Matara district.',
+      description: 'Partner farm growing commercial vegetables with our vermicompost in Matara district.',
       photos: ['/images/training-day.jpg'],
     },
   ],
@@ -298,7 +298,7 @@ export const defaultContent: SiteContent = {
       title: 'Vermicompost Training Workshop',
       date: '2025-08-15',
       location: 'Karandeniya Main Farm',
-      description: 'Hands-on training on vermicomposting techniques. Learn from Mr. Lolitha Basnayaka himself. Limited seats available. Register early to secure your spot.',
+      description: 'Hands-on training on vermicomposting. Learn directly from Lolitha Basnayaka. Seats are limited, so register early.',
       type: 'training',
     },
     {
@@ -306,7 +306,7 @@ export const defaultContent: SiteContent = {
       title: 'Organic Farming Field Day',
       date: '2025-09-10',
       location: 'Galle District Agrarian Centre',
-      description: 'Annual field day showcasing organic farming methods and vermicompost application. Free entry for registered farmers. Demonstrations by Department of Agrarian Development officers.',
+      description: 'Our annual field day on organic farming and vermicompost use. Free entry for registered farmers, with demonstrations by Department of Agrarian Development officers.',
       type: 'event',
     },
     {
@@ -314,7 +314,7 @@ export const defaultContent: SiteContent = {
       title: 'Advanced Composting Workshop',
       date: '2025-10-05',
       location: 'Karandeniya Main Farm',
-      description: 'Two-day intensive workshop on advanced vermicomposting techniques. Certificate provided. Accommodation available for outstation participants.',
+      description: 'A two-day workshop on advanced vermicomposting. Certificate provided. Accommodation can be arranged for people travelling from outstation.',
       type: 'training',
     },
     {
@@ -322,7 +322,7 @@ export const defaultContent: SiteContent = {
       title: 'New Fish Nutrient Product Launch',
       date: '2025-11-20',
       location: 'Karandeniya Main Farm',
-      description: 'Official launch of our new fish-based liquid nutrient. Special introductory pricing for all attendees. Refreshments provided.',
+      description: 'Launch of our new fish-based liquid nutrient. Introductory pricing for everyone who attends, and refreshments provided.',
       type: 'event',
     },
     {
@@ -330,7 +330,7 @@ export const defaultContent: SiteContent = {
       title: 'School Awareness Program on Soil Health',
       date: '2025-12-05',
       location: 'Karandeniya Regional School',
-      description: 'Educational program for school children on the importance of soil health and organic farming. Interactive sessions with live vermicompost demonstrations.',
+      description: 'A school programme on soil health and organic farming, with hands-on vermicompost demonstrations for the children.',
       type: 'training',
     },
   ],

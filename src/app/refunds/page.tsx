@@ -3,9 +3,9 @@ import Link from 'next/link'
 import { LegalPage, LegalSection, LegalList } from '@/components/site/legal-page'
 
 export const metadata: Metadata = {
-  title: 'Refunds, Cancellations & Delivery — Basnayaka Vermigrow',
+  title: 'Refunds, Cancellations & Delivery | Basnayaka Vermigrow',
   description:
-    'How delivery and collection work at Basnayaka Vermigrow, when you can cancel an order or workshop booking, and how refunds are paid — including card refunds through Payments.lk.',
+    'How delivery and collection work at Basnayaka Vermigrow, when you can cancel an order or workshop booking, and how refunds are paid, including card refunds through Payments.lk.',
   alternates: { canonical: '/refunds' },
 }
 
@@ -19,7 +19,7 @@ export default function RefundsPage() {
         <p>
           We arrange delivery or collection with you when we confirm your order. We
           will tell you the expected date and any delivery charge <strong>before you
-          pay</strong> — if the charge is not acceptable, you can cancel at no cost.
+          pay</strong>. If the charge is not acceptable, you can cancel at no cost.
         </p>
         <LegalList>
           <li>
@@ -49,7 +49,7 @@ export default function RefundsPage() {
         </p>
         <p>
           This cancellation right is separate from returns for faulty goods. If you
-          simply change your mind after delivery, contact us — where the goods are
+          simply change your mind after delivery, contact us. Where the goods are
           unopened, unused and in a condition we can resell, we may agree to a
           return, but we do not promise a refund for change of mind. Nothing in
           this paragraph affects your statutory rights.
@@ -61,7 +61,7 @@ export default function RefundsPage() {
           If what arrives is damaged, not what you ordered, or short, contact us{' '}
           <strong>within 48 hours of delivery or collection</strong> with your order
           reference and, where possible, a photograph. We will replace the item or
-          refund it — whichever you prefer — and we will cover the cost of putting
+          refund it, whichever you prefer, and we will cover the cost of putting
           it right. Please keep the goods and packaging until we have sorted it out.
         </p>
         <p>
@@ -76,7 +76,7 @@ export default function RefundsPage() {
           contact us <strong>within 24 hours of delivery or collection</strong> and
           send a photograph if you can. We will replace them or refund them. Delays
           caused by the courier or by a delivery being left in unsuitable conditions
-          after handover are outside our control, but tell us anyway — we would
+          after handover are outside our control, but tell us anyway. We would
           rather help than argue.
         </p>
       </LegalSection>
@@ -116,7 +116,7 @@ export default function RefundsPage() {
             <strong>Card payments</strong> are refunded through Payments.lk back to
             the card that was used. The refund is submitted promptly, but it
             typically takes <strong>5 to 10 business days</strong> to appear on your
-            statement — the exact timing is set by your bank, not by us.
+            statement. The exact timing is set by your bank, not by us.
           </li>
           <li>
             <strong>Cash payments</strong> are refunded in cash at the store, or by

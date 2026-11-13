@@ -137,7 +137,7 @@ function DirectGiverWall({ donors }: { donors: DonorEntry[] }) {
           </span>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          People who gave straight to Apeksha Hospital — no pack, no order.
+          People who gave straight to Apeksha Hospital, with no pack and no order.
         </p>
         <ul className="mt-5 grid gap-2 sm:grid-cols-2">
           {donors.map((d) => (
@@ -221,7 +221,7 @@ export function DonationsClient() {
           body: JSON.stringify({ code }),
         })
         if (res.status === 404) {
-          toast.error('That code isn’t one of ours — please check the QR on your pack.')
+          toast.error('That code isn’t one of ours. Please check the QR on your pack.')
           return
         }
         const body = await res.json()
@@ -231,17 +231,17 @@ export function DonationsClient() {
         }
         if (body.status === 'sold') {
           toast.success(
-            `Pack verified — ${formatLkr(body.donation ?? 0)} added to the Apeksha Hospital fund. Thank you!`
+            `Pack verified. ${formatLkr(body.donation ?? 0)} added to the Apeksha Hospital fund. Thank you!`
           )
         } else if (body.status === 'redeemed') {
           // A workshop seat: scanning confirms attendance, it does not add money.
           // The contribution was booked when the seat was paid for, so this must
           // never say "added to the fund".
-          toast.success(`Seat confirmed for ${body.product ?? 'your workshop'} — see you there!`)
+          toast.success(`Seat confirmed for ${body.product ?? 'your workshop'}. See you there!`)
         } else if (body.status === 'already_redeemed') {
-          toast.info('This seat is already checked in — no need to scan again.')
+          toast.info('This seat is already checked in. No need to scan again.')
         } else {
-          toast.info('This pack was already scanned before — no double counting.')
+          toast.info('This pack was already scanned before. No double counting.')
         }
         load()
       } catch {
@@ -329,7 +329,7 @@ export function DonationsClient() {
       setPhone('')
       toast.success(
         phone.trim()
-          ? `Thank you, ${trimmed}! Your name is on the wall — we will send you a thank-you.`
+          ? `Thank you, ${trimmed}! Your name is on the wall. We will send you a thank-you.`
           : `Thank you, ${trimmed}! Your name is on the wall.`
       )
     } catch {
@@ -462,7 +462,7 @@ export function DonationsClient() {
               </h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
                 Give straight to Apeksha Hospital. We will call you to arrange
-                payment — nothing is charged online.
+                payment. Nothing is charged online.
               </p>
               <form onSubmit={pledge} className="mt-4 space-y-3">
                 <div className="flex flex-wrap gap-2">
@@ -558,7 +558,7 @@ export function DonationsClient() {
                 </li>
                 <li className="flex gap-3">
                   <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">2</span>
-                  <span>Scan the QR code on the pack — it brings you here.</span>
+                  <span>Scan the QR code on the pack. It brings you here.</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">3</span>

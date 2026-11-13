@@ -270,7 +270,7 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     throw new PaymentsLkError('Card payments start at Rs. 10.', 409)
   }
   if (input.amountCents > PAYMENTS_MAX_CENTS) {
-    throw new PaymentsLkError('This order is above the card limit — please call us.', 409)
+    throw new PaymentsLkError('This order is above the card limit. Please call us.', 409)
   }
   if (!/^[A-Za-z0-9_\-:.]{8,255}$/.test(input.idempotencyKey)) {
     throw new PaymentsLkError('Invalid idempotency key.', 500)

@@ -71,7 +71,7 @@ export async function LegalPage({
           <section className="mt-14 rounded-xl border bg-card p-6">
             <h2 className="text-lg font-semibold tracking-tight">Questions about this policy</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Write to us or call — we would rather sort something out directly than
+              Write to us or call. We would rather sort something out directly than
               have you go away unhappy.
             </p>
             <dl className="mt-4 space-y-2 text-sm">

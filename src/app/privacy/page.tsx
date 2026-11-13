@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { LegalPage, LegalSection, LegalList } from '@/components/site/legal-page'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — Basnayaka Vermigrow',
+  title: 'Privacy Policy | Basnayaka Vermigrow',
   description:
     'What personal information Basnayaka Vermigrow collects when you order, donate or contact us, why we collect it, who we share it with, and the rights you have under Sri Lankan data protection law.',
   alternates: { canonical: '/privacy' },
@@ -13,12 +13,12 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      intro="This policy explains what personal information we collect when you use this website, order from us, donate, scan a pack or send us a message — and what we do with it."
+      intro="This policy explains what personal information we collect when you use this website, order from us, donate, scan a pack or send us a message, and what we do with it."
     >
       <LegalSection title="1. Who is responsible for your information">
         <p>
           Basnayaka Vermigrow, Karandeniya, Galle District, Sri Lanka, is the
-          controller of the personal information described here — we decide why and
+          controller of the personal information described here. We decide why and
           how it is used. Our contact details are at the bottom of this page. This
           policy is written to meet Sri Lanka&apos;s Personal Data Protection Act
           No. 9 of 2022.
@@ -29,8 +29,8 @@ export default function PrivacyPage() {
         <LegalList>
           <li>
             <strong>Orders:</strong> your name, phone number, email address (if you
-            give one), any note you write — which may include a delivery address or
-            instructions — the items and quantities you order, and the total amount.
+            give one), any note you write (it may include a delivery address or
+            instructions), the items and quantities you order, and the total amount.
           </li>
           <li>
             <strong>Donations:</strong> the name you choose to display, your phone
@@ -43,7 +43,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Payments:</strong> the reference, amount, status and method of a
-            payment, and — for card payments — limited details returned by
+            payment, and, for card payments, limited details returned by
             Payments.lk such as the card scheme and last four digits.{' '}
             <strong>We never receive or store your full card number or CVV.</strong>
           </li>
@@ -94,15 +94,15 @@ export default function PrivacyPage() {
             against your rights.
           </li>
           <li>
-            <strong>With your consent, where we ask for it</strong> — for example if
+            <strong>With your consent, where we ask for it.</strong> For example, if
             we ever ask to use your words or photographs in our publicity. You can
             withdraw consent at any time.
           </li>
         </LegalList>
         <p>
           We send order-related SMS only to the number you give us at checkout, and
-          only about that order or donation. They are service messages — a
-          confirmation, a receipt link, a delivery update — not marketing.
+          only about that order or donation. They are service messages (a
+          confirmation, a receipt link, a delivery update), not marketing.
         </p>
         <p>
           We do not sell your personal information, and we do not send marketing
@@ -123,21 +123,21 @@ export default function PrivacyPage() {
       <LegalSection title="5. Who we share it with">
         <LegalList>
           <li>
-            <strong>Payments.lk</strong>, operated by Payable — our payment
+            <strong>Payments.lk</strong>, operated by Payable, our payment
             provider, which processes card payments and tells us the result. For
             card data it acts as the payment processor; for everything else in
             this policy we remain the controller.
           </li>
           <li>
-            <strong>Text.lk</strong> — our SMS provider, which delivers order and
+            <strong>Text.lk</strong>, our SMS provider, which delivers order and
             donation messages to the phone number you gave us.
           </li>
           <li>
-            <strong>Our hosting and IT providers</strong> — who store the site and
+            <strong>Our hosting and IT providers</strong>, who store the site and
             its database on our behalf.
           </li>
           <li>
-            <strong>Professional advisers and authorities</strong> — where necessary
+            <strong>Professional advisers and authorities</strong>, where necessary
             to obtain advice, resolve a dispute, or comply with a legal obligation
             or a lawful request.
           </li>
@@ -153,7 +153,7 @@ export default function PrivacyPage() {
       <LegalSection title="6. How long we keep it">
         <p>
           We keep order and payment records for as long as we need them for
-          accounting, tax, warranty and dispute purposes — typically no longer than
+          accounting, tax, warranty and dispute purposes, typically no longer than
           seven years. Contact-form messages are kept until the matter is resolved
           and for a reasonable period afterwards. Donation-wall entries stay while
           the wall is published unless you ask us to remove yours. SMS delivery

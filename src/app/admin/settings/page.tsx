@@ -24,8 +24,8 @@ export default function AdminSettings() {
       setError('Passwords do not match')
       return
     }
-    if (newPw.length < 6) {
-      setError('Password must be at least 6 characters')
+    if (newPw.length < 10) {
+      setError('Password must be at least 10 characters')
       return
     }
 
@@ -98,7 +98,7 @@ export default function AdminSettings() {
                 value={newPw}
                 onChange={(e) => setNewPw(e.target.value)}
                 required
-                minLength={6}
+                minLength={10}
               />
             </div>
             <div className="space-y-2">
@@ -109,7 +109,7 @@ export default function AdminSettings() {
                 value={confirmPw}
                 onChange={(e) => setConfirmPw(e.target.value)}
                 required
-                minLength={6}
+                minLength={10}
               />
             </div>
             <Button type="submit" disabled={saving}>

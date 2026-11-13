@@ -166,23 +166,13 @@ export function Contact() {
                 id="message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Tell us what you need — vermicompost, vegetables, or a custom blend"
+                placeholder="Tell us what you need: vermicompost, vegetables, or a custom blend"
                 rows={5}
                 className="bg-background/5 border-background/20 text-background placeholder:text-background/40 focus-visible:ring-emerald-400 resize-none"
               />
             </div>
             {/* Gazette No. 2332/15 requires a privacy statement at the point
-                personal data is collected — not only a policy link in the
-                footer. */}
-            <p className="text-xs text-background/60">
-              We use your name, email and message only to reply to you. See our{' '}
-              <a href="/privacy" className="underline underline-offset-4 hover:text-background">
-                Privacy Policy
-              </a>
-              .
-            </p>
-            {/* Gazette No. 2332/15 requires a privacy statement at the point
-                personal data is collected — not only a policy link in the
+                personal data is collected, not only a policy link in the
                 footer. */}
             <p className="text-xs text-background/60">
               We use your name, email and message only to reply to you. See our{' '}

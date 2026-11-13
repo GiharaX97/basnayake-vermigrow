@@ -93,7 +93,7 @@ export async function POST(request: Request) {
   }
   const pending = lines.filter((l) => l.status === 'pending')
   if (pending.length === 0) {
-    return NextResponse.json({ error: 'This order was cancelled — it cannot be paid.' }, { status: 409 })
+    return NextResponse.json({ error: 'This order was cancelled. It cannot be paid.' }, { status: 409 })
   }
 
   // Server-derived, never client input. Rounded to whole cents because the
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
   const amountCents = Math.round(total * 100)
   if (amountCents < PAYMENTS_MIN_CENTS) {
     return NextResponse.json(
-      { error: 'Card payments start at Rs. 10 for this order — please pay in cash or call us.' },
+      { error: 'Card payments start at Rs. 10 for this order. Please pay in cash or call us.' },
       { status: 409 }
     )
   }

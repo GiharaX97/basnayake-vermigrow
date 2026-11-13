@@ -122,7 +122,7 @@ export function ReceiptVouchers({ token }: { token: string }) {
           required
         />
         <p className="text-xs text-muted-foreground">
-          It is on your booking confirmation — we also sent it when you placed the order.
+          It is on your booking confirmation. We also sent it when you placed the order.
         </p>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}

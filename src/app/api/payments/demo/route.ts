@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No webhook secret is configured.' }, { status: 503 })
   }
   if (demoThrottle.check(clientIp(request))) {
-    return NextResponse.json({ error: 'Too many demo payments — wait a moment.' }, { status: 429 })
+    return NextResponse.json({ error: 'Too many demo payments. Wait a moment.' }, { status: 429 })
   }
 
   let body: unknown
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
   const intent = await prisma.paymentIntent.findUnique({ where: { orderRef } })
   if (!intent || !intent.checkoutId) {
-    return NextResponse.json({ error: 'Order not found — start the card payment first.' }, { status: 404 })
+    return NextResponse.json({ error: 'Order not found. Start the card payment first.' }, { status: 404 })
   }
   if (intent.status === 'succeeded') {
     return NextResponse.json({ error: 'This order has already been paid.' }, { status: 409 })

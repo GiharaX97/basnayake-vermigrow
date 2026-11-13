@@ -9,8 +9,16 @@ www.basnayakavermigrow.lk {
 
 	# Admin uploads are stored off-app and served straight from disk, so new
 	# files appear immediately (no restart) and survive redeploys.
+	#
+	# These responses never pass through Next, so they need their own security
+	# headers. nosniff stops a browser re-interpreting a stored image as HTML,
+	# and the policy leaves nothing executable on the response at all.
 	handle_path /uploads/* {
 		root * /var/www/basnayakavermigrow/uploads
+		header {
+			X-Content-Type-Options "nosniff"
+			Content-Security-Policy "default-src 'none'; sandbox"
+		}
 		file_server
 	}
 
@@ -33,6 +41,10 @@ http://161.97.120.230 {
 
 	handle_path /uploads/* {
 		root * /var/www/basnayakavermigrow/uploads
+		header {
+			X-Content-Type-Options "nosniff"
+			Content-Security-Policy "default-src 'none'; sandbox"
+		}
 		file_server
 	}
 

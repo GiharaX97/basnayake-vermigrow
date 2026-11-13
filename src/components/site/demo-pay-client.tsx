@@ -67,7 +67,7 @@ export function DemoPayClient({ orderRef }: { orderRef: string }) {
           <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-600">
               <CreditCard className="size-4" />
-              Demo checkout — no real money
+              Demo checkout, no real money
             </div>
             <h1 className="mt-4 text-2xl font-semibold tracking-tight">Pay for your order</h1>
             <p className="mt-2 text-sm text-muted-foreground">

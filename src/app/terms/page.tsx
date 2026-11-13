@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { LegalPage, LegalSection, LegalList } from '@/components/site/legal-page'
 
 export const metadata: Metadata = {
-  title: 'Terms & Conditions — Basnayaka Vermigrow',
+  title: 'Terms & Conditions | Basnayaka Vermigrow',
   description:
     'The terms that apply when you use the Basnayaka Vermigrow website, place an order, book a workshop seat, or make a donation.',
   alternates: { canonical: '/terms' },
@@ -13,7 +13,7 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Terms & Conditions"
-      intro="These terms apply to this website and to every order, workshop booking and donation you make through it. Please read them before you place an order — placing an order means you accept them."
+      intro="These terms apply to this website and to every order, workshop booking and donation you make through it. Please read them before you place an order. Placing an order means you accept them."
     >
       <LegalSection title="1. Who we are">
         <p>
@@ -53,7 +53,7 @@ export default function TermsPage() {
           on this site are illustrative rather than a precise description of the
           batch you receive. We describe our products as accurately as we can, but
           nothing on this site is professional agricultural, veterinary or medical
-          advice — if your crop or soil has a specific problem, ask us or a
+          advice. If your crop or soil has a specific problem, ask us or a
           qualified adviser before relying on a product.
         </p>
         <p>
@@ -76,7 +76,7 @@ export default function TermsPage() {
         <LegalList>
           <li>
             Submitting the order form is a <strong>request to buy</strong>, not the
-            finished contract. We will contact you — usually by phone or SMS — to
+            finished contract. We will contact you, usually by phone or SMS, to
             confirm availability, delivery or collection, and payment.
           </li>
           <li>
@@ -91,7 +91,7 @@ export default function TermsPage() {
           </li>
           <li>
             You see a summary of the items, quantities and total before you confirm
-            the order. Check it before you submit — that summary is what we act on.
+            the order. Check it before you submit. That summary is what we act on.
           </li>
           <li>
             After you order we send you a receipt link. It shows the price, the
@@ -100,7 +100,7 @@ export default function TermsPage() {
           </li>
           <li>
             By giving us a phone number you agree to receive service messages about
-            that order or donation — confirmation, receipt and delivery updates.
+            that order or donation: confirmation, receipt and delivery updates.
             These are not marketing messages.
           </li>
           <li>
@@ -140,7 +140,7 @@ export default function TermsPage() {
         <p>
           Delivery or collection is arranged with you when we confirm your order.
           Any delivery charge is quoted to you before you pay. Please inspect goods
-          at handover and raise any problem with us promptly — our{' '}
+          at handover and raise any problem with us promptly. Our{' '}
           <Link href="/refunds">Refunds, Cancellations &amp; Delivery</Link> page
           explains how. Risk in the goods passes to you when they are delivered or
           collected.
@@ -160,7 +160,7 @@ export default function TermsPage() {
       <LegalSection title="8. Donations">
         <p>
           Donations you add to an order, or make directly, are voluntary gifts to
-          support the community fund described on this site — currently a
+          support the community fund described on this site, currently a
           contribution towards Apeksha Hospital. You receive no goods or services
           in return for a donation, and it is not a payment for any product.
         </p>
@@ -189,8 +189,8 @@ export default function TermsPage() {
           Workshop and training seats are limited and are held only once your
           booking is confirmed. You must follow safety instructions given at the
           farm, and children must be accompanied by a responsible adult. If you
-          need to cancel or reschedule, please give us as much notice as you can —
-          the terms are on the <Link href="/refunds">refunds page</Link>. If we cancel
+          need to cancel or reschedule, please give us as much notice as you can.
+          The terms are on the <Link href="/refunds">refunds page</Link>. If we cancel
           a session, you may take a full refund or move to another date.
         </p>
       </LegalSection>
@@ -227,7 +227,7 @@ export default function TermsPage() {
       <LegalSection title="14. Our liability">
         <p>
           Nothing in these terms excludes or limits liability that cannot be
-          excluded or limited under Sri Lankan law — including liability for death
+          excluded or limited under Sri Lankan law, including liability for death
           or personal injury caused by our negligence, or for fraud.
         </p>
         <p>
@@ -250,7 +250,7 @@ export default function TermsPage() {
         <p>
           These terms are governed by the laws of Sri Lanka, and the courts of Sri
           Lanka have jurisdiction over any dispute. Before going to court, please
-          contact us — most problems can be settled with a phone call.
+          contact us. Most problems can be settled with a phone call.
         </p>
         <p>
           If we cannot resolve a complaint between us, you may refer it to the

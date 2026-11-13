@@ -91,7 +91,7 @@ export function OrderCompleteClient({ orderRef }: { orderRef: string }) {
             <>
               <CheckCircle2 className="mx-auto size-14 text-emerald-600" />
               <h1 className="mt-5 text-2xl sm:text-3xl font-semibold tracking-tight">
-                Payment received — thank you
+                Payment received. Thank you
               </h1>
               <p className="mt-3 text-muted-foreground">
                 Your order <span className="font-mono font-semibold text-foreground">{orderRef}</span> is
@@ -118,7 +118,7 @@ export function OrderCompleteClient({ orderRef }: { orderRef: string }) {
               <p className="mt-3 text-muted-foreground">
                 Order <span className="font-mono font-semibold text-foreground">{orderRef}</span>{' '}
                 {total !== null ? `(${formatLkr(total)}) ` : ''}is not marked paid yet. If the card page
-                said the payment went through, give it a minute — the confirmation arrives separately.
+                said the payment went through, give it a minute. The confirmation arrives separately.
                 You will get a text as soon as it is confirmed. Nothing has been charged twice, and
                 you can safely close this page.
               </p>
@@ -161,7 +161,7 @@ export function OrderCompleteClient({ orderRef }: { orderRef: string }) {
 
           <p className="mt-10 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <ShieldCheck className="size-3.5" />
-            Card details are handled entirely by Payments.lk — never by this site.
+            Card details are handled entirely by Payments.lk, never by this site.
           </p>
         </section>
       </main>

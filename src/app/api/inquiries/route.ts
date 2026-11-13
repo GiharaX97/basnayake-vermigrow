@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
+import { createThrottle, clientIp } from '@/lib/throttle'
 import { z } from 'zod'
+
+/**
+ * The contact form is public and writes a row to the database, so without a cap
+ * one script can fill the inquiries table (and the admin notification bell)
+ * from a single address. Five messages per IP per ten minutes is well above what
+ * a real visitor sends and cheap to keep in memory.
+ */
+const inquiryThrottle = createThrottle({ windowMs: 10 * 60 * 1000, max: 5 })
 
 const inquirySchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
@@ -18,6 +27,13 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (inquiryThrottle.check(clientIp(request))) {
+    return NextResponse.json(
+      { error: 'Too many messages from this connection. Please try again later, or call us.' },
+      { status: 429, headers: { 'Retry-After': '600' } }
+    )
+  }
+
   // Parse and validate input
   let body: unknown
   try {
