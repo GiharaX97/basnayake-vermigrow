@@ -4,7 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import { CheckCircle2, Clock3, ShieldCheck, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Navbar } from '@/components/site/navbar'
+import { Navbar, HeaderSpacer } from '@/components/site/navbar'
 import { NoticeTicker } from '@/components/site/notice-ticker'
 import { Footer } from '@/components/site/footer'
 import { formatLkr } from '@/lib/currency'
@@ -75,6 +75,7 @@ export function OrderCompleteClient({ orderRef }: { orderRef: string }) {
     <div className="min-h-screen flex flex-col bg-background">
       <NoticeTicker />
       <Navbar />
+      <HeaderSpacer />
       <main className="flex-1">
         <section className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 py-16 text-center">
           {state === 'loading' && (

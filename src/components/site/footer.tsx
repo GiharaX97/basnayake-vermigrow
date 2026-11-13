@@ -1,6 +1,7 @@
 'use client'
 
 import { Heart } from 'lucide-react'
+import { BrandMark } from '@/components/site/brand-mark'
 import { useContentStore } from '@/store/content-store'
 
 export function Footer() {
@@ -19,7 +20,7 @@ export function Footer() {
               />
             </span>
             <div>
-              <div className="text-base font-semibold">{content.brand}</div>
+              <div className="text-base font-semibold"><BrandMark brand={content.brand} /></div>
               <div className="text-xs text-muted-foreground">{content.tagline}</div>
               {/* Seller identity and contact on every page: the e-commerce
                   directions (Gazette No. 2332/15) and the payment gateway's
@@ -77,7 +78,7 @@ export function Footer() {
             on the page scrolls nowhere. */}
         <div className="mt-8 pt-6 border-t border-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted-foreground">
           <div>
-            © {year} {content.brand}. Crafted with care.
+            © {year} {content.brand}. All rights reserved.
           </div>
           {/* Required by the payment gateway's site review, and genuinely useful:
               a visitor must be able to reach the terms before paying. Kept out of
@@ -91,9 +92,11 @@ export function Footer() {
             <a href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</a>
             <a href="/refunds" className="hover:text-foreground transition-colors">Refunds &amp; Delivery</a>
           </nav>
-          <div>
-            Developed by{' '}
-            <span className="font-medium text-foreground">Gihara Wijesinghe</span>
+          {/* Deliberately quiet: one line, no colour accent, no icon. The
+              seller's own contact details above are the prominent ones; this
+              is only a credit so the builder is reachable. */}
+          <div className="text-muted-foreground/70">
+            Site by Gihara Wijesinghe
             <span className="mx-1.5 text-border">·</span>
             <a
               href="tel:+94773259724"

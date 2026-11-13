@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
-import { Navbar } from '@/components/site/navbar'
+import { Navbar, HeaderSpacer } from '@/components/site/navbar'
 import { NoticeTicker } from '@/components/site/notice-ticker'
 import { Footer } from '@/components/site/footer'
+import { BrandMark } from '@/components/site/brand-mark'
 import { readSiteContent } from '@/lib/content-service'
 import {
   BUSINESS_REGISTRATION_NO,
@@ -45,11 +46,12 @@ export async function LegalPage({
     <div className="min-h-screen flex flex-col bg-background">
       <NoticeTicker />
       <Navbar />
+      <HeaderSpacer />
       <main className="flex-1">
         <section className="relative overflow-hidden bg-gradient-to-br from-emerald-800 via-emerald-700 to-emerald-900 text-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider">
-              {brand}
+              <BrandMark brand={brand} />
             </span>
             <h1 className="mt-5 text-4xl sm:text-5xl font-bold tracking-tight max-w-2xl">
               {title}

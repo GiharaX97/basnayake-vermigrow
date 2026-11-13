@@ -213,6 +213,11 @@ export default function TermsPage() {
           own use, but you may not copy, republish or use our content commercially
           without our written permission.
         </p>
+        <p>
+          The trading name Basnayaka Vermigrow is used as an unregistered trade
+          mark and is shown with the ™ symbol. It is not a registered trade mark,
+          so the ® symbol does not apply.
+        </p>
       </LegalSection>
 
       <LegalSection title="13. Third-party services">

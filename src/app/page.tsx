@@ -42,7 +42,7 @@ export default async function Home() {
         }}
       />
       <NoticeTicker />
-      <Navbar />
+      <Navbar overlay />
       <main className="flex-1">
         <Hero />
         <NoticeBoard />

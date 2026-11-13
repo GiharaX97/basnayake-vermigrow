@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Navbar } from '@/components/site/navbar'
+import { Navbar, HeaderSpacer } from '@/components/site/navbar'
 import { NoticeTicker } from '@/components/site/notice-ticker'
 import { Footer } from '@/components/site/footer'
 import { cn } from '@/lib/utils'
@@ -343,6 +343,7 @@ export function DonationsClient() {
     <div className="min-h-screen flex flex-col bg-background">
       <NoticeTicker />
       <Navbar />
+      <HeaderSpacer />
       <main className="flex-1">
         {/* Hero with the live total */}
         <section className="relative overflow-hidden bg-gradient-to-br from-emerald-800 via-emerald-700 to-emerald-900 text-white">

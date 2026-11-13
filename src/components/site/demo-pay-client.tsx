@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { CreditCard, ShieldCheck, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Navbar } from '@/components/site/navbar'
+import { Navbar, HeaderSpacer } from '@/components/site/navbar'
 import { NoticeTicker } from '@/components/site/notice-ticker'
 import { Footer } from '@/components/site/footer'
 import { formatLkr } from '@/lib/currency'
@@ -62,6 +62,7 @@ export function DemoPayClient({ orderRef }: { orderRef: string }) {
     <div className="min-h-screen flex flex-col bg-background">
       <NoticeTicker />
       <Navbar />
+      <HeaderSpacer />
       <main className="flex-1">
         <section className="mx-auto max-w-lg px-4 sm:px-6 py-16">
           <div className="rounded-2xl border bg-card p-6 sm:p-8 shadow-sm">

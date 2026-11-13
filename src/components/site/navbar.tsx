@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useTheme } from 'next-themes'
 import { Menu, X, Sun, Moon } from 'lucide-react'
 import { useContentStore } from '@/store/content-store'
+import { BrandMark } from '@/components/site/brand-mark'
 import { cn } from '@/lib/utils'
 
 /**
@@ -24,7 +25,29 @@ const navItems = [
   { label: 'Donations', href: '/donations' },
 ]
 
-export function Navbar() {
+/**
+ * Reserves the vertical space the fixed notice ticker (44px) and navbar (64px)
+ * occupy, so the first thing on an inner page is not hidden underneath them.
+ *
+ * The home page deliberately does not use this: its hero is a full-bleed image
+ * and the transparent navbar is meant to float over it. Every other page starts
+ * with a coloured band whose heading sat behind the navbar without this.
+ */
+export function HeaderSpacer() {
+  const store = useContentStore()
+  const hasNotices = (store?.content?.notices?.length ?? 0) > 0 && !store?.tickerDismissed
+  return <div aria-hidden="true" className={hasNotices ? 'h-[6.75rem]' : 'h-16'} />
+}
+
+/**
+ * The site header.
+ *
+ * `overlay` is for the home page only: its hero is a full-bleed dark image, so
+ * the header starts transparent with white text and turns solid once scrolled.
+ * Every other page starts on a light background, where transparent white text
+ * is invisible, so the default is the solid style from the first pixel.
+ */
+export function Navbar({ overlay = false }: { overlay?: boolean }) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
   const [open, setOpen] = React.useState(false)
@@ -32,6 +55,7 @@ export function Navbar() {
   const store = useContentStore()
   const brand = store?.content?.brand ?? 'Basnayaka Vermigrow'
   const hasNotices = (store?.content?.notices?.length ?? 0) > 0 && !store?.tickerDismissed
+  const solid = scrolled || !overlay
 
   React.useEffect(() => { setMounted(true) }, [])
 
@@ -46,7 +70,11 @@ export function Navbar() {
     <header
       className={cn(
         `fixed ${hasNotices ? 'top-11' : 'top-0'} inset-x-0 z-50 transition-all duration-500`,
-        scrolled
+        /* The blur is dropped while the mobile menu is open: `backdrop-filter`
+           makes this header the containing block for its `fixed` descendants, so
+           the full-screen drawer collapsed to the header's own 64px height and
+           its links were clipped away. */
+        solid && !open
           ? 'bg-background/80 backdrop-blur-xl border-b border-border/60'
           : 'bg-transparent'
       )}
@@ -65,10 +93,10 @@ export function Navbar() {
           <span
             className={cn(
               'text-base sm:text-lg font-semibold tracking-tight transition-colors leading-tight',
-              scrolled ? 'text-foreground' : 'text-white drop-shadow'
+              solid ? 'text-foreground' : 'text-white drop-shadow'
             )}
           >
-            {brand}
+            <BrandMark brand={brand} />
           </span>
         </a>
 
@@ -79,7 +107,7 @@ export function Navbar() {
               href={item.href}
               className={cn(
                 'px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                scrolled
+                solid
                   ? 'text-foreground/70 hover:text-foreground hover:bg-foreground/5'
                   : 'text-white/80 hover:text-white hover:bg-white/10'
               )}
@@ -96,7 +124,7 @@ export function Navbar() {
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className={cn(
               'inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full transition-colors touch-[manipulation]',
-              !scrolled ? 'text-white hover:bg-white/10 active:bg-white/20' : 'text-foreground hover:bg-accent active:bg-accent'
+              !solid ? 'text-white hover:bg-white/10 active:bg-white/20' : 'text-foreground hover:bg-accent active:bg-accent'
             )}
           >
             {mounted ? (
@@ -111,7 +139,7 @@ export function Navbar() {
             onClick={() => setOpen(true)}
             className={cn(
               'md:hidden inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full transition-colors touch-[manipulation]',
-              !scrolled ? 'text-white hover:bg-white/10 active:bg-white/20' : 'text-foreground hover:bg-accent active:bg-accent'
+              !solid ? 'text-white hover:bg-white/10 active:bg-white/20' : 'text-foreground hover:bg-accent active:bg-accent'
             )}
           >
             <Menu className="size-5" />
@@ -120,7 +148,14 @@ export function Navbar() {
       </nav>
 
       {open && (
-        <div className="fixed inset-0 z-50 md:hidden bg-background/95 backdrop-blur-xl flex flex-col">
+        <div
+          className={cn(
+            'fixed inset-0 z-50 md:hidden bg-background/95 backdrop-blur-xl flex flex-col',
+            // The notice ticker is fixed above the drawer (z-60), so without
+            // this the drawer's own logo row sat underneath it.
+            hasNotices && 'pt-11'
+          )}
+        >
           <div className="flex items-center justify-between h-16 px-4 shrink-0">
             <div className="flex items-center gap-2.5">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/95 overflow-hidden">
@@ -130,7 +165,7 @@ export function Navbar() {
                   className="h-full w-full object-contain p-0.5"
                 />
               </span>
-              <span className="text-lg font-semibold">{brand}</span>
+              <span className="text-lg font-semibold"><BrandMark brand={brand} /></span>
             </div>
             <button
               type="button"

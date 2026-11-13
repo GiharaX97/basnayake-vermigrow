@@ -20,7 +20,7 @@ import {
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Navbar } from '@/components/site/navbar'
+import { Navbar, HeaderSpacer } from '@/components/site/navbar'
 import { NoticeTicker } from '@/components/site/notice-ticker'
 import { Footer } from '@/components/site/footer'
 import { formatLkr } from '@/lib/currency'
@@ -188,6 +188,7 @@ export function OrderClient({ initialItems }: { initialItems: CatalogItem[] }) {
     <div className="min-h-screen flex flex-col bg-background">
       <NoticeTicker />
       <Navbar />
+      <HeaderSpacer />
       <main className="flex-1">
         <section className="relative overflow-hidden bg-gradient-to-br from-emerald-800 via-emerald-700 to-emerald-900 text-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
