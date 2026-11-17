@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
@@ -16,15 +17,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-/**
- * Cache the rendered shell and refresh it at most every 5 minutes.
- *
- * The admin's "Save All" does not wait for this window — `POST /api/content`
- * calls `revalidatePath('/', 'layout')`, so an edit shows on the next page load.
- * This is the backstop for changes made any other way.
- */
-export const revalidate = 300;
 
 const SITE_URL = process.env.NEXTAUTH_URL || "https://basnayakavermigrow.lk";
 
@@ -92,12 +84,18 @@ export default async function RootLayout({
   // never throws, so a broken content row cannot take down `/admin/login`.
   const content = await readSiteContent();
 
+  // Set by src/proxy.ts. Next stamps this on its own scripts; anything we render
+  // inline has to carry it by hand or the CSP blocks it. Reading request headers
+  // opts every route into dynamic rendering, which the nonce requires: a
+  // prerendered page is built without a request and could never carry one.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/site.webmanifest" />
         <link rel="icon" href="/logos/logo-main.png" sizes="any" />
-        <script dangerouslySetInnerHTML={{
+        <script nonce={nonce} dangerouslySetInnerHTML={{
           __html: `(function(){try{var a=document.querySelectorAll("[bis_skin_checked]");for(var i=0;i<a.length;i++)a[i].removeAttribute("bis_skin_checked")}catch(e){}})()`
         }} />
       </head>
@@ -110,6 +108,7 @@ export default async function RootLayout({
           defaultTheme="light"
           enableSystem
           disableTransitionOnChange
+          nonce={nonce}
         >
           <ContentProvider initialContent={content}>
             <ErrorBoundary>

@@ -7,6 +7,10 @@
 www.basnayakavermigrow.lk {
 	encode gzip zstd
 
+	# Do not advertise the reverse proxy. `Server: Caddy` and `Via` are low-risk
+	# on their own, but they hand a scanner a free fingerprint of the stack.
+	header -Server -Via
+
 	# Admin uploads are stored off-app and served straight from disk, so new
 	# files appear immediately (no restart) and survive redeploys.
 	#
@@ -30,6 +34,7 @@ www.basnayakavermigrow.lk {
 # Apex -> www (one canonical URL; avoids duplicate content). Keep in sync with
 # NEXTAUTH_URL in /etc/basnayakavermigrow.env, which must be https://www...
 basnayakavermigrow.lk {
+	header -Server
 	redir https://www.basnayakavermigrow.lk{uri} permanent
 }
 

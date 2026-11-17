@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { getCatalog } from '@/lib/catalog'
 import { OrderClient } from '@/components/site/order-client'
 import { buildProductsJsonLd, serializeJsonLd } from '@/lib/structured-data'
@@ -24,6 +25,7 @@ export const dynamic = 'force-dynamic'
 export default async function OrderPage() {
   const items = await getCatalog()
   const origin = process.env.NEXTAUTH_URL || 'https://basnayakavermigrow.lk'
+  const nonce = (await headers()).get('x-nonce') ?? undefined
   // Null when nothing in the catalog has a price — markup for an unpriced item
   // would advertise it at LKR 0, which is not true.
   const productsJsonLd = buildProductsJsonLd(items, origin)
@@ -33,6 +35,7 @@ export default async function OrderPage() {
       {productsJsonLd && (
         <script
           type="application/ld+json"
+          nonce={nonce}
           dangerouslySetInnerHTML={{ __html: serializeJsonLd(productsJsonLd) }}
         />
       )}

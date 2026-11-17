@@ -348,10 +348,29 @@ async function A_public() {
   check('GET / is server-rendered with CMS text', /Basnayaka/i.test(home.text))
   check('GET / carries LocalBusiness JSON-LD', home.text.includes('LocalBusiness'))
 
-  for (const p of ['/donations', '/order', '/sitemap.xml', '/robots.txt']) {
+  const csp = home.headers.get('content-security-policy') ?? ''
+  const headerNonce = csp.match(/'nonce-([^']+)'/)?.[1]
+  check(
+    "CSP script-src uses a nonce and drops 'unsafe-inline'",
+    !!headerNonce && !/script-src[^;]*'unsafe-inline'/.test(csp)
+  )
+  const scriptTags = home.text.match(/<script\b[^>]*>/g) ?? []
+  check(
+    'every script tag carries the CSP nonce',
+    scriptTags.length > 0 && scriptTags.every((tag) => tag.includes('nonce='))
+  )
+  check('the nonce in the header matches the page', !!headerNonce && home.text.includes(`nonce="${headerNonce}"`))
+
+  for (const p of ['/donations', '/order', '/sitemap.xml', '/robots.txt', '/.well-known/security.txt']) {
     const r = await get(p, { noJar: true })
     eq(`GET ${p} → 200`, r.status, 200)
   }
+
+  const secTxt = await get('/.well-known/security.txt', { noJar: true })
+  check(
+    'security.txt publishes a Contact and a future Expires',
+    /^Contact: mailto:/m.test(secTxt.text) && Date.parse(secTxt.text.match(/^Expires: (.+)$/m)?.[1] ?? '') > Date.now()
+  )
 
   const content = await get('/api/content', { noJar: true })
   eq('GET /api/content → 200', content.status, 200)

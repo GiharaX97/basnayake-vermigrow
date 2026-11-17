@@ -1,3 +1,4 @@
+import { headers } from 'next/headers'
 import { Navbar } from '@/components/site/navbar'
 import { NoticeTicker } from '@/components/site/notice-ticker'
 import { NoticeBoard } from '@/components/site/notice-board'
@@ -32,11 +33,13 @@ import { buildSiteJsonLd, serializeJsonLd } from '@/lib/structured-data'
 export default async function Home() {
   const content = await readSiteContent()
   const origin = process.env.NEXTAUTH_URL || 'https://basnayakavermigrow.lk'
+  const nonce = (await headers()).get('x-nonce') ?? undefined
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <script
         type="application/ld+json"
+        nonce={nonce}
         dangerouslySetInnerHTML={{
           __html: serializeJsonLd(buildSiteJsonLd(content, origin)),
         }}

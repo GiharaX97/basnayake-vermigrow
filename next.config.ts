@@ -1,34 +1,9 @@
 import type { NextConfig } from "next";
 
-/**
- * Content Security Policy.
- *
- * `script-src` needs `'unsafe-inline'`: the App Router streams its own inline
- * bootstrap scripts and Next 16 gives no nonce here without threading one
- * through middleware. It still blocks every third-party script origin, which is
- * the injection path that matters. `style-src` needs `'unsafe-inline'` for
- * Radix and Leaflet, who set element styles directly.
- *
- * Only applied in production builds. The dev server compiles with eval and
- * talks over a websocket, and a CSP that blocks those would break `next dev`
- * without protecting anything a developer cares about.
- */
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org",
-  "media-src 'self' blob: data:",
-  "font-src 'self' data:",
-  "connect-src 'self'",
-  "frame-src 'self'",
-  "frame-ancestors 'self'",
-  "form-action 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "upgrade-insecure-requests",
-].join("; ");
-
+// The Content Security Policy is not here: it needs a per-response nonce, so it
+// is built in src/proxy.ts. Do not add a second CSP header in this file — browsers
+// enforce every policy they receive, and a static one still permitting
+// `'unsafe-inline'` would silently cancel the nonce policy out.
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
@@ -43,9 +18,6 @@ const securityHeaders = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   { key: "Cross-Origin-Resource-Policy", value: "same-site" },
   { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
-  ...(process.env.NODE_ENV === "production"
-    ? [{ key: "Content-Security-Policy", value: contentSecurityPolicy }]
-    : []),
 ];
 
 const nextConfig: NextConfig = {
