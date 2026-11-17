@@ -1,0 +1,4 @@
+#!/bin/sh
+# Pre-commit secret screen. See scripts/check-secrets.mjs.
+# Enable once per clone: git config core.hooksPath .githooks
+node scripts/check-secrets.mjs || exit 1

@@ -24,6 +24,16 @@ node_modules
 .DS_Store
 *.pem
 
+# private key material and credential stores — never commit
+*.key
+*.p12
+*.pfx
+*.p8
+*.kdbx
+*.age
+credentials.json
+.git-credentials
+
 # debug
 npm-debug.log*
 yarn-debug.log*
