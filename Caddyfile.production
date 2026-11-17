@@ -9,7 +9,14 @@ www.basnayakavermigrow.lk {
 
 	# Do not advertise the reverse proxy. `Server: Caddy` and `Via` are low-risk
 	# on their own, but they hand a scanner a free fingerprint of the stack.
-	header -Server -Via
+	# `defer` is not optional here: reverse_proxy adds `Via` to the response, and
+	# only a deferred deletion runs late enough to remove it. The bare
+	# `header -Server -Via` form leaves `Via` behind once a handle block exists.
+	header {
+		-Server
+		-Via
+		defer
+	}
 
 	# Admin uploads are stored off-app and served straight from disk, so new
 	# files appear immediately (no restart) and survive redeploys.
@@ -43,6 +50,12 @@ basnayakavermigrow.lk {
 # DNS is being moved / for server-side checks.
 http://161.97.120.230 {
 	encode gzip zstd
+
+	header {
+		-Server
+		-Via
+		defer
+	}
 
 	handle_path /uploads/* {
 		root * /var/www/basnayakavermigrow/uploads
